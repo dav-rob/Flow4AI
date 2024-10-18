@@ -5,12 +5,6 @@ from time import sleep
 from utils.print_utils import printh
 from job import JobFactory
 
-# Simulated async LLM API call
-async def async_llm_analysis(task):
-    print(f"Async LLM analysis for {task}")
-    await asyncio.sleep(1)  # Simulate network delay
-    return f"Async Analysis of {task} complete"
-
 class JobChain:
     def __init__(self, job_chain_context):
         self.job_chain_context = job_chain_context
@@ -38,8 +32,7 @@ class JobChain:
                     if task is None:
                         break  # Exit signal
                     
-                    # Call async LLM analysis and push result to result_queue
-                    #result = await async_llm_analysis(task)
+                    # Call async Job and push result to result_queue
                     result = await self.job.execute(task)
                     # Push analysis result into result_queue
                     self.result_queue.put(result)  # Pub: Push result into result_queue
