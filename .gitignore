@@ -1,0 +1,35 @@
+# Virtual environment
+myenv/
+
+# Compiled Python files
+__pycache__/
+*.py[cod]
+
+# Environment variables
+api.env
+
+# Logs
+*.log
+
+# Cache files
+__pycache__/
+/jupyter/.ipynb_checkpoints/
+
+# Distribution / Packaging
+dist/
+build/
+
+
+# IDE-specific files
+.vscode/
+.idea/
+
+
+# Test coverage reports
+htmlcov/
+.tox/
+.nox/
+
+# macOS-specific files
+.DS_Store
+
