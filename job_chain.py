@@ -2,29 +2,30 @@ import multiprocessing as mp
 import asyncio
 import queue
 from time import sleep
+from typing import Any, Dict
 from utils.print_utils import printh
 from job import JobFactory
 
 class JobChain:
-    def __init__(self, job_chain_context):
+    def __init__(self, job_chain_context:dict[str, Any]):
         self.job_chain_context = job_chain_context
         self.task_queue = mp.Queue()
         self.result_queue = mp.Queue()
         self.analyzer_process = None
-        job_context:dict[str, any]={"type":"file","params":{}}
+        job_context:dict[str, any]= job_chain_context.get("job_context")
         self.job = JobFactory.load_job(job_context)
 
     def start(self):
-        self.analyzer_process = mp.Process(target=self.worker_analyzer)
+        self.analyzer_process = mp.Process(target=self.async_worker)
         self.analyzer_process.start()
 
     def wait_for_completion(self):
         self.analyzer_process.join()
 
-    def worker_analyzer(self):
-        """Process that handles analyzing pages using asyncio."""
+    def async_worker(self):
+        """Process that handles making workflow calls using asyncio."""
 
-        async def analyzer_loop():
+        async def task_loop():
             while True:
                 try:
                     # Block until new task is available
@@ -41,7 +42,7 @@ class JobChain:
                     printh("task_queue timeout")
                     continue  # No task, keep waiting
 
-        asyncio.run(analyzer_loop())
+        asyncio.run(task_loop())
         # Signal that the analyzer has finished
-        printh("task_queue ended")
+        printh("result_queue ended")
         self.result_queue.put(None)  # Pub: Signal that analysis is done

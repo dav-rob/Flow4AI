@@ -16,6 +16,7 @@ def scrape_website(task_queue):
         task_queue.put(page)  # Pub: Push page into task_queue
         sleep(0.1)  # Simulate network delay
     # Signal that scraping is complete
+    printh("task_queue ended")
     task_queue.put(None)
 
 def handle_results(result_queue):
@@ -36,9 +37,11 @@ def collate_and_summarise_analysis(result):
 # Main function to manage the job chain
 def main():
     start_time = time.perf_counter()
-    pdf = "path_to_pdf.pdf"  # Replace with your actual PDF path
+    job_chain_context = {
+        "job_context":{"type":"file","params":{}}
+    }
 
-    job_chain = JobChain(pdf)
+    job_chain = JobChain(job_chain_context)
     job_chain.start()
 
     # Start web scraping and feed the task queue
