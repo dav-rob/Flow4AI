@@ -149,3 +149,53 @@ def test_parallel_execution_in_batches():
         f"Execution completed too quickly in {execution_time:.2f}s. "
         "Expected ~100s for scraping all links"
     )
+
+async def run_parallel_load_test(num_tasks: int) -> float:
+    """Run a load test with specified number of parallel tasks"""
+    start_time = time.perf_counter()
+    
+    job_chain_context = {
+        "job_context": {
+            "type": "file",
+            "params": {"time_delay": 1.0}  # Each task takes 1 second
+        }
+    }
+
+    job_chain = JobChain(job_chain_context)
+    job_chain.start()
+
+    # Submit all tasks immediately
+    for i in range(num_tasks):
+        job_chain.task_queue.put(f"Task_{i}")
+    job_chain.task_queue.put(None)
+
+    # Collect results
+    results = []
+    while True:
+        result = job_chain.result_queue.get()
+        if result is None:
+            break
+        results.append(result)
+
+    job_chain.wait_for_completion()
+    execution_time = time.perf_counter() - start_time
+    print(f"\nExecution time for {num_tasks} tasks: {execution_time:.2f}s")
+    print(f"Number of completed tasks: {len(results)}")
+    return execution_time
+
+def test_maximum_parallel_execution():
+    """Test the maximum theoretical parallel execution capacity"""
+    
+    # Test with increasing number of tasks
+    task_counts = [100, 500, 2500, 10000, 15000]
+    
+    for count in task_counts:
+        execution_time = asyncio.run(run_parallel_load_test(count))
+        
+        assert execution_time < 2.0, (
+            f"Expected {count} tasks to complete in under 2 seconds with parallel execution, "
+            f"took {execution_time:.2f}s"
+        )
+        
+        tasks_per_second = count / execution_time
+        print(f"Tasks per second with {count} tasks: {tasks_per_second:.2f}")
