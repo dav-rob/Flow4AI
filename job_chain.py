@@ -7,12 +7,12 @@ from utils.print_utils import printh
 from job import JobFactory
 
 class JobChain:
-    def __init__(self, job_chain_context:dict[str, Any]):
+    def __init__(self, job_chain_context: Dict[str, Any]):
         self.job_chain_context = job_chain_context
         self.task_queue = mp.Queue()
         self.result_queue = mp.Queue()
         self.analyzer_process = None
-        job_context:dict[str, any]= job_chain_context.get("job_context")
+        job_context: Dict[str, Any] = job_chain_context.get("job_context")
         self.job = JobFactory.load_job(job_context)
 
     def start(self):
@@ -25,22 +25,27 @@ class JobChain:
     def async_worker(self):
         """Process that handles making workflow calls using asyncio."""
 
+        async def process_task(task):
+            """Process a single task and return its result"""
+            result = await self.job.execute(task)
+            self.result_queue.put(result)
+
         async def task_loop():
+            tasks = []
+            # First collect all tasks
             while True:
                 try:
-                    # Block until new task is available
-                    task = self.task_queue.get(timeout=5)  # Sub: Task queue gets page
+                    task = self.task_queue.get(timeout=5)
                     if task is None:
-                        break  # Exit signal
-                    
-                    # Call async Job and push result to result_queue
-                    result = await self.job.execute(task)
-                    # Push analysis result into result_queue
-                    self.result_queue.put(result)  # Pub: Push result into result_queue
-
+                        break
+                    tasks.append(process_task(task))
                 except queue.Empty:
                     printh("task_queue timeout")
-                    continue  # No task, keep waiting
+                    break
+
+            # Execute all tasks concurrently
+            if tasks:
+                await asyncio.gather(*tasks)
 
         asyncio.run(task_loop())
         # Signal that the analyzer has finished
