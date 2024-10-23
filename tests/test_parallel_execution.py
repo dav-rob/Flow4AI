@@ -91,3 +91,61 @@ def test_parallel_execution():
         f"Expected time ratio <= 1.5, got {time_ratio:.2f}. "
         "This suggests tasks are running sequentially instead of in parallel"
     )
+
+async def run_batch_job_chain() -> float:
+    """Run job chain with batches of website analysis jobs"""
+    start_time = time.perf_counter()
+    
+    # Configure JobChain with 7-second analysis jobs
+    job_chain_context = {
+        "job_context": {
+            "type": "file",
+            "params": {"time_delay": 7.0}  # Each analysis takes 7 seconds
+        }
+    }
+
+    job_chain = JobChain(job_chain_context)
+    job_chain.start()
+
+    # Process 4 batches of 25 links each
+    for batch in range(4):
+        # Simulate scraping 25 links, 1 second per link
+        for link in range(25):
+            job_chain.task_queue.put(f"Batch{batch}_Link{link}")
+            await asyncio.sleep(1.0)  # Simulate time to scrape each link
+    
+    job_chain.task_queue.put(None)  # Signal end of tasks
+
+    # Collect all results
+    results = []
+    while True:
+        result = job_chain.result_queue.get()
+        if result is None:
+            break
+        results.append(result)
+
+    job_chain.wait_for_completion()
+    execution_time = time.perf_counter() - start_time
+    print(f"\nTotal execution time: {execution_time:.2f}s")
+    print(f"Number of processed results: {len(results)}")
+    return execution_time
+
+def test_parallel_execution_in_batches():
+    """Test parallel execution of website analysis in batches while scraping continues"""
+    execution_time = asyncio.run(run_batch_job_chain())
+    
+    # Expected timing:
+    # - 4 batches * 25 links * 1s per link = 100s for scraping
+    # - Analysis jobs (7s each) should run in parallel while scraping continues
+    # Allow +10s for system overhead and timing variations
+    
+    assert execution_time <= 110, (
+        f"Expected execution to complete in ~107s = (scraping time) + 1 x analysis time, took {execution_time:.2f}s. "
+        "This suggests analysis jobs are not running in parallel with scraping"
+    )
+    
+    # Ensure execution doesn't complete too quickly, which would indicate incorrect implementation
+    assert execution_time >= 95, (
+        f"Execution completed too quickly in {execution_time:.2f}s. "
+        "Expected ~100s for scraping all links"
+    )
