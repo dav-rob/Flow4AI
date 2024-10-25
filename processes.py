@@ -6,27 +6,31 @@ from utils.print_utils import printh
 from job_chain import JobChain
 
 
-# Scraping function (remains synchronous)
+# Scraping function
 def scrape_website(task_queue):
-    """Simulates web scraping."""
-    pages = [f"Page {i}" for i in range(10)]  # Simulated pages
-    for page in pages:
-        print(f"Scraping: {page}")
-        # Push the scraped page to task_queue
-        task_queue.put(page)  # Pub: Push page into task_queue
-        sleep(0.1)  # Simulate network delay
+    """Simulates web scraping by submitting batches of 4 pages to the task queue."""
+    batch_of_pages = []
+    i = 0
+    
+    for batch in range(5):
+        # Collect 4 pages into a batch
+        for _ in range(4):
+            page = f"Page {i}"
+            print(f"Scraping: {page}")
+            batch_of_pages.append(page)
+            i += 1
+            
+        # Submit the batch of 4 pages to task queue
+        task_queue.put(batch_of_pages)
+        batch_of_pages = []
+        
+        # Add delay between batches (except after last batch)
+        if batch < 4:
+            sleep(0.2)
+    
     # Signal that scraping is complete
     printh("task_queue ended")
     task_queue.put(None)
-
-def handle_results(result_queue):
-    """Continuously handle results from result_queue."""
-    while True:
-        result = result_queue.get()  # Block until new result is available
-        if result is None:
-            print("No more results to process.")
-            break  # Exit loop when analyzer is done
-        collate_and_summarise_analysis(result)  # Process each result as it comes
 
 # Function to collate and summarize results
 def collate_and_summarise_analysis(result):
@@ -41,16 +45,13 @@ def main():
         "job_context":{"type":"file","params":{}}
     }
 
-    job_chain = JobChain(job_chain_context)
+    job_chain = JobChain(job_chain_context, collate_and_summarise_analysis)
     job_chain.start()
 
     # Start web scraping and feed the task queue
     scrape_website(job_chain.task_queue)
 
-    # Handle results while analyzer is running
-    handle_results(job_chain.result_queue)
-
-    # Wait for the analyzer to finish
+    # Wait for all processes to finish
     job_chain.wait_for_completion()
 
     end_time = time.perf_counter()
