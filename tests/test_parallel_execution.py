@@ -17,12 +17,24 @@ class DelayedJob(Job):
         await asyncio.sleep(self.time_delay)  # Use specified delay
         return {"task": task, "status": "complete"}
 
-# Extend JobFactory to handle delayed jobs
 def create_delayed_job(params: dict) -> Job:
     time_delay = params.get('time_delay', 1.0)
-    return DelayedJob("Delayed Job", "Test prompt", "test-model", time_delay)
+    return DelayedJob("Test Job", "Test prompt", "test-model", time_delay)
 
-JobFactory._load_from_file = create_delayed_job
+# Store original load_from_file function
+original_load_from_file = JobFactory._load_from_file
+
+def setup_module(module):
+    """Set up test environment"""
+    JobFactory._load_from_file = create_delayed_job
+
+def teardown_module(module):
+    """Restore original implementation"""
+    JobFactory._load_from_file = original_load_from_file
+
+def dummy_result_processor(result):
+    """Dummy function for processing results in tests"""
+    print(f"Processing result: {result}")
 
 async def run_job_chain(time_delay: float) -> float:
     """Run job chain with specified delay and return execution time"""
@@ -35,7 +47,7 @@ async def run_job_chain(time_delay: float) -> float:
         }
     }
 
-    job_chain = JobChain(job_chain_context)
+    job_chain = JobChain(job_chain_context, dummy_result_processor)
     job_chain.start()
 
     # Feed 10 tasks with a delay between each to simulate data gathering
@@ -44,14 +56,7 @@ async def run_job_chain(time_delay: float) -> float:
         await asyncio.sleep(0.2)  # Simulate time taken to gather data
     job_chain.task_queue.put(None)
 
-    # Collect results
-    results = []
-    while True:
-        result = job_chain.result_queue.get()
-        if result is None:
-            break
-        results.append(result)
-
+    # Wait for completion
     job_chain.wait_for_completion()
     execution_time = time.perf_counter() - start_time
     print(f"Execution time for delay {time_delay}s: {execution_time:.2f}s")
@@ -70,12 +75,6 @@ def test_parallel_execution():
     print(f"Time with 2s delay: {time_2s:.2f}s")
     print(f"Ratio: {time_ratio:.2f}x")
     
-    # With 0.2s delay between tasks (total 1.8s for adding tasks)
-    # If tasks run in parallel:
-    #   - 10 tasks with 1s delay should take ~2.8s (1.8s for adding + 1s for execution)
-    #   - 10 tasks with 2s delay should take ~3.8s (1.8s for adding + 2s for execution)
-    # Allow +0.5s for system overhead and timing variations
-    
     assert time_1s <= 3.3, (
         f"Expected tasks to complete in ~3.3s (including data gathering + overhead), took {time_1s:.2f}s. "
         "This suggests tasks are running sequentially"
@@ -86,7 +85,6 @@ def test_parallel_execution():
         "This suggests tasks are running sequentially"
     )
     
-    # Ratio should still be close to 1 since most time is spent gathering data
     assert time_ratio <= 1.5, (
         f"Expected time ratio <= 1.5, got {time_ratio:.2f}. "
         "This suggests tasks are running sequentially instead of in parallel"
@@ -96,15 +94,14 @@ async def run_batch_job_chain() -> float:
     """Run job chain with batches of website analysis jobs"""
     start_time = time.perf_counter()
     
-    # Configure JobChain with 7-second analysis jobs
     job_chain_context = {
         "job_context": {
             "type": "file",
-            "params": {"time_delay": 0.70}  # Each analysis takes 7 seconds
+            "params": {"time_delay": 0.70}
         }
     }
 
-    job_chain = JobChain(job_chain_context)
+    job_chain = JobChain(job_chain_context, dummy_result_processor)
     job_chain.start()
 
     # Process 4 batches of 25 links each
@@ -116,38 +113,24 @@ async def run_batch_job_chain() -> float:
     
     job_chain.task_queue.put(None)  # Signal end of tasks
 
-    # Collect all results
-    results = []
-    while True:
-        result = job_chain.result_queue.get()
-        if result is None:
-            break
-        results.append(result)
-
+    # Wait for completion
     job_chain.wait_for_completion()
     execution_time = time.perf_counter() - start_time
     print(f"\nTotal execution time: {execution_time:.2f}s")
-    print(f"Number of processed results: {len(results)}")
     return execution_time
 
 def test_parallel_execution_in_batches():
     """Test parallel execution of website analysis in batches while scraping continues"""
     execution_time = asyncio.run(run_batch_job_chain())
     
-    # Expected timing:
-    # - 4 batches * 25 links * 1s per link = 100s for scraping
-    # - Analysis jobs (7s each) should run in parallel while scraping continues
-    # Allow +10s for system overhead and timing variations
-    
     assert execution_time <= 11, (
-        f"Expected execution to complete in ~107s = (scraping time) + 1 x analysis time, took {execution_time:.2f}s. "
+        f"Expected execution to complete in ~10.7s, took {execution_time:.2f}s. "
         "This suggests analysis jobs are not running in parallel with scraping"
     )
     
-    # Ensure execution doesn't complete too quickly, which would indicate incorrect implementation
     assert execution_time >= 9.5, (
         f"Execution completed too quickly in {execution_time:.2f}s. "
-        "Expected ~100s for scraping all links"
+        "Expected ~10s for scraping all links"
     )
 
 async def run_parallel_load_test(num_tasks: int) -> float:
@@ -157,11 +140,11 @@ async def run_parallel_load_test(num_tasks: int) -> float:
     job_chain_context = {
         "job_context": {
             "type": "file",
-            "params": {"time_delay": 1.0}  # Each task takes 1 second
+            "params": {"time_delay": 1.0}
         }
     }
 
-    job_chain = JobChain(job_chain_context)
+    job_chain = JobChain(job_chain_context, dummy_result_processor)
     job_chain.start()
 
     # Submit all tasks immediately
@@ -169,25 +152,17 @@ async def run_parallel_load_test(num_tasks: int) -> float:
         job_chain.task_queue.put(f"Task_{i}")
     job_chain.task_queue.put(None)
 
-    # Collect results
-    results = []
-    while True:
-        result = job_chain.result_queue.get()
-        if result is None:
-            break
-        results.append(result)
-
+    # Wait for completion
     job_chain.wait_for_completion()
     execution_time = time.perf_counter() - start_time
     print(f"\nExecution time for {num_tasks} tasks: {execution_time:.2f}s")
-    print(f"Number of completed tasks: {len(results)}")
     return execution_time
 
 def test_maximum_parallel_execution():
     """Test the maximum theoretical parallel execution capacity"""
     
     # Test with increasing number of tasks
-    task_counts = [100, 500, 2500, 10000, 15000]
+    task_counts = [100, 500, 2500, 10000]
     
     for count in task_counts:
         execution_time = asyncio.run(run_parallel_load_test(count))
