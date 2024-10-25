@@ -100,7 +100,7 @@ async def run_batch_job_chain() -> float:
     job_chain_context = {
         "job_context": {
             "type": "file",
-            "params": {"time_delay": 7.0}  # Each analysis takes 7 seconds
+            "params": {"time_delay": 0.70}  # Each analysis takes 7 seconds
         }
     }
 
@@ -112,7 +112,7 @@ async def run_batch_job_chain() -> float:
         # Simulate scraping 25 links, 1 second per link
         for link in range(25):
             job_chain.task_queue.put(f"Batch{batch}_Link{link}")
-            await asyncio.sleep(1.0)  # Simulate time to scrape each link
+            await asyncio.sleep(0.10)  # Simulate time to scrape each link
     
     job_chain.task_queue.put(None)  # Signal end of tasks
 
@@ -139,13 +139,13 @@ def test_parallel_execution_in_batches():
     # - Analysis jobs (7s each) should run in parallel while scraping continues
     # Allow +10s for system overhead and timing variations
     
-    assert execution_time <= 110, (
+    assert execution_time <= 11, (
         f"Expected execution to complete in ~107s = (scraping time) + 1 x analysis time, took {execution_time:.2f}s. "
         "This suggests analysis jobs are not running in parallel with scraping"
     )
     
     # Ensure execution doesn't complete too quickly, which would indicate incorrect implementation
-    assert execution_time >= 95, (
+    assert execution_time >= 9.5, (
         f"Execution completed too quickly in {execution_time:.2f}s. "
         "Expected ~100s for scraping all links"
     )
