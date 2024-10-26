@@ -3,6 +3,7 @@ import asyncio
 import time
 from time import sleep
 from utils.print_utils import printh
+from utils.timing import timing_decorator
 from job_chain import JobChain
 
 # Simulates web scraping.
@@ -44,8 +45,8 @@ def process_results_function(result):
     print(f"Collating and summarizing: {result}")
 
 # Main function to manage the job chain
+@timing_decorator
 def main():
-    start_time = time.perf_counter()
     # Pass in a context describing the jobs to execute asynchronously
     job_chain_context = {
         "job_context":{"type":"file","params":{}}
@@ -64,10 +65,6 @@ def main():
     # Tell the job_chain there's no more input so it can close down its 
     #   process once its Jobs have completed.
     job_chain.mark_input_completed()
-
-    end_time = time.perf_counter()
-    elapsed_time = end_time - start_time
-    print(f"Elapsed time: {elapsed_time:.6f} seconds")
 
 if __name__ == "__main__":
     main()
