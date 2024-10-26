@@ -75,7 +75,7 @@ class JobChain:
                 done_tasks = {t for t in tasks if t.done()}
                 tasks.difference_update(done_tasks)
 
-                # Very small sleep to prevent busy waiting
+                # A short pause to reduce CPU usage and avoid a busy-wait state.
                 await asyncio.sleep(0.001)
 
             # Wait for remaining tasks to complete
