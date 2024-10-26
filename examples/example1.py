@@ -1,4 +1,8 @@
 from time import sleep
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from utils.timing import timing_decorator
 from job_chain import JobChain
 
@@ -41,16 +45,15 @@ def process_results_function(result):
 # Main function to manage the job chain
 @timing_decorator
 def main():
-    # Pass in a context describing the jobs to execute asynchronously on data
-    #   passed in from a synchronous context.
+    # Pass in a context describing the jobs to execute asynchronously.
     job_chain_context = {
         "job_context":{"type":"file","params":{}}
     }
-    # Initialise a JobChain which spawns a seperate process for asynchronously 
+    # Initialise a JobChain which spawns a separate process for asynchronously 
     #   processing tasks passed in from a synchronous context. 
-    # process_results_function is called synchronously after jobs have completed
+    #   process_results_function is called synchronously after jobs have completed.
     job_chain = JobChain(job_chain_context, process_results_function)
-    # First synchronous function to send tasks to be executed asynchronously
+    # First synchronous function sends tasks to be executed asynchronously
     #   by JobChain
     send_tasks_1(job_chain)
     # Second synchronous function sends tasks to be executed asynchronously
