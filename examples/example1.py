@@ -37,7 +37,7 @@ def send_tasks_1(job_chain):
             sleep(0.2)
 
 # Function to simulate serially collating results returned by JobChain
-def process_results_function(result):
+def process_after_results_fn(result):
     """ Call any code you want to process each result returned by JobChain"""
     sleep(0.5) 
     print(f"Collating and summarizing: {result}")
@@ -52,7 +52,7 @@ def main():
     # Initialise a JobChain which spawns a separate process for asynchronously 
     #   processing tasks passed in from a synchronous context. 
     #   process_results_function is called synchronously after jobs have completed.
-    job_chain = JobChain(job_chain_context, process_results_function)
+    job_chain = JobChain(job_chain_context, process_after_results_fn)
     # First synchronous function sends tasks to be executed asynchronously
     #   by JobChain
     send_tasks_1(job_chain)
