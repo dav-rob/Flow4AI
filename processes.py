@@ -5,12 +5,6 @@ from time import sleep
 from utils.print_utils import printh
 from job_chain import JobChain
 
-
-def mark_input_completed(task_queue):
-    # Signal that scraping is complete
-    printh("task_queue ended")
-    task_queue.put(None)
-
 # Scraping function
 def scrape_website_batches(task_queue):
     """Simulates web scraping by submitting batches of 4 pages to the task queue."""
@@ -52,10 +46,8 @@ def main():
     # Start web scraping and feed the task queue
     scrape_website_batches(job_chain.task_queue)
 
-    mark_input_completed(job_chain.task_queue)
-
-    # Wait for all processes to finish
-    job_chain.wait_for_completion()
+    # Mark input as complete and wait for processing to finish
+    job_chain.mark_input_completed()
 
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time

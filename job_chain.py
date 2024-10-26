@@ -18,10 +18,16 @@ class JobChain:
 
     def start(self):
         """Start the analyzer process - non-blocking."""
-        self.analyzer_process = mp.Process(target=self.async_worker)
+        self.analyzer_process = mp.Process(target=self._async_worker)
         self.analyzer_process.start()
 
-    def wait_for_completion(self):
+    def mark_input_completed(self):
+        """Signal completion of input and wait for all processing to finish."""
+        printh("task_queue ended")
+        self.task_queue.put(None)
+        self._wait_for_completion()
+
+    def _wait_for_completion(self):
         """Wait for completion and process results."""
         # Process results until we get None or analyzer process dies
         while True:
@@ -40,7 +46,7 @@ class JobChain:
         if self.analyzer_process and self.analyzer_process.is_alive():
             self.analyzer_process.join()
 
-    def async_worker(self):
+    def _async_worker(self):
         """Process that handles making workflow calls using asyncio."""
         async def process_task(task):
             """Process a single task and return its result"""

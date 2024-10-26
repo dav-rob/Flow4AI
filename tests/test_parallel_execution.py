@@ -57,7 +57,7 @@ async def run_job_chain(time_delay: float) -> float:
     job_chain.task_queue.put(None)
 
     # Wait for completion
-    job_chain.wait_for_completion()
+    job_chain._wait_for_completion()
     execution_time = time.perf_counter() - start_time
     print(f"Execution time for delay {time_delay}s: {execution_time:.2f}s")
     return execution_time
@@ -114,7 +114,7 @@ async def run_batch_job_chain() -> float:
     job_chain.task_queue.put(None)  # Signal end of tasks
 
     # Wait for completion
-    job_chain.wait_for_completion()
+    job_chain._wait_for_completion()
     execution_time = time.perf_counter() - start_time
     print(f"\nTotal execution time: {execution_time:.2f}s")
     return execution_time
@@ -153,7 +153,7 @@ async def run_parallel_load_test(num_tasks: int) -> float:
     job_chain.task_queue.put(None)
 
     # Wait for completion
-    job_chain.wait_for_completion()
+    job_chain._wait_for_completion()
     execution_time = time.perf_counter() - start_time
     print(f"\nExecution time for {num_tasks} tasks: {execution_time:.2f}s")
     return execution_time
