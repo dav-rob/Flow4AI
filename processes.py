@@ -5,9 +5,9 @@ from time import sleep
 from utils.print_utils import printh
 from job_chain import JobChain
 
-# Scraping function (remains synchronous)
-def scrape_website(job_chain):
-    """Simulates web scraping."""
+# Simulates web scraping.
+def send_tasks_1(job_chain):
+    """ Pass the JobChain instance to any code you want processing quickly in parallel """
     pages = [f"Page {i}" for i in range(10)]  # Simulated pages
     for page in pages:
         print(f"Scraping: {page}")
@@ -15,9 +15,9 @@ def scrape_website(job_chain):
         job_chain.submit_task(page)  # Pub: Push page into task_queue
         sleep(0.1)  # Simulate network delay
 
-# Scraping function
-def scrape_website_batches(job_chain):
-    """Simulates web scraping by submitting batches of 4 pages to the task queue."""
+# Simulates web scraping in batches
+def send_tasks_2(job_chain):
+    """ Pass the JobChain instance to any code you want processing quickly in parallel """
     batch_of_pages = []
     i = 0
     
@@ -37,26 +37,32 @@ def scrape_website_batches(job_chain):
         if batch < 4:
             sleep(0.2)
 
-# Function to collate and summarize results
-def collate_and_summarise_analysis(result):
-    """Processes and summarizes the result from the analyzer."""
-    sleep(2) 
+# Function to simulate serially collating and summarizing results produced by JobChain
+def process_results_function(result):
+    """ Call any code you want to execute slowly, in series"""
+    sleep(0.5) 
     print(f"Collating and summarizing: {result}")
 
 # Main function to manage the job chain
 def main():
     start_time = time.perf_counter()
+    # Pass in a context describing the jobs to execute asynchronously
     job_chain_context = {
         "job_context":{"type":"file","params":{}}
     }
-
-    job_chain = JobChain(job_chain_context, collate_and_summarise_analysis)
-    # first synchronous function
-    scrape_website(job_chain)
-    # second synchronous function
-    scrape_website_batches(job_chain)
-    # tell the job_chain there's no more input
-    #   so it can close down
+    # Initialise a JobChain which spawns a seperate process for
+    #   asynchronously processing tasks passed in from a synchronous 
+    #   context.
+    job_chain = JobChain(job_chain_context, process_results_function)
+    # First synchronous function to send tasks to be executed asynchronously
+    #   by JobChain
+    send_tasks_1(job_chain)
+    # Second synchronous function sends tasks to be executed asynchronously
+    #   - send as many tasks as you want to
+    #   - take as long as you want to
+    send_tasks_2(job_chain)
+    # Tell the job_chain there's no more input so it can close down its 
+    #   process once its Jobs have completed.
     job_chain.mark_input_completed()
 
     end_time = time.perf_counter()
