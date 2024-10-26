@@ -6,7 +6,7 @@ from utils.print_utils import printh
 from job_chain import JobChain
 
 # Scraping function
-def scrape_website_batches(task_queue):
+def scrape_website_batches(job_chain):
     """Simulates web scraping by submitting batches of 4 pages to the task queue."""
     batch_of_pages = []
     i = 0
@@ -20,7 +20,7 @@ def scrape_website_batches(task_queue):
             i += 1
             
         # Submit the batch of 4 pages to task queue
-        task_queue.put(batch_of_pages)
+        job_chain.submit_task(batch_of_pages)
         batch_of_pages = []
         
         # Add delay between batches (except after last batch)
@@ -44,7 +44,7 @@ def main():
     job_chain.start()
 
     # Start web scraping and feed the task queue
-    scrape_website_batches(job_chain.task_queue)
+    scrape_website_batches(job_chain)
 
     # Mark input as complete and wait for processing to finish
     job_chain.mark_input_completed()

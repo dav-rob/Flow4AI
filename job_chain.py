@@ -9,8 +9,8 @@ from job import JobFactory
 class JobChain:
     def __init__(self, job_chain_context: Dict[str, Any], result_processing_function: Callable[[Any], None]):
         self.job_chain_context = job_chain_context
-        self.task_queue = mp.Queue()
-        self.result_queue = mp.Queue()
+        self._task_queue = mp.Queue()
+        self._result_queue = mp.Queue()
         self.analyzer_process = None
         self._result_processing_function = result_processing_function
         job_context: Dict[str, Any] = job_chain_context.get("job_context")
@@ -21,18 +21,21 @@ class JobChain:
         self.analyzer_process = mp.Process(target=self._async_worker)
         self.analyzer_process.start()
 
+    def submit_task(self, task):
+        """Submit a task to be processed."""
+        self._task_queue.put(task)
+
     def mark_input_completed(self):
         """Signal completion of input and wait for all processing to finish."""
         printh("task_queue ended")
-        self.task_queue.put(None)
+        self._task_queue.put(None)
         self._wait_for_completion()
 
     def _wait_for_completion(self):
         """Wait for completion and process results."""
-        # Process results until we get None or analyzer process dies
         while True:
             try:
-                result = self.result_queue.get(timeout=1)
+                result = self._result_queue.get(timeout=0.1)
                 if result is None:
                     print("No more results to process.")
                     break
@@ -41,8 +44,8 @@ class JobChain:
             except queue.Empty:
                 if not self.analyzer_process.is_alive():
                     break
+                continue
 
-        # Wait for analyzer process to complete
         if self.analyzer_process and self.analyzer_process.is_alive():
             self.analyzer_process.join()
 
@@ -51,7 +54,7 @@ class JobChain:
         async def process_task(task):
             """Process a single task and return its result"""
             result = await self.job.execute(task)
-            self.result_queue.put(result)
+            self._result_queue.put(result)
 
         async def queue_monitor():
             """Monitor the task queue and create tasks as they arrive"""
@@ -63,7 +66,7 @@ class JobChain:
                 # Collect available tasks
                 while True:
                     try:
-                        task = self.task_queue.get_nowait()
+                        task = self._task_queue.get_nowait()
                         if task is None:
                             end_signal_received = True
                             break
@@ -81,8 +84,8 @@ class JobChain:
                 done_tasks = {t for t in tasks if t.done()}
                 tasks.difference_update(done_tasks)
 
-                # A short pause to reduce CPU usage and avoid a busy-wait state.
-                await asyncio.sleep(0.001)
+                # A short pause to reduce CPU usage and avoid a busy-wait state.             
+                await asyncio.sleep(0.0001)
 
             # Wait for remaining tasks to complete
             if tasks:
@@ -90,6 +93,6 @@ class JobChain:
 
             # Signal completion
             printh("result_queue ended")
-            self.result_queue.put(None)
+            self._result_queue.put(None)
 
         asyncio.run(queue_monitor())
