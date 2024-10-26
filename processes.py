@@ -5,13 +5,23 @@ from time import sleep
 from utils.print_utils import printh
 from job_chain import JobChain
 
+# Scraping function (remains synchronous)
+def scrape_website(job_chain):
+    """Simulates web scraping."""
+    pages = [f"Page {i}" for i in range(10)]  # Simulated pages
+    for page in pages:
+        print(f"Scraping: {page}")
+        # Push the scraped page to task_queue
+        job_chain.submit_task(page)  # Pub: Push page into task_queue
+        sleep(0.1)  # Simulate network delay
+
 # Scraping function
 def scrape_website_batches(job_chain):
     """Simulates web scraping by submitting batches of 4 pages to the task queue."""
     batch_of_pages = []
     i = 0
     
-    for batch in range(5):
+    for batch in range(3):
         # Collect 4 pages into a batch
         for _ in range(4):
             page = f"Page {i}"
@@ -41,12 +51,12 @@ def main():
     }
 
     job_chain = JobChain(job_chain_context, collate_and_summarise_analysis)
-    job_chain.start()
-
-    # Start web scraping and feed the task queue
+    # first synchronous function
+    scrape_website(job_chain)
+    # second synchronous function
     scrape_website_batches(job_chain)
-
-    # Mark input as complete and wait for processing to finish
+    # tell the job_chain there's no more input
+    #   so it can close down
     job_chain.mark_input_completed()
 
     end_time = time.perf_counter()

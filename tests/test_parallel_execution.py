@@ -48,7 +48,6 @@ async def run_job_chain(time_delay: float) -> float:
     }
 
     job_chain = JobChain(job_chain_context, dummy_result_processor)
-    job_chain.start()
 
     # Feed 10 tasks with a delay between each to simulate data gathering
     for i in range(10):
@@ -102,7 +101,6 @@ async def run_batch_job_chain() -> float:
     }
 
     job_chain = JobChain(job_chain_context, dummy_result_processor)
-    job_chain.start()
 
     # Process 4 batches of 25 links each
     for batch in range(4):
@@ -145,7 +143,6 @@ async def run_parallel_load_test(num_tasks: int) -> float:
     }
 
     job_chain = JobChain(job_chain_context, dummy_result_processor)
-    job_chain.start()
 
     # Submit all tasks immediately
     for i in range(num_tasks):

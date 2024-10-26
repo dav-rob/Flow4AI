@@ -15,8 +15,10 @@ class JobChain:
         self._result_processing_function = result_processing_function
         job_context: Dict[str, Any] = job_chain_context.get("job_context")
         self.job = JobFactory.load_job(job_context)
+        # Start the analyzer process immediately upon construction
+        self._start()
 
-    def start(self):
+    def _start(self):
         """Start the analyzer process - non-blocking."""
         self.analyzer_process = mp.Process(target=self._async_worker)
         self.analyzer_process.start()
