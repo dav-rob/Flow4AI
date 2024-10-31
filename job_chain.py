@@ -28,17 +28,23 @@ class JobChain:
 
     def __del__(self):
         """Clean up resources when the object is destroyed."""
-        if hasattr(self, 'analyzer_process') and self.analyzer_process and self.analyzer_process.is_alive():
-            self.analyzer_process.terminate()
-            self.analyzer_process.join()
-        
-        if hasattr(self, '_task_queue'):
-            self._task_queue.close()
-            self._task_queue.join_thread()
-        
-        if hasattr(self, '_result_queue'):
-            self._result_queue.close()
-            self._result_queue.join_thread()
+        try:
+            if hasattr(self, 'analyzer_process') and self.analyzer_process:
+                if self.analyzer_process.is_alive():
+                    self.analyzer_process.terminate()
+                    self.analyzer_process.join()
+                self.analyzer_process = None
+            
+            if hasattr(self, '_task_queue'):
+                self._task_queue.close()
+                self._task_queue.join_thread()
+            
+            if hasattr(self, '_result_queue'):
+                self._result_queue.close()
+                self._result_queue.join_thread()
+        except Exception:
+            # Suppress any errors during cleanup
+            pass
 
     def _start(self):
         """Start the analyzer process - non-blocking."""
