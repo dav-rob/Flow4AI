@@ -16,7 +16,7 @@ class ExampleJob(Job):
     async def execute(self, task):
         print(f"Processing task: {task}")
         await asyncio.sleep(0.1)  # Simulate processing
-        return f"Processed {task}"
+        return {"task": task, "result": f"Processed {task}"}
 
 # Simulates web scraping.
 def send_tasks_2(job_chain):
