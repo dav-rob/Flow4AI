@@ -2,19 +2,27 @@ import multiprocessing as mp
 import asyncio
 import queue
 from time import sleep
-from typing import Any, Dict, Callable
+from typing import Any, Dict, Callable, Union
 from utils.print_utils import printh
-from job import JobFactory
+from job import JobFactory, Job
 
 class JobChain:
-    def __init__(self, job_chain_context: Dict[str, Any], result_processing_function: Callable[[Any], None]):
-        self.job_chain_context = job_chain_context
+    def __init__(self, job_input: Union[Dict[str, Any], Job], result_processing_function: Callable[[Any], None]):
         self._task_queue = mp.Queue()
         self._result_queue = mp.Queue()
         self.analyzer_process = None
         self._result_processing_function = result_processing_function
-        job_context: Dict[str, Any] = job_chain_context.get("job_context")
-        self.job = JobFactory.load_job(job_context)
+
+        if isinstance(job_input, Dict):
+            self.job_chain_context = job_input
+            job_context: Dict[str, Any] = job_input.get("job_context")
+            self.job = JobFactory.load_job(job_context)
+        elif isinstance(job_input, Job):
+            self.job_chain_context = {"job_context": {"type": "direct", "job": job_input}}
+            self.job = job_input
+        else:
+            raise TypeError("job_input must be either Dict[str, Any] or Job instance")
+
         # Start the analyzer process immediately upon construction
         self._start()
 

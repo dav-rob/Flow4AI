@@ -1,10 +1,22 @@
 from time import sleep
 import sys
 import os
+import asyncio
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.timing import timing_decorator
 from job_chain import JobChain
+from job import Job
+
+# Custom Job implementation for demonstration
+class ExampleJob(Job):
+    def __init__(self):
+        super().__init__("Example Job", "Sample prompt", "example-model")
+
+    async def execute(self, task):
+        print(f"Processing task: {task}")
+        await asyncio.sleep(0.1)  # Simulate processing
+        return f"Processed {task}"
 
 # Simulates web scraping.
 def send_tasks_2(job_chain):
@@ -42,26 +54,39 @@ def process_after_results_fn(result):
     sleep(0.5) 
     print(f"Collating and summarizing: {result}")
 
-# Main function to manage the job chain
+# Example using dictionary-based initialization
 @timing_decorator
-def main():
+def run_with_dict_init():
+    print("\nRunning with dictionary-based initialization:")
     # Pass in a context describing the jobs to execute asynchronously.
     job_chain_context = {
-        "job_context":{"type":"file","params":{}}
+        "job_context": {"type": "file", "params": {}}
     }
-    # Initialise a JobChain which spawns a separate process for asynchronously 
-    #   processing tasks passed in from a synchronous context. 
-    #   process_results_function is called synchronously after jobs have completed.
+    # Initialize JobChain with dictionary configuration
     job_chain = JobChain(job_chain_context, process_after_results_fn)
-    # First synchronous function sends tasks to be executed asynchronously
-    #   by JobChain
     send_tasks_1(job_chain)
-    # Second synchronous function sends tasks to be executed asynchronously
-    #   - send as many tasks as you want to
-    #   - take as long as you want to between calls
     send_tasks_2(job_chain)
-    # When you're finished tell JobChain there's no more input so it can close down.
     job_chain.mark_input_completed()
+
+# Example using direct Job instance initialization
+@timing_decorator
+def run_with_direct_job():
+    print("\nRunning with direct Job instance initialization:")
+    # Create a Job instance directly
+    job = ExampleJob()
+    # Initialize JobChain with Job instance
+    job_chain = JobChain(job, process_after_results_fn)
+    send_tasks_1(job_chain)
+    send_tasks_2(job_chain)
+    job_chain.mark_input_completed()
+
+# Main function demonstrating both initialization methods
+def main():
+    # Run example with dictionary-based initialization
+    run_with_dict_init()
+    
+    # Run example with direct Job instance
+    run_with_direct_job()
 
 if __name__ == "__main__":
     main()

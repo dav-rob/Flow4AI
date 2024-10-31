@@ -36,18 +36,23 @@ def dummy_result_processor(result):
     """Dummy function for processing results in tests"""
     print(f"Processing result: {result}")
 
-async def run_job_chain(time_delay: float) -> float:
+async def run_job_chain(time_delay: float, use_direct_job: bool = False) -> float:
     """Run job chain with specified delay and return execution time"""
     start_time = time.perf_counter()
     
-    job_chain_context = {
-        "job_context": {
-            "type": "file",
-            "params": {"time_delay": time_delay}
+    if use_direct_job:
+        # Create and pass Job instance directly
+        job = DelayedJob("Test Job", "Test prompt", "test-model", time_delay)
+        job_chain = JobChain(job, dummy_result_processor)
+    else:
+        # Use traditional dictionary initialization
+        job_chain_context = {
+            "job_context": {
+                "type": "file",
+                "params": {"time_delay": time_delay}
+            }
         }
-    }
-
-    job_chain = JobChain(job_chain_context, dummy_result_processor)
+        job_chain = JobChain(job_chain_context, dummy_result_processor)
 
     # Feed 10 tasks with a delay between each to simulate data gathering
     for i in range(10):
@@ -87,6 +92,26 @@ def test_parallel_execution():
     assert time_ratio <= 1.5, (
         f"Expected time ratio <= 1.5, got {time_ratio:.2f}. "
         "This suggests tasks are running sequentially instead of in parallel"
+    )
+
+def test_direct_job_initialization():
+    """Test that direct Job instance initialization works equivalently"""
+    # Run with dictionary initialization
+    time_dict = asyncio.run(run_job_chain(1.0, use_direct_job=False))
+    
+    # Run with direct Job instance
+    time_direct = asyncio.run(run_job_chain(1.0, use_direct_job=True))
+    
+    # Calculate the ratio of execution times
+    time_ratio = abs(time_direct - time_dict) / time_dict
+    print(f"\nTime with dict initialization: {time_dict:.2f}s")
+    print(f"Time with direct Job instance: {time_direct:.2f}s")
+    print(f"Difference ratio: {time_ratio:.2f}")
+    
+    # The execution times should be very similar (within 10% of each other)
+    assert time_ratio <= 0.1, (
+        f"Expected similar execution times, but difference ratio was {time_ratio:.2f}. "
+        "This suggests the two initialization methods are not equivalent"
     )
 
 async def run_batch_job_chain() -> float:
