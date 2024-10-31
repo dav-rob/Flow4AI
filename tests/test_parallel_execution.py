@@ -196,3 +196,26 @@ def test_maximum_parallel_execution():
         
         tasks_per_second = count / execution_time
         print(f"Tasks per second with {count} tasks: {tasks_per_second:.2f}")
+
+async def run_job_chain_without_result_processor() -> bool:
+    """Run job chain without a result processing function"""
+    job = DelayedJob("Test Job", "Test prompt", "test-model", 0.1)
+    job_chain = JobChain(job)  # Pass no result_processing_function
+
+    # Submit a few tasks
+    for i in range(3):
+        job_chain.submit_task(f"Task {i}")
+    job_chain.mark_input_completed()
+
+    # Wait for completion - should work without error
+    try:
+        job_chain._wait_for_completion()
+        return True
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        return False
+
+def test_no_result_processor():
+    """Test that JobChain works without setting result_processing_function"""
+    success = asyncio.run(run_job_chain_without_result_processor())
+    assert success, "JobChain should execute successfully without result_processing_function"

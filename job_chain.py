@@ -2,12 +2,12 @@ import multiprocessing as mp
 import asyncio
 import queue
 from time import sleep
-from typing import Any, Dict, Callable, Union
+from typing import Any, Dict, Callable, Union, Optional
 from utils.print_utils import printh
 from job import JobFactory, Job
 
 class JobChain:
-    def __init__(self, job_input: Union[Dict[str, Any], Job], result_processing_function: Callable[[Any], None]):
+    def __init__(self, job_input: Union[Dict[str, Any], Job], result_processing_function: Optional[Callable[[Any], None]] = None):
         self._task_queue = mp.Queue()
         self._result_queue = mp.Queue()
         self.analyzer_process = None
@@ -25,6 +25,20 @@ class JobChain:
 
         # Start the analyzer process immediately upon construction
         self._start()
+
+    def __del__(self):
+        """Clean up resources when the object is destroyed."""
+        if hasattr(self, 'analyzer_process') and self.analyzer_process and self.analyzer_process.is_alive():
+            self.analyzer_process.terminate()
+            self.analyzer_process.join()
+        
+        if hasattr(self, '_task_queue'):
+            self._task_queue.close()
+            self._task_queue.join_thread()
+        
+        if hasattr(self, '_result_queue'):
+            self._result_queue.close()
+            self._result_queue.join_thread()
 
     def _start(self):
         """Start the analyzer process - non-blocking."""
@@ -104,5 +118,3 @@ class JobChain:
             # Signal completion
             printh("result_queue ended")
             self._result_queue.put(None)
-
-        asyncio.run(queue_monitor())
