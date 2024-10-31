@@ -66,6 +66,7 @@ def run_with_dict_init():
     job_chain = JobChain(job_chain_context, process_after_results_fn)
     send_tasks_1(job_chain)
     send_tasks_2(job_chain)
+    # Indicate there is no more input data to process to initiate shutdown
     job_chain.mark_input_completed()
 
 # Example using direct Job instance initialization
@@ -78,6 +79,7 @@ def run_with_direct_job():
     job_chain = JobChain(job, process_after_results_fn)
     send_tasks_1(job_chain)
     send_tasks_2(job_chain)
+    # Indicate there is no more input data to process to initiate shutdown
     job_chain.mark_input_completed()
 
 # Main function demonstrating both initialization methods

@@ -58,10 +58,9 @@ async def run_job_chain(time_delay: float, use_direct_job: bool = False) -> floa
     for i in range(10):
         job_chain.submit_task(f"Task {i}")
         await asyncio.sleep(0.2)  # Simulate time taken to gather data
+    # Indicate there is no more input data to process to initiate shutdown
     job_chain.mark_input_completed()
 
-    # Wait for completion
-    job_chain._wait_for_completion()
     execution_time = time.perf_counter() - start_time
     print(f"Execution time for delay {time_delay}s: {execution_time:.2f}s")
     return execution_time
@@ -133,11 +132,9 @@ async def run_batch_job_chain() -> float:
         for link in range(25):
             job_chain.submit_task(f"Batch{batch}_Link{link}")
             await asyncio.sleep(0.10)  # Simulate time to scrape each link
-    
+    # Indicate there is no more input data to process to initiate shutdown
     job_chain.mark_input_completed()
 
-    # Wait for completion
-    job_chain._wait_for_completion()
     execution_time = time.perf_counter() - start_time
     print(f"\nTotal execution time: {execution_time:.2f}s")
     return execution_time
@@ -172,10 +169,9 @@ async def run_parallel_load_test(num_tasks: int) -> float:
     # Submit all tasks immediately
     for i in range(num_tasks):
         job_chain.submit_task(f"Task_{i}")
+    # Indicate there is no more input data to process to initiate shutdown
     job_chain.mark_input_completed()
 
-    # Wait for completion
-    job_chain._wait_for_completion()
     execution_time = time.perf_counter() - start_time
     print(f"\nExecution time for {num_tasks} tasks: {execution_time:.2f}s")
     return execution_time
@@ -199,17 +195,15 @@ def test_maximum_parallel_execution():
 
 async def run_job_chain_without_result_processor() -> bool:
     """Run job chain without a result processing function"""
-    job = DelayedJob("Test Job", "Test prompt", "test-model", 0.1)
-    job_chain = JobChain(job)  # Pass no result_processing_function
-
-    # Submit a few tasks
-    for i in range(3):
-        job_chain.submit_task(f"Task {i}")
-    job_chain.mark_input_completed()
-
-    # Wait for completion - should work without error
     try:
-        job_chain._wait_for_completion()
+        job = DelayedJob("Test Job", "Test prompt", "test-model", 0.1)
+        job_chain = JobChain(job)  # Pass no result_processing_function
+
+        # Submit a few tasks
+        for i in range(3):
+            job_chain.submit_task(f"Task {i}")
+        # Indicate there is no more input data to process to initiate shutdown
+        job_chain.mark_input_completed()
         return True
     except Exception as e:
         print(f"Error occurred: {e}")
