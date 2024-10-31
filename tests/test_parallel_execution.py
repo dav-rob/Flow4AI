@@ -5,7 +5,6 @@ from time import sleep
 from utils.print_utils import printh
 from job_chain import JobChain
 from job import Job, JobFactory
-import pytest
 
 class DelayedJob(Job):
     def __init__(self, name: str, prompt: str, model: str, time_delay: float):
