@@ -53,22 +53,22 @@ class JobChain:
                 return
 
             # Log the process state
-            self.logger.debug(f"Process state during cleanup: {process}")
+            self.logger.debug(f"Job executor process state during cleanup: {process}")
             
             try:
                 # Atomic operation: check and terminate if alive
                 if process.is_alive():
-                    self.logger.debug("Terminating live process")
+                    self.logger.info("Terminating live job executor process")
                     try:
                         process.terminate()
                         process.join()
-                        self.logger.debug("Process terminated successfully")
+                        self.logger.info("Job executor process terminated successfully")
                     except AttributeError:
-                        self.logger.warning("Process became None during termination attempt")
+                        self.logger.warning("Job executor process became None during termination attempt")
                     except Exception as e:
-                        self.logger.error(f"Error terminating process: {e}")
+                        self.logger.error(f"Error terminating job executor process: {e}")
                 else:
-                    self.logger.debug("Process is not alive, skipping termination")
+                    self.logger.info("Job executor Process is not alive, skipping termination")
             finally:
                 # Clear the process reference
                 self.job_executor_process = None
@@ -97,7 +97,7 @@ class JobChain:
         self.logger.debug("Starting job executor process")
         self.job_executor_process = mp.Process(target=self._async_worker, name="JobExecutorProcess")
         self.job_executor_process.start()
-        self.logger.debug(f"Job executor process started with PID {self.job_executor_process.pid}")
+        self.logger.info(f"Job executor process started with PID {self.job_executor_process.pid}")
 
     def submit_task(self, task):
         """Submit a task to be processed."""
@@ -179,7 +179,7 @@ class JobChain:
                     try:
                         task = self._task_queue.get_nowait()
                         if task is None:
-                            logger.debug("Received end signal in task queue")
+                            logger.info("Received end signal in task queue")
                             end_signal_received = True
                             break
                         pending_tasks.append(task)
@@ -228,5 +228,5 @@ class JobChain:
             logger.error(f"Error in async worker: {e}")
             raise
         finally:
-            logger.debug("Closing event loop")
+            logger.info("Closing event loop")
             loop.close()
