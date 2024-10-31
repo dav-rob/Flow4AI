@@ -14,15 +14,14 @@ setup_logging()
 
 class JobChain:
     def __init__(self, job_input: Union[Dict[str, Any], Job], result_processing_function: Optional[Callable[[Any], None]] = None):
-        self._task_queue = mp.Queue()
-        self._result_queue = mp.Queue()
-        self.job_executor_process = None
-        self._result_processing_function = result_processing_function
-
         # Get logger for JobChain
         self.logger = logging.getLogger('JobChain')
         self.logger.info("Initializing JobChain")
 
+        self._task_queue = mp.Queue()
+        self._result_queue = mp.Queue()
+        self.job_executor_process = None
+        self._result_processing_function = result_processing_function
         if isinstance(job_input, Dict):
             self.job_chain_context = job_input
             job_context: Dict[str, Any] = job_input.get("job_context")
