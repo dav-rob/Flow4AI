@@ -49,7 +49,6 @@ class CPUIntensiveJob(Job):
             # Print progress every 1000 numbers
             if checked % 1000 == 0:
                 msg = f"Task {n}: Checked {checked}/{n} numbers, found {len(primes)} primes..."
-                print(msg)
                 self.logger.debug(msg)
                 
         duration = time.time() - start_time
@@ -71,7 +70,7 @@ def result_processor(result):
     msg = f"\nCompleted task {result['task']}: Found {result['primes_found']} primes, " \
           f"largest: {result['largest_prime']}, " \
           f"took {result['duration']:.2f}s"
-    print(msg)
+    
     logger.debug(f"Processed result: {msg}")
 
 def main(target_duration: float = 30.0):
@@ -96,11 +95,11 @@ def main(target_duration: float = 30.0):
         # Cycle through our numbers
         n = numbers[tasks_submitted % len(numbers)]
         job_chain.submit_task(str(n))
-        print(f"Submitted task to find primes up to {n}")
+        job.logger.debug(f"Submitted task to find primes up to {n}")
         tasks_submitted += 1
         
         elapsed_time = time.time() - start_time
-        print(f"\nElapsed time: {elapsed_time:.2f}s / {target_duration:.2f}s")
+        #clprint(f"\nElapsed time: {elapsed_time:.2f}s / {target_duration:.2f}s")
         
         if elapsed_time >= target_duration:
             break
