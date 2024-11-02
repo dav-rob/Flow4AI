@@ -1,5 +1,4 @@
 import multiprocessing as mp
-import threading
 import asyncio
 import queue
 import logging
@@ -22,6 +21,7 @@ class JobChain:
         self._task_queue = mp.Queue()
         self._result_queue = mp.Queue()
         self.job_executor_process = None
+        self.result_processor_process = None
         self._result_processing_function = result_processing_function
         if isinstance(job_input, Dict):
             self.job_chain_context = job_input
@@ -33,13 +33,24 @@ class JobChain:
         else:
             raise TypeError("job_input must be either Dict[str, Any] or Job instance")
 
-        # Start the job executor process immediately upon construction
+        # Start the processes immediately upon construction
         self._start()
 
     def __del__(self):
         """Clean up resources when the object is destroyed."""
         try:
             self.logger.info("Cleaning up JobChain resources")
+            
+            # Clean up result processor process
+            if hasattr(self, 'result_processor_process'):
+                process = self.result_processor_process
+                if process and process.is_alive():
+                    try:
+                        process.terminate()
+                        process.join()
+                    except Exception as e:
+                        self.logger.error(f"Error terminating result processor process: {e}")
+                self.result_processor_process = None
             
             # Clean up job executor process
             if not hasattr(self, 'job_executor_process'):
@@ -88,15 +99,25 @@ class JobChain:
             pass
 
     def _start(self):
-        """Start the job executor process - non-blocking."""
+        """Start the job executor and result processor processes - non-blocking."""
         self.logger.debug("Starting job executor process")
         self.job_executor_process = mp.Process(
             target=self._async_worker,
-            args=(self._result_processing_function,),
+            args=(self.job, self._task_queue, self._result_queue),
             name="JobExecutorProcess"
         )
         self.job_executor_process.start()
         self.logger.info(f"Job executor process started with PID {self.job_executor_process.pid}")
+
+        if self._result_processing_function:
+            self.logger.debug("Starting result processor process")
+            self.result_processor_process = mp.Process(
+                target=self._result_processor,
+                args=(self._result_processing_function, self._result_queue),
+                name="ResultProcessorProcess"
+            )
+            self.result_processor_process.start()
+            self.logger.info(f"Result processor process started with PID {self.result_processor_process.pid}")
 
     def submit_task(self, task):
         """Submit a task to be processed."""
@@ -110,6 +131,32 @@ class JobChain:
         self._task_queue.put(None)
         self._wait_for_completion()
 
+    @staticmethod
+    def _result_processor(process_fn: Callable[[Any], None], result_queue: mp.Queue):
+        """Process that handles processing results as they arrive."""
+        logger = logging.getLogger('ResultProcessor')
+        logger.debug("Starting result processor")
+
+        while True:
+            try:
+                result = result_queue.get()
+                if result is None:
+                    logger.debug("Received completion signal from result queue")
+                    break
+
+                try:
+                    # Handle both dictionary and non-dictionary results
+                    task_id = result.get('task', str(result)) if isinstance(result, dict) else str(result)
+                    logger.debug(f"Processing result for task {task_id}")
+                    process_fn(result)
+                    logger.debug(f"Finished processing result for task {task_id}")
+                except Exception as e:
+                    logger.error(f"Error processing result: {e}")
+            except queue.Empty:
+                continue
+
+        logger.debug("Result processor shutting down")
+
     def _wait_for_completion(self):
         """Wait for completion of all processing."""
         self.logger.debug("Entering wait for completion")
@@ -120,82 +167,26 @@ class JobChain:
             self.job_executor_process.join()
             self.logger.debug("Job executor process completed")
 
-    def _async_worker(self, result_processing_function):
-        """Process that handles making workflow calls using asyncio and processes results."""
+        # Wait for result processor to finish
+        if self.result_processor_process and self.result_processor_process.is_alive():
+            self.logger.debug("Waiting for result processor process")
+            self.result_processor_process.join()
+            self.logger.debug("Result processor process completed")
+
+    @staticmethod
+    def _async_worker(job: Job, task_queue: mp.Queue, result_queue: mp.Queue):
+        """Process that handles making workflow calls using asyncio."""
         # Get logger for AsyncWorker
         logger = logging.getLogger('AsyncWorker')
         logger.debug("Starting async worker")
-
-        # Create event for signaling result processor to stop
-        stop_processing = threading.Event()
-
-        def result_processor():
-            """Thread that handles processing results as they arrive."""
-            logger = logging.getLogger('ResultProcessor')
-            logger.debug("Starting result processor")
-
-            # Create a queue for result processing
-            result_queue = queue.Queue()
-            processing_threads = []
-            max_threads = 10  # Limit concurrent result processing threads
-
-            def process_single_result(result):
-                """Process a single result"""
-                try:
-                    if result_processing_function:
-                        task_id = result.get('task', str(result)) if isinstance(result, dict) else str(result)
-                        logger.debug(f"Processing result for task {task_id}")
-                        result_processing_function(result)
-                        logger.debug(f"Finished processing result for task {task_id}")
-                except Exception as e:
-                    logger.error(f"Error processing result: {e}")
-
-            while not stop_processing.is_set():
-                try:
-                    # Clean up completed threads
-                    processing_threads[:] = [t for t in processing_threads if t.is_alive()]
-
-                    # Only process new results if we haven't hit thread limit
-                    if len(processing_threads) < max_threads:
-                        result = self._result_queue.get(timeout=0.1)
-                        if result is None:
-                            logger.debug("Received completion signal from result queue")
-                            break
-
-                        # Start new thread for this result
-                        thread = threading.Thread(
-                            target=process_single_result,
-                            args=(result,),
-                            daemon=True
-                        )
-                        thread.start()
-                        processing_threads.append(thread)
-                    else:
-                        # Wait a bit if we've hit thread limit
-                        sleep(0.1)
-                except queue.Empty:
-                    continue
-
-            # Wait for all result processing threads to complete
-            for thread in processing_threads:
-                thread.join()
-            logger.debug("Result processor shutting down")
-
-        # Start result processor thread
-        result_thread = None
-        if result_processing_function:
-            result_thread = threading.Thread(target=result_processor, name="ResultProcessorThread")
-            result_thread.daemon = True
-            result_thread.start()
-            logger.info("Result processor thread started")
 
         async def process_task(task):
             """Process a single task and return its result"""
             logger.debug(f"Processing task: {task}")
             try:
-                result = await self.job.execute(task)
+                result = await job.execute(task)
                 logger.debug(f"Task {task} completed successfully")
-                self._result_queue.put(result)
+                result_queue.put(result)
                 logger.debug(f"Result for task {task} put in queue")
             except Exception as e:
                 logger.error(f"Error processing task {task}: {e}")
@@ -215,7 +206,7 @@ class JobChain:
                 # Collect available tasks
                 while True:
                     try:
-                        task = self._task_queue.get_nowait()
+                        task = task_queue.get_nowait()
                         if task is None:
                             logger.info("Received end signal in task queue")
                             end_signal_received = True
@@ -253,12 +244,7 @@ class JobChain:
             logger.debug("Sending completion signal to result queue")
             logger.debug(f"Final stats - Created: {tasks_created}, Completed: {tasks_completed}")
             printh("result_queue ended")
-            self._result_queue.put(None)
-
-            # Wait for result processor to finish
-            if result_thread:
-                stop_processing.set()
-                result_thread.join()
+            result_queue.put(None)
 
         # Run the event loop
         logger.debug("Creating event loop")
