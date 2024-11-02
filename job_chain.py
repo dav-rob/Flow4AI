@@ -1,4 +1,5 @@
 import multiprocessing as mp
+import threading
 import asyncio
 import queue
 import logging
@@ -40,22 +41,19 @@ class JobChain:
         try:
             self.logger.info("Cleaning up JobChain resources")
             
-            # First check if the attribute exists
+            # Clean up job executor process
             if not hasattr(self, 'job_executor_process'):
                 self.logger.warning("job_executor_process attribute not found during cleanup")
                 return
 
-            # Store process reference locally to prevent race conditions
             process = self.job_executor_process
             if process is None:
-                self.logger.warning("job_executor_process has become None before cleanup - this may indicate premature process termination")
+                self.logger.warning("job_executor_process has become None before cleanup")
                 return
 
-            # Log the process state
             self.logger.debug(f"Job executor process state during cleanup: {process}")
             
             try:
-                # Atomic operation: check and terminate if alive
                 if process.is_alive():
                     self.logger.info("Terminating live job executor process")
                     try:
@@ -69,7 +67,6 @@ class JobChain:
                 else:
                     self.logger.info("Job executor Process is not alive, skipping termination")
             finally:
-                # Clear the process reference
                 self.job_executor_process = None
             
             # Clean up queues
@@ -88,13 +85,16 @@ class JobChain:
                     self.logger.error(f"Error closing result queue: {e}")
         except Exception as e:
             self.logger.error(f"Error during cleanup: {e}")
-            # Suppress any errors during cleanup
             pass
 
     def _start(self):
         """Start the job executor process - non-blocking."""
         self.logger.debug("Starting job executor process")
-        self.job_executor_process = mp.Process(target=self._async_worker, name="JobExecutorProcess")
+        self.job_executor_process = mp.Process(
+            target=self._async_worker,
+            args=(self._result_processing_function,),
+            name="JobExecutorProcess"
+        )
         self.job_executor_process.start()
         self.logger.info(f"Job executor process started with PID {self.job_executor_process.pid}")
 
@@ -111,44 +111,83 @@ class JobChain:
         self._wait_for_completion()
 
     def _wait_for_completion(self):
-        """Wait for completion and process results."""
+        """Wait for completion of all processing."""
         self.logger.debug("Entering wait for completion")
-        self.logger.debug(f"Job executor process alive: {self.job_executor_process.is_alive()}")
         
-        while True:
-            try:
-                self.logger.debug("Attempting to get result from queue")
-                result = self._result_queue.get(timeout=0.1)
-                if result is None:
-                    self.logger.debug("Received completion signal (None) from result queue")
-                    print("No more results to process.")
-                    break
-                if self._result_processing_function:
-                    try:
-                        # Handle both dictionary and non-dictionary results
-                        task_id = result.get('task', str(result)) if isinstance(result, dict) else str(result)
-                        self.logger.debug(f"Processing result for task {task_id}")
-                        self._result_processing_function(result)
-                        self.logger.debug(f"Finished processing result for task {task_id}")
-                    except Exception as e:
-                        self.logger.error(f"Error processing result: {e}")
-            except queue.Empty:
-                self.logger.debug(f"Queue empty, job executor process alive: {self.job_executor_process.is_alive()}")
-                if not self.job_executor_process.is_alive():
-                    self.logger.debug("Job executor process is not alive, breaking wait loop")
-                    break
-                continue
-
+        # Wait for job executor to finish
         if self.job_executor_process and self.job_executor_process.is_alive():
-            self.logger.debug("Joining job executor process")
+            self.logger.debug("Waiting for job executor process")
             self.job_executor_process.join()
-            self.logger.debug("Job executor process joined")
+            self.logger.debug("Job executor process completed")
 
-    def _async_worker(self):
-        """Process that handles making workflow calls using asyncio."""
+    def _async_worker(self, result_processing_function):
+        """Process that handles making workflow calls using asyncio and processes results."""
         # Get logger for AsyncWorker
         logger = logging.getLogger('AsyncWorker')
         logger.debug("Starting async worker")
+
+        # Create event for signaling result processor to stop
+        stop_processing = threading.Event()
+
+        def result_processor():
+            """Thread that handles processing results as they arrive."""
+            logger = logging.getLogger('ResultProcessor')
+            logger.debug("Starting result processor")
+
+            # Create a queue for result processing
+            result_queue = queue.Queue()
+            processing_threads = []
+            max_threads = 10  # Limit concurrent result processing threads
+
+            def process_single_result(result):
+                """Process a single result"""
+                try:
+                    if result_processing_function:
+                        task_id = result.get('task', str(result)) if isinstance(result, dict) else str(result)
+                        logger.debug(f"Processing result for task {task_id}")
+                        result_processing_function(result)
+                        logger.debug(f"Finished processing result for task {task_id}")
+                except Exception as e:
+                    logger.error(f"Error processing result: {e}")
+
+            while not stop_processing.is_set():
+                try:
+                    # Clean up completed threads
+                    processing_threads[:] = [t for t in processing_threads if t.is_alive()]
+
+                    # Only process new results if we haven't hit thread limit
+                    if len(processing_threads) < max_threads:
+                        result = self._result_queue.get(timeout=0.1)
+                        if result is None:
+                            logger.debug("Received completion signal from result queue")
+                            break
+
+                        # Start new thread for this result
+                        thread = threading.Thread(
+                            target=process_single_result,
+                            args=(result,),
+                            daemon=True
+                        )
+                        thread.start()
+                        processing_threads.append(thread)
+                    else:
+                        # Wait a bit if we've hit thread limit
+                        sleep(0.1)
+                except queue.Empty:
+                    continue
+
+            # Wait for all result processing threads to complete
+            for thread in processing_threads:
+                thread.join()
+            logger.debug("Result processor shutting down")
+
+        # Start result processor thread
+        result_thread = None
+        if result_processing_function:
+            result_thread = threading.Thread(target=result_processor, name="ResultProcessorThread")
+            result_thread.daemon = True
+            result_thread.start()
+            logger.info("Result processor thread started")
 
         async def process_task(task):
             """Process a single task and return its result"""
@@ -215,6 +254,11 @@ class JobChain:
             logger.debug(f"Final stats - Created: {tasks_created}, Completed: {tasks_completed}")
             printh("result_queue ended")
             self._result_queue.put(None)
+
+            # Wait for result processor to finish
+            if result_thread:
+                stop_processing.set()
+                result_thread.join()
 
         # Run the event loop
         logger.debug("Creating event loop")
