@@ -1,136 +1,114 @@
 # Result Processing in JobChain
 
-JobChain uses multiple processes to achieve efficient parallel execution. The result processing function must be "picklable" - it needs to be serializable so it can be sent between processes. This document explains the limitations and best practices for providing result processing functions to JobChain.
+JobChain uses multiple processes to achieve efficient parallel execution. This means that the result processing function must be "picklable" - it needs to be serializable so it can be sent between processes. However, JobChain also provides a serial mode for cases where the result processing function cannot be pickled.
 
-## Understanding Pickling Limitations
+## Parallel Mode (Default)
 
-When you pass a result processing function to JobChain, it needs to be sent to a separate process. This means:
-
-1. The function itself must be picklable
-2. Any state the function depends on must be picklable
-3. Any objects the function references must be picklable
-
-## Valid Approaches
-
-### 1. Standalone Functions
+In parallel mode, JobChain uses separate processes for task execution and result processing, providing better performance but requiring picklable functions.
 
 ```python
 def valid_result_processor(result):
-    """This function can be pickled because it's defined at module level
-    and only uses built-in Python functionality."""
+    """This function can be pickled because it's defined at module level."""
     print(f"Processing result: {result}")
-    # Only use local variables or module-level imports
-    processed = result.upper()
-    return processed
+    return result.upper()
 
-# This works
+# This works in parallel mode
 job_chain = JobChain(job, valid_result_processor)
 ```
 
-### 2. Methods from Module-Level Class Instances
+### Requirements for Parallel Mode
+
+1. The function must be picklable
+2. Any closure variables must be picklable
+3. Any global variables used must be picklable
+
+## Serial Mode
+
+For cases where your result processing function cannot be pickled (e.g., it uses file handles or database connections), you can use serial mode:
 
 ```python
-class ResultProcessor:
-    def __init__(self, prefix):
-        # Only store picklable state
-        self.prefix = prefix
-    
-    def process_result(self, result):
-        print(f"{self.prefix}: {result}")
-
-# Create instance at module level
-processor = ResultProcessor("PREFIX")
-
-# This works because both the instance and its state are picklable
-job_chain = JobChain(job, processor.process_result)
-```
-
-## Invalid Approaches
-
-### 1. Closures (Functions that Capture Local Variables)
-
-```python
-def create_processor(prefix):
-    def process_result(result):  # Captures prefix from outer scope
-        print(f"{prefix}: {result}")
-    return process_result
-
-# This will FAIL
-processor = create_processor("PREFIX")
-job_chain = JobChain(job, processor)  # Pickling error!
-```
-
-### 2. Lambda Functions
-
-```python
-# This will FAIL
-processor = lambda result: print(f"Result: {result}")
-job_chain = JobChain(job, processor)  # Pickling error!
-```
-
-### 3. Functions with Unpicklable State
-
-```python
-class UnpicklableProcessor:
+class UnpicklableState:
     def __init__(self):
-        # File handles can't be pickled
-        self.log_file = open('log.txt', 'w')
+        self.log_file = open('log.txt', 'w')  # File handle can't be pickled
     
     def process_result(self, result):
-        self.log_file.write(str(result))
+        self.log_file.write(str(result) + '\n')
 
-# This will FAIL
-processor = UnpicklableProcessor()
-job_chain = JobChain(job, processor.process_result)  # Pickling error!
+# Create processor with unpicklable state
+processor = UnpicklableState()
+
+# Use serial mode for unpicklable functions
+job_chain = JobChain(job, processor.process_result, serial_processing=True)
 ```
 
-## Common Scenarios and Solutions
+### How Serial Mode Works
 
-### 1. Working with Files
+1. All processing happens in the main process
+2. No pickling is required
+3. Can use any Python objects or resources
+4. Trade-off is reduced parallelism
+
+## Choosing Between Modes
+
+### Use Parallel Mode When:
+- Your result processing function is simple and self-contained
+- You need maximum performance
+- You're processing large numbers of tasks
+- Your function only uses picklable resources
+
+### Use Serial Mode When:
+- Your function uses unpicklable resources (file handles, database connections)
+- Your function depends on complex object state
+- You need to maintain shared state between results
+- Performance is less critical
+
+## Best Practices
+
+### 1. Keep Functions Simple in Parallel Mode
 
 ```python
-# BAD - File handle can't be pickled
-log_file = open('log.txt', 'w')
-def bad_processor(result):
-    log_file.write(str(result))
-
-# GOOD - Open file inside function
+# GOOD - Simple, picklable function
 def good_processor(result):
-    with open('log.txt', 'a') as f:
+    return result.upper()
+
+# BAD - Uses unpicklable resources
+def bad_processor(result):
+    with open('log.txt', 'w') as f:  # File handle can't be pickled
         f.write(str(result))
 ```
 
-### 2. Working with Databases
+### 2. Create Resources Inside Functions
 
 ```python
-# BAD - Connection can't be pickled
-db = create_database_connection()
-def bad_processor(result):
-    db.save(result)
-
-# GOOD - Create connection inside function
+# GOOD - Create resources when needed
 def good_processor(result):
-    with create_database_connection() as db:
-        db.save(result)
+    with open('log.txt', 'a') as f:
+        f.write(str(result))
+
+# BAD - Tries to share resource
+log_file = open('log.txt', 'w')  # This won't work in parallel mode
+def bad_processor(result):
+    log_file.write(str(result))
 ```
 
-### 3. Working with External Libraries
+### 3. Use Serial Mode for Complex State
 
 ```python
-# BAD - External object might not be picklable
-processor = ComplexExternalObject()
-def bad_processor(result):
-    processor.process(result)
+class ResultAggregator:
+    def __init__(self):
+        self.results = []
+        self.total = 0
+    
+    def process_result(self, result):
+        self.results.append(result)
+        self.total += result['value']
 
-# GOOD - Create objects inside function
-def good_processor(result):
-    processor = ComplexExternalObject()
-    processor.process(result)
+# Use serial mode to maintain shared state
+aggregator = ResultAggregator()
+job_chain = JobChain(job, aggregator.process_result, serial_processing=True)
 ```
 
-## Testing for Pickling Support
-
-You can test if your function will work with JobChain before using it:
+### 4. Test Pickling Support
 
 ```python
 import pickle
@@ -138,49 +116,52 @@ import pickle
 def test_processor(func):
     """Test if a result processor function can be pickled."""
     try:
-        # Try to pickle the function
-        pickled = pickle.dumps(func)
+        pickle.dumps(func)
         print("Function can be pickled!")
-        
-        # Try to unpickle and use it
-        unpickled = pickle.loads(pickled)
-        test_result = {"test": "data"}
-        unpickled(test_result)
-        print("Function works after unpickling!")
         return True
     except Exception as e:
         print(f"Function cannot be pickled: {e}")
+        print("Use serial_processing=True for this function")
         return False
-
-# Example usage:
-def my_processor(result):
-    print(result)
-
-test_processor(my_processor)  # Should pass
-
-test_processor(lambda x: print(x))  # Should fail
 ```
 
-## Best Practices
+## Example: Database Operations
 
-1. Keep result processing functions simple and self-contained
-2. Define functions at module level
-3. Only store picklable state in classes
-4. Create resource handles (files, connections) inside the function
-5. Test pickling support before using with JobChain
-6. Use the provided example file (`examples/function_pickling_examples.py`) to verify your approach
+### Parallel Mode Approach
+```python
+def parallel_processor(result):
+    # Create connection inside function
+    with create_database_connection() as db:
+        db.save(result)
+```
+
+### Serial Mode Approach
+```python
+class DatabaseProcessor:
+    def __init__(self):
+        # Keep connection open
+        self.db = create_database_connection()
+    
+    def process_result(self, result):
+        self.db.save(result)
+
+processor = DatabaseProcessor()
+job_chain = JobChain(job, processor.process_result, serial_processing=True)
+```
 
 ## Performance Considerations
 
-1. Heavy processing in the result function will block other results from being processed
-2. Consider batching operations (e.g., database writes) for better performance
-3. Resource-intensive operations should be handled asynchronously if possible
+1. Parallel Mode:
+   - Better for CPU-bound tasks
+   - Better for large numbers of tasks
+   - Better when results can be processed independently
+
+2. Serial Mode:
+   - Better for I/O-bound tasks
+   - Better when maintaining shared state
+   - Better when using unpicklable resources
+   - May be slower for large numbers of tasks
 
 ## Example
 
-See `examples/function_pickling_examples.py` for complete examples of valid and invalid approaches to result processing functions, including:
-- Standalone functions
-- Class methods
-- Closures (invalid)
-- Lambdas (invalid)
-- Functions with unpicklable state (invalid)
+See `examples/function_pickling_examples.py` for complete examples of both modes and when to use each.

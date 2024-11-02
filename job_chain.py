@@ -1,8 +1,11 @@
 import multiprocessing as mp
+import threading
 import asyncio
 import queue
 import logging
 import os
+import pickle
+import inspect
 from time import sleep
 from typing import Any, Dict, Callable, Union, Optional
 from utils.print_utils import printh
@@ -13,16 +16,41 @@ from logging_config import setup_logging
 setup_logging()
 
 class JobChain:
-    def __init__(self, job_input: Union[Dict[str, Any], Job], result_processing_function: Optional[Callable[[Any], None]] = None):
+    def __init__(self, job_input: Union[Dict[str, Any], Job], result_processing_function: Optional[Callable[[Any], None]] = None, serial_processing: bool = False):
         # Get logger for JobChain
         self.logger = logging.getLogger('JobChain')
         self.logger.info("Initializing JobChain")
 
-        self._task_queue = mp.Queue()
-        self._result_queue = mp.Queue()
+        # If not in serial mode, verify function and its closure can be pickled
+        if not serial_processing and result_processing_function:
+            try:
+                # Try to pickle the function
+                pickle.dumps(result_processing_function)
+                
+                # Try to pickle any closure variables
+                if hasattr(result_processing_function, '__closure__') and result_processing_function.__closure__:
+                    for cell in result_processing_function.__closure__:
+                        pickle.dumps(cell.cell_contents)
+                
+                # Try to pickle globals used by the function
+                if hasattr(result_processing_function, '__code__'):
+                    func_globals = {name: result_processing_function.__globals__[name] 
+                                  for name in result_processing_function.__code__.co_names 
+                                  if name in result_processing_function.__globals__}
+                    pickle.dumps(func_globals)
+                
+            except Exception as e:
+                self.logger.error(f"Result processing function or its dependencies cannot be pickled: {e}")
+                self.logger.info("Use serial_processing=True for unpicklable functions")
+                raise TypeError(f"Result processing function and its dependencies must be picklable in parallel mode: {e}")
+
+        self._task_queue = mp.Queue() if not serial_processing else queue.Queue()
+        self._result_queue = mp.Queue() if not serial_processing else queue.Queue()
         self.job_executor_process = None
         self.result_processor_process = None
         self._result_processing_function = result_processing_function
+        self._serial_processing = serial_processing
+        
         if isinstance(job_input, Dict):
             self.job_chain_context = job_input
             job_context: Dict[str, Any] = job_input.get("job_context")
@@ -33,72 +61,77 @@ class JobChain:
         else:
             raise TypeError("job_input must be either Dict[str, Any] or Job instance")
 
-        # Start the processes immediately upon construction
-        self._start()
+        # Start processing based on mode
+        if serial_processing:
+            self.logger.info("Running in serial processing mode")
+        else:
+            self.logger.info("Running in parallel processing mode")
+            self._start_parallel()
 
     def __del__(self):
         """Clean up resources when the object is destroyed."""
         try:
             self.logger.info("Cleaning up JobChain resources")
             
-            # Clean up result processor process
-            if hasattr(self, 'result_processor_process'):
-                process = self.result_processor_process
-                if process and process.is_alive():
-                    try:
-                        process.terminate()
-                        process.join()
-                    except Exception as e:
-                        self.logger.error(f"Error terminating result processor process: {e}")
-                self.result_processor_process = None
-            
-            # Clean up job executor process
-            if not hasattr(self, 'job_executor_process'):
-                self.logger.warning("job_executor_process attribute not found during cleanup")
-                return
+            if not self._serial_processing:
+                # Clean up result processor process
+                if hasattr(self, 'result_processor_process'):
+                    process = self.result_processor_process
+                    if process and process.is_alive():
+                        try:
+                            process.terminate()
+                            process.join()
+                        except Exception as e:
+                            self.logger.error(f"Error terminating result processor process: {e}")
+                    self.result_processor_process = None
+                
+                # Clean up job executor process
+                if not hasattr(self, 'job_executor_process'):
+                    self.logger.warning("job_executor_process attribute not found during cleanup")
+                    return
 
-            process = self.job_executor_process
-            if process is None:
-                self.logger.warning("job_executor_process has become None before cleanup")
-                return
+                process = self.job_executor_process
+                if process is None:
+                    self.logger.warning("job_executor_process has become None before cleanup")
+                    return
 
-            self.logger.debug(f"Job executor process state during cleanup: {process}")
-            
-            try:
-                if process.is_alive():
-                    self.logger.info("Terminating live job executor process")
+                self.logger.debug(f"Job executor process state during cleanup: {process}")
+                
+                try:
+                    if process.is_alive():
+                        self.logger.info("Terminating live job executor process")
+                        try:
+                            process.terminate()
+                            process.join()
+                            self.logger.info("Job executor process terminated successfully")
+                        except AttributeError:
+                            self.logger.warning("Job executor process became None during termination attempt")
+                        except Exception as e:
+                            self.logger.error(f"Error terminating job executor process: {e}")
+                    else:
+                        self.logger.info("Job executor Process is not alive, skipping termination")
+                finally:
+                    self.job_executor_process = None
+                
+                # Clean up queues
+                if hasattr(self, '_task_queue'):
                     try:
-                        process.terminate()
-                        process.join()
-                        self.logger.info("Job executor process terminated successfully")
-                    except AttributeError:
-                        self.logger.warning("Job executor process became None during termination attempt")
+                        self._task_queue.close()
+                        self._task_queue.join_thread()
                     except Exception as e:
-                        self.logger.error(f"Error terminating job executor process: {e}")
-                else:
-                    self.logger.info("Job executor Process is not alive, skipping termination")
-            finally:
-                self.job_executor_process = None
-            
-            # Clean up queues
-            if hasattr(self, '_task_queue'):
-                try:
-                    self._task_queue.close()
-                    self._task_queue.join_thread()
-                except Exception as e:
-                    self.logger.error(f"Error closing task queue: {e}")
-            
-            if hasattr(self, '_result_queue'):
-                try:
-                    self._result_queue.close()
-                    self._result_queue.join_thread()
-                except Exception as e:
-                    self.logger.error(f"Error closing result queue: {e}")
+                        self.logger.error(f"Error closing task queue: {e}")
+                
+                if hasattr(self, '_result_queue'):
+                    try:
+                        self._result_queue.close()
+                        self._result_queue.join_thread()
+                    except Exception as e:
+                        self.logger.error(f"Error closing result queue: {e}")
         except Exception as e:
             self.logger.error(f"Error during cleanup: {e}")
             pass
 
-    def _start(self):
+    def _start_parallel(self):
         """Start the job executor and result processor processes - non-blocking."""
         self.logger.debug("Starting job executor process")
         self.job_executor_process = mp.Process(
@@ -129,7 +162,46 @@ class JobChain:
         self.logger.debug("Marking input as completed")
         printh("task_queue ended")
         self._task_queue.put(None)
-        self._wait_for_completion()
+        
+        if self._serial_processing:
+            return self._process_tasks_serial()
+        else:
+            self._wait_for_completion()
+
+    async def _process_tasks_serial(self):
+        """Process tasks serially in the current event loop."""
+        self.logger.debug("Processing tasks serially")
+        
+        while True:
+            try:
+                task = self._task_queue.get_nowait()
+                if task is None:
+                    break
+                
+                # Execute task
+                result = await self.job.execute(task)
+                
+                # Process result immediately if function provided
+                if self._result_processing_function:
+                    self._result_processing_function(result)
+            except queue.Empty:
+                break
+
+    def _wait_for_completion(self):
+        """Wait for completion of all processing."""
+        self.logger.debug("Entering wait for completion")
+        
+        # Wait for job executor to finish
+        if self.job_executor_process and self.job_executor_process.is_alive():
+            self.logger.debug("Waiting for job executor process")
+            self.job_executor_process.join()
+            self.logger.debug("Job executor process completed")
+
+        # Wait for result processor to finish
+        if self.result_processor_process and self.result_processor_process.is_alive():
+            self.logger.debug("Waiting for result processor process")
+            self.result_processor_process.join()
+            self.logger.debug("Result processor process completed")
 
     @staticmethod
     def _result_processor(process_fn: Callable[[Any], None], result_queue: mp.Queue):
@@ -156,22 +228,6 @@ class JobChain:
                 continue
 
         logger.debug("Result processor shutting down")
-
-    def _wait_for_completion(self):
-        """Wait for completion of all processing."""
-        self.logger.debug("Entering wait for completion")
-        
-        # Wait for job executor to finish
-        if self.job_executor_process and self.job_executor_process.is_alive():
-            self.logger.debug("Waiting for job executor process")
-            self.job_executor_process.join()
-            self.logger.debug("Job executor process completed")
-
-        # Wait for result processor to finish
-        if self.result_processor_process and self.result_processor_process.is_alive():
-            self.logger.debug("Waiting for result processor process")
-            self.result_processor_process.join()
-            self.logger.debug("Result processor process completed")
 
     @staticmethod
     def _async_worker(job: Job, task_queue: mp.Queue, result_queue: mp.Queue):
