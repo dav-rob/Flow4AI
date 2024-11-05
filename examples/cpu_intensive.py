@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 import time
+from functools import wraps
 
 # Add parent directory to Python path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -11,6 +12,24 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from job import Job
 from job_chain import JobChain
 from logging_config import setup_logging
+
+def intentionally_blocking(reason: str):
+    """
+    Decorator to mark methods that intentionally perform blocking operations in async context.
+    This is used to suppress warnings about CPU-bound work in async methods when the blocking
+    is deliberate and serves a specific purpose.
+    
+    Args:
+        reason: Explanation of why this method intentionally blocks
+    """
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            return await func(*args, **kwargs)
+        wrapper._intentionally_blocking = True
+        wrapper._blocking_reason = reason
+        return wrapper
+    return decorator
 
 # Initialize logging configuration
 setup_logging()
@@ -21,6 +40,10 @@ class CPUIntensiveJob(Job):
         self.logger = logging.getLogger('CPUIntensiveJob')
         self.logger.debug("Initializing CPUIntensiveJob")
         
+    @intentionally_blocking(
+        reason="This job intentionally performs CPU-intensive work to demonstrate "
+               "process monitoring capabilities via tools like ps/top"
+    )
     async def execute(self, task) -> dict:
         """Calculate prime numbers up to n using CPU-intensive operations"""
         self.logger.debug(f"Starting prime calculation for n={task}")
