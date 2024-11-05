@@ -1,16 +1,21 @@
-import multiprocessing as mp
 import asyncio
-import time
+import multiprocessing as mp
 import os
+import time
 from time import sleep
-from job_chain import JobChain
+
 from job import Job
+from job_chain import JobChain
+
 
 class ResultTimingJob(Job):
     def __init__(self):
         super().__init__("Result Timing Job", "Test prompt", "test-model")
+        self.executed_tasks = set()
 
     async def execute(self, task) -> dict:
+        # Record task execution
+        self.executed_tasks.add(task)
         # Simulate some work
         await asyncio.sleep(0.1)
         current_time = time.time()
@@ -30,8 +35,7 @@ class UnpicklableState:
         except:
             pass
 
-async def run_unpicklable_tests():
-    """Run both parallel and serial tests"""
+async def parallel_mode():
     # Clean up any existing log file
     if os.path.exists('temp.log'):
         os.remove('temp.log')
@@ -65,6 +69,9 @@ async def run_unpicklable_tests():
         if 'unpicklable' in locals():
             unpicklable.__del__()
 
+    
+
+async def serial_mode():
     print("\nTesting serial mode (should work):")
     try:
         # Create new unpicklable state
@@ -81,25 +88,32 @@ async def run_unpicklable_tests():
         job_chain = JobChain(job, unpicklable_processor, serial_processing=True)
 
         # Submit some tasks
-        for i in range(3):
-            job_chain.submit_task(f"Task {i}")
+        expected_tasks = {f"Task {i}" for i in range(3)}
+        for task in expected_tasks:
+            job_chain.submit_task(task)
             await asyncio.sleep(0.1)
         
         # Process tasks and wait for completion
         await job_chain.mark_input_completed()
-        print("Serial mode succeeded as expected")
         
         # Verify results were written to file
         with open('temp.log', 'r') as f:
             content = f.read()
         assert "Processing: " in content, "Expected results to be logged"
+
+        # Verify that all tasks were executed
+        assert job.executed_tasks == expected_tasks, f"Not all tasks were executed. Expected {expected_tasks}, got {job.executed_tasks}"
+        print(f"Verified all tasks were executed: {job.executed_tasks}")
+
     except Exception as e:
         assert False, f"Serial mode should not fail: {e}"
     finally:
         if 'unpicklable' in locals():
             unpicklable.__del__()
 
-def test_unpicklable_processor():
-    """Test that unpicklable processors work in serial mode but fail in parallel mode"""
-    # Run both tests in a single event loop
-    asyncio.run(run_unpicklable_tests())
+def test_parallel_result_processor_fails_with_unpicklable():
+    asyncio.run(parallel_mode())
+    
+
+def test_serial_result_processor_succeeds_with_unpicklable():
+    asyncio.run(serial_mode())
