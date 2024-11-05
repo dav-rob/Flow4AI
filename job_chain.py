@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import multiprocessing as mp
-import os
+import pickle
 import queue
 from time import sleep
 from typing import Any, Callable, Dict, Optional, Union
@@ -19,7 +19,7 @@ class JobChain:
         self.logger = logging.getLogger('JobChain')
         self.logger.info("Initializing JobChain")
         if not serial_processing and result_processing_function:
-            self._check_picklable()
+            self._check_picklable(result_processing_function)
         self._task_queue = mp.Queue()
         self._result_queue = mp.Queue()
         self.job_executor_process = None
@@ -40,8 +40,27 @@ class JobChain:
         # Start the processes immediately upon construction
         self._start()
 
-    def _check_picklable(self):
-        pass
+    def _check_picklable(self, result_processing_function):
+        try:
+            # Try to pickle the function
+            pickle.dumps(result_processing_function)
+            
+            # Try to pickle any closure variables
+            if hasattr(result_processing_function, '__closure__') and result_processing_function.__closure__:
+                for cell in result_processing_function.__closure__:
+                    pickle.dumps(cell.cell_contents)
+            
+            # Try to pickle globals used by the function
+            if hasattr(result_processing_function, '__code__'):
+                func_globals = {name: result_processing_function.__globals__[name] 
+                                for name in result_processing_function.__code__.co_names 
+                                if name in result_processing_function.__globals__}
+                pickle.dumps(func_globals)
+        except Exception as e:
+            self.logger.error(f"""Result processing function or its dependencies cannot be pickled: {e}.  
+                              Use serial_processing=True for unpicklable functions.""")
+            raise TypeError(f"Result processing function and its dependencies must be picklable in parallel mode: {e}")
+
     
     def __del__(self):
         """Clean up resources when the object is destroyed."""
@@ -67,24 +86,24 @@ class JobChain:
 
             process = self.job_executor_process
             if process is None:
-                self.logger.warning("job_executor_process has become None before cleanup")
+                self.logger.debug("job_executor_process has become None before cleanup")
                 return
 
             self.logger.debug(f"Job executor process state during cleanup: {process}")
             
             try:
                 if process.is_alive():
-                    self.logger.info("Terminating live job executor process")
+                    self.logger.debug("Terminating live job executor process")
                     try:
                         process.terminate()
                         process.join()
-                        self.logger.info("Job executor process terminated successfully")
+                        self.logger.debug("Job executor process terminated successfully")
                     except AttributeError:
-                        self.logger.warning("Job executor process became None during termination attempt")
+                        self.logger.debug("Job executor process became None during termination attempt")
                     except Exception as e:
                         self.logger.error(f"Error terminating job executor process: {e}")
                 else:
-                    self.logger.info("Job executor Process is not alive, skipping termination")
+                    self.logger.debug("Job executor Process is not alive, skipping termination")
             finally:
                 self.job_executor_process = None
             
