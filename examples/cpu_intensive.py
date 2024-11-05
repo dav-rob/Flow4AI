@@ -1,9 +1,9 @@
-import asyncio
-import time
-import sys
-import os
 import argparse
+import asyncio
 import logging
+import os
+import sys
+import time
 
 # Add parent directory to Python path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -113,7 +113,7 @@ def main(target_duration: float = 30.0):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run CPU intensive tasks for a specified duration.')
     parser.add_argument('--duration', type=float, default=3.0,
-                       help='Target duration in seconds (default: 30.0)')
+                       help='Target duration in seconds (default: 3.0)')
     args = parser.parse_args()
     
     main(args.duration)
