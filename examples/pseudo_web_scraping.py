@@ -1,14 +1,15 @@
 import asyncio
+import logging
 import os
 import sys
 from time import sleep
-import logging
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from job import Job
 from job_chain import JobChain
 from utils.timing import timing_decorator
+
 
 # Custom Job implementation for demonstration
 class ExampleJob(Job):
