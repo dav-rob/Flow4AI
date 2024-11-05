@@ -14,7 +14,17 @@ from utils.print_utils import printh
 setup_logging()
 
 class JobChain:
-    def __init__(self, job_input: Union[Dict[str, Any], Job], result_processing_function: Optional[Callable[[Any], None]] = None, serial_processing: bool = False):
+    """JobChain enables parallel processing of tasks using multiple processes.
+        
+    Args:
+        job (Union[Dict[str, Any], Job]): Either a dictionary containing job configuration or a Job instance.
+        result_processing_function (Optional[Callable[[Any], None]]): Non-JobChain code to handle results after job
+            has processed tasks, typically this is a function from the existing codebase. Function parameters 
+            must be picklable, but non-picklable variables can be used inside the function freely.
+        serial_processing (bool): In most cases you should not need to use this.  If you need unpicklable resources 
+            at the function definition level (like maintaining an open database connection), use serial_processing=True.
+    """
+    def __init__(self, job: Union[Dict[str, Any], Job], result_processing_function: Optional[Callable[[Any], None]] = None, serial_processing: bool = False):
         # Get logger for JobChain
         self.logger = logging.getLogger('JobChain')
         self.logger.info("Initializing JobChain")
@@ -27,15 +37,15 @@ class JobChain:
         self._result_processing_function = result_processing_function
         self._serial_processing = serial_processing
         
-        if isinstance(job_input, Dict):
-            self.job_chain_context = job_input
-            job_context: Dict[str, Any] = job_input.get("job_context")
+        if isinstance(job, Dict):
+            self.job_chain_context = job
+            job_context: Dict[str, Any] = job.get("job_context")
             self.job = JobFactory.load_job(job_context)
-        elif isinstance(job_input, Job):
-            self.job_chain_context = {"job_context": {"type": "direct", "job": job_input}}
-            self.job = job_input
+        elif isinstance(job, Job):
+            self.job_chain_context = {"job_context": {"type": "direct", "job": job}}
+            self.job = job
         else:
-            raise TypeError("job_input must be either Dict[str, Any] or Job instance")
+            raise TypeError("job must be either Dict[str, Any] or Job instance")
 
         # Start the processes immediately upon construction
         self._start()
