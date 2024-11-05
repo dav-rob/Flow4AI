@@ -42,24 +42,18 @@ class JobChain:
 
     def _check_picklable(self, result_processing_function):
         try:
-            # Try to pickle the function
+            # Try to pickle just the function itself
             pickle.dumps(result_processing_function)
             
             # Try to pickle any closure variables
             if hasattr(result_processing_function, '__closure__') and result_processing_function.__closure__:
                 for cell in result_processing_function.__closure__:
                     pickle.dumps(cell.cell_contents)
-            
-            # Try to pickle globals used by the function
-            if hasattr(result_processing_function, '__code__'):
-                func_globals = {name: result_processing_function.__globals__[name] 
-                                for name in result_processing_function.__code__.co_names 
-                                if name in result_processing_function.__globals__}
-                pickle.dumps(func_globals)
+                    
         except Exception as e:
-            self.logger.error(f"""Result processing function or its dependencies cannot be pickled: {e}.  
+            self.logger.error(f"""Result processing function or its closure variables cannot be pickled: {e}.  
                               Use serial_processing=True for unpicklable functions.""")
-            raise TypeError(f"Result processing function and its dependencies must be picklable in parallel mode: {e}")
+            raise TypeError(f"Result processing function must be picklable in parallel mode: {e}")
 
     
     def __del__(self):
