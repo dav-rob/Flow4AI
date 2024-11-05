@@ -158,6 +158,8 @@ class JobChain:
         self._task_queue.put(None)
         self._wait_for_completion()
 
+    # Must be static because it's passed as a target to multiprocessing.Process
+    # Instance methods can't be pickled properly for multiprocessing
     @staticmethod
     def _result_processor(process_fn: Callable[[Any], None], result_queue: mp.Queue):
         """Process that handles processing results as they arrive."""
@@ -228,6 +230,8 @@ class JobChain:
                     break
                 continue
 
+    # Must be static because it's passed as a target to multiprocessing.Process
+    # Instance methods can't be pickled properly for multiprocessing
     @staticmethod
     def _async_worker(job: Job, task_queue: mp.Queue, result_queue: mp.Queue):
         """Process that handles making workflow calls using asyncio."""
