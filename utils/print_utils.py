@@ -1,5 +1,8 @@
+import logging
+
 def printh(text):
     """
-    Print the given text surrounded by asterisks.
+    Log the given text surrounded by asterisks.
     """
-    print("*** " + text + " ***")
+    logger = logging.getLogger('PrintUtils')
+    logger.info("*** " + text + " ***")

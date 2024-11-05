@@ -74,13 +74,14 @@ def result_processor(result):
     logger.debug(f"Processed result: {msg}")
 
 def main(target_duration: float = 30.0):
+    logger = logging.getLogger('Main')
     # Create job chain
     job = CPUIntensiveJob()
     job_chain = JobChain(job, result_processor)
     
-    print(f"Starting CPU intensive tasks (target duration: {target_duration} seconds)...")
-    print("You can now inspect this process with tools like top, ps, htop, etc.")
-    print(f"Process ID: {job_chain.job_executor_process.pid}")
+    logger.info(f"Starting CPU intensive tasks (target duration: {target_duration} seconds)...")
+    logger.info("You can now inspect this process with tools like top, ps, htop, etc.")
+    logger.info(f"Process ID: {job_chain.job_executor_process.pid}")
     
     # Use numbers that take roughly 1 second each to process
     numbers = [15000, 15500, 16000]  # Each should take ~1 second
@@ -108,7 +109,7 @@ def main(target_duration: float = 30.0):
     job_chain.mark_input_completed()
     
     total_duration = time.time() - start_time
-    print(f"\nAll tasks completed in {total_duration:.2f} seconds")
+    logger.info(f"All tasks completed in {total_duration:.2f} seconds")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run CPU intensive tasks for a specified duration.')

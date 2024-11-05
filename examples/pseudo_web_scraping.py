@@ -2,6 +2,7 @@ import asyncio
 import os
 import sys
 from time import sleep
+import logging
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -9,23 +10,24 @@ from job import Job
 from job_chain import JobChain
 from utils.timing import timing_decorator
 
-
 # Custom Job implementation for demonstration
 class ExampleJob(Job):
     def __init__(self):
         super().__init__("Example Job", "Sample prompt", "example-model")
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     async def execute(self, task):
-        print(f"Processing task: {task}")
+        self.logger.info(f"Processing task: {task}")
         await asyncio.sleep(0.1)  # Simulate processing
         return {"task": task, "result": f"Processed {task}"}
 
 # Simulates web scraping.
 def send_tasks_2(job_chain):
     """ Pass the JobChain instance to any code you want processing quickly in parallel """
+    logger = logging.getLogger('WebScraper')
     pages = [f"Page {i}" for i in range(12,22)]  # Simulated pages
     for page in pages:
-        print(f"Scraping: {page}")
+        logger.info(f"Scraping: {page}")
         # Push the scraped page to task_queue
         job_chain.submit_task(page)  # Pub: Push page into task_queue
         sleep(0.1)  # Simulate network delay
@@ -33,6 +35,7 @@ def send_tasks_2(job_chain):
 # Simulates web scraping in batches
 def send_tasks_1(job_chain):
     """ Pass the JobChain instance to any code you want processing quickly in parallel """
+    logger = logging.getLogger('BatchScraper')
     batch_of_pages = []
     i = 0
     
@@ -43,7 +46,7 @@ def send_tasks_1(job_chain):
             batch_of_pages.append(page)
             i += 1           
         # Submit the batch of 4 pages to task queue
-        print(f"Submitting batch of scraped pages: {batch_of_pages}")
+        logger.info(f"Submitting batch of scraped pages: {batch_of_pages}")
         job_chain.submit_task(batch_of_pages)
         batch_of_pages = []        
         # Add delay between batches (except after last batch)
@@ -53,13 +56,15 @@ def send_tasks_1(job_chain):
 # Function to simulate serially collating results returned by JobChain
 def process_after_results_fn(result):
     """ Call any code you want to process each result returned by JobChain"""
+    logger = logging.getLogger('ResultProcessor')
     sleep(0.1) 
-    print(f"Collating and summarizing: {result}")
+    logger.info(f"Collating and summarizing: {result}")
 
 # Example using dictionary-based initialization
 @timing_decorator
 def run_with_dict_init():
-    print("\nRunning with dictionary-based initialization:")
+    logger = logging.getLogger('DictInit')
+    logger.info("Running with dictionary-based initialization:")
     # Pass in a context describing the jobs to execute asynchronously.
     job_chain_context = {
         "job_context": {"type": "file", "params": {}}
@@ -74,7 +79,8 @@ def run_with_dict_init():
 # Example using direct Job instance initialization
 @timing_decorator
 def run_with_direct_job():
-    print("\nRunning with direct Job instance initialization:")
+    logger = logging.getLogger('DirectInit')
+    logger.info("Running with direct Job instance initialization:")
     # Create a Job instance directly
     job = ExampleJob()
     # Initialize JobChain with Job instance

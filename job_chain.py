@@ -212,7 +212,7 @@ class JobChain:
                 result = self._result_queue.get(timeout=0.1)
                 if result is None:
                     self.logger.debug("Received completion signal (None) from result queue")
-                    print("No more results to process.")
+                    self.logger.info("No more results to process.")
                     break
                 if self._result_processing_function:
                     try:
