@@ -1,12 +1,14 @@
-from time import sleep
-import sys
-import os
 import asyncio
+import os
+import sys
+from time import sleep
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.timing import timing_decorator
-from job_chain import JobChain
 from job import Job
+from job_chain import JobChain
+from utils.timing import timing_decorator
+
 
 # Custom Job implementation for demonstration
 class ExampleJob(Job):
@@ -51,7 +53,7 @@ def send_tasks_1(job_chain):
 # Function to simulate serially collating results returned by JobChain
 def process_after_results_fn(result):
     """ Call any code you want to process each result returned by JobChain"""
-    sleep(0.5) 
+    sleep(0.1) 
     print(f"Collating and summarizing: {result}")
 
 # Example using dictionary-based initialization
