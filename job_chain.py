@@ -18,11 +18,12 @@ class JobChain:
         
     Args:
         job (Union[Dict[str, Any], Job]): Either a dictionary containing job configuration or a Job instance.
-        result_processing_function (Optional[Callable[[Any], None]]): Non-JobChain code to handle results after job
-            has processed tasks, typically this is a function from the existing codebase. Function parameters 
-            must be picklable, but non-picklable variables can be used inside the function freely.
-        serial_processing (bool): In most cases you should not need to use this.  If you need unpicklable resources 
-            at the function definition level (like maintaining an open database connection), use serial_processing=True.
+        result_processing_function (Optional[Callable[[Any], None]]): Reference to the code to handle results after the Job
+            has processed the task, by default this will be called in parallel with Job processing. Typically, this is a function 
+            from the existing codebase. Must be picklable, for parallel execution, see serial_processing parameter below.
+        serial_processing (bool): In most cases you should not need to use this unless you want to ensure that all jobs
+            are completed before processing of results is started.  Also, if you have to include unpicklable resources in 
+            in result_processing_function signature, or need to us use closures in the function then set serial_processing=True.
     """
     def __init__(self, job: Union[Dict[str, Any], Job], result_processing_function: Optional[Callable[[Any], None]] = None, serial_processing: bool = False):
         # Get logger for JobChain
