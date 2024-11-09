@@ -1,5 +1,6 @@
 # Virtual environment
 myenv/
+.venv/
 
 # Compiled Python files
 __pycache__/
@@ -33,3 +34,5 @@ htmlcov/
 # macOS-specific files
 .DS_Store
 
+# temporary files
+temp/
