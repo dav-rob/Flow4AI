@@ -14,16 +14,20 @@ from utils.print_utils import printh
 setup_logging()
 
 class JobChain:
-    """JobChain enables parallel processing of tasks using multiple processes.
+    """JobChain executes tasks in parallel using a Job passed into constructor.  Optionally passes results to a pre-existing 
+            result processing function after task completion.
         
     Args:
-        job (Union[Dict[str, Any], Job]): Either a dictionary containing job configuration or a Job instance.
-        result_processing_function (Optional[Callable[[Any], None]]): Reference to the code to handle results after the Job
-            has processed the task, by default this will be called in parallel with Job processing. Typically, this is a function 
-            from the existing codebase. Must be picklable, for parallel execution, see serial_processing parameter below.
-        serial_processing (bool): In most cases you should not need to use this unless you want to ensure that all jobs
-            are completed before processing of results is started.  Also, if you have to include unpicklable resources in 
-            in result_processing_function signature, or need to us use closures in the function then set serial_processing=True.
+        job (Union[Dict[str, Any], Job]): either a dictionary containing job configuration or a Job instance.
+
+        result_processing_function (Optional[Callable[[Any], None]]):  code to handle results after the Job executes its task.
+            By default, this hand-off happens in parallel, immediately after a Job processes a task. Typically, this function is 
+            from an existing codebase that JobChain is supplementing. This function must be picklable, for parallel execution, 
+            see serial_processing parameter below.
+
+        serial_processing (bool = False): forces result_processing_function to execute only after all tasks are completed by the Job.  
+            Enables an unpicklable result_processing_function to be used by setting serial_processing=True.  However, in most cases 
+            changing result_processing_function to be picklable is straightforward and should be the default. 
     """
     def __init__(self, job: Union[Dict[str, Any], Job], result_processing_function: Optional[Callable[[Any], None]] = None, serial_processing: bool = False):
         # Get logger for JobChain
@@ -47,9 +51,44 @@ class JobChain:
             self.job = job
         else:
             raise TypeError("job must be either Dict[str, Any] or Job instance")
-
-        # Start the processes immediately upon construction
+        
         self._start()
+
+    # We will not to use context manager as it makes semantics of JobChain use less flexible
+    # def __enter__(self):
+    #     """Initialize resources when entering the context."""
+    #     self._start()
+    #     return self
+
+    # def __exit__(self, exc_type, exc_val, exc_tb):
+    #     """Clean up resources when exiting the context."""
+    #     self._cleanup()
+
+    # belt and braces, _cleanup is called by _wait_for_completion() via mark_input_completed()
+    def __del__(self):
+        self._cleanup
+
+    def _cleanup(self):
+        """Clean up resources when the object is destroyed."""
+        self.logger.info("Cleaning up JobChain resources")
+        
+        if self.job_executor_process:
+            if self.job_executor_process.is_alive():
+                self.job_executor_process.terminate()
+                self.job_executor_process.join()
+        
+        if self.result_processor_process:
+            if self.result_processor_process.is_alive():
+                self.result_processor_process.terminate()
+                self.result_processor_process.join()
+        
+        if hasattr(self, '_task_queue'):
+            self._task_queue.close()
+            self._task_queue.join_thread()
+        
+        if hasattr(self, '_result_queue'):
+            self._result_queue.close()
+            self._result_queue.join_thread()
 
     def _check_picklable(self, result_processing_function):
         try:
@@ -67,69 +106,6 @@ class JobChain:
             raise TypeError(f"Result processing function must be picklable in parallel mode: {e}")
 
     
-    def __del__(self):
-        """Clean up resources when the object is destroyed."""
-        try:
-            self.logger.info("Cleaning up JobChain resources")
-            
-            if not self._serial_processing:
-                self.logger.debug("Clean up result processor process")
-                if hasattr(self, 'result_processor_process'):
-                    process = self.result_processor_process
-                    if process and process.is_alive():
-                        try:
-                            process.terminate()
-                            process.join()
-                        except Exception as e:
-                            self.logger.error(f"Error terminating result processor process: {e}")
-                    self.result_processor_process = None
-            
-            self.logger.debug("Clean up job executor process")
-            if not hasattr(self, 'job_executor_process'):
-                self.logger.warning("job_executor_process attribute not found during cleanup")
-                return
-
-            process = self.job_executor_process
-            if process is None:
-                self.logger.debug("job_executor_process has become None before cleanup")
-                return
-
-            self.logger.debug(f"Job executor process state during cleanup: {process}")
-            
-            try:
-                if process.is_alive():
-                    self.logger.debug("Terminating live job executor process")
-                    try:
-                        process.terminate()
-                        process.join()
-                        self.logger.debug("Job executor process terminated successfully")
-                    except AttributeError:
-                        self.logger.debug("Job executor process became None during termination attempt")
-                    except Exception as e:
-                        self.logger.error(f"Error terminating job executor process: {e}")
-                else:
-                    self.logger.debug("Job executor Process is not alive, skipping termination")
-            finally:
-                self.job_executor_process = None
-            
-            # Clean up queues
-            if hasattr(self, '_task_queue'):
-                try:
-                    self._task_queue.close()
-                    self._task_queue.join_thread()
-                except Exception as e:
-                    self.logger.error(f"Error closing task queue: {e}")
-            
-            if hasattr(self, '_result_queue'):
-                try:
-                    self._result_queue.close()
-                    self._result_queue.join_thread()
-                except Exception as e:
-                    self.logger.error(f"Error closing result queue: {e}")
-        except Exception as e:
-            self.logger.error(f"Error during cleanup: {e}")
-            pass
-
     def _start(self):
         """Start the job executor and result processor processes - non-blocking."""
         self.logger.debug("Starting job executor process")
@@ -209,6 +185,8 @@ class JobChain:
             self.logger.debug("Waiting for result processor process")
             self.result_processor_process.join()
             self.logger.debug("Result processor process completed")
+        
+        self._cleanup()
 
     def _process_serial_results(self):
         while True:
@@ -229,8 +207,9 @@ class JobChain:
                     except Exception as e:
                         self.logger.error(f"Error processing result: {e}")
             except queue.Empty:
-                self.logger.debug(f"Queue empty, job executor process alive: {self.job_executor_process.is_alive()}")
-                if not self.job_executor_process.is_alive():
+                job_executor_is_alive = self.job_executor_process and self.job_executor_process.is_alive()
+                self.logger.debug(f"Queue empty, job executor process alive status = {job_executor_is_alive}")
+                if not job_executor_is_alive:
                     self.logger.debug("Job executor process is not alive, breaking wait loop")
                     break
                 continue

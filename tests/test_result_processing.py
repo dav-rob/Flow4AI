@@ -1,7 +1,7 @@
+import asyncio
 import multiprocessing as mp
 import os
 import time
-import asyncio
 from time import sleep
 
 from job import Job
@@ -69,6 +69,10 @@ def parallel_mode():
 def serial_mode():
     print("\nTesting serial mode (should work):")
     try:
+        # Clean up any existing log file
+        if os.path.exists('temp.log'):
+            os.remove('temp.log')
+            
         # Create new unpicklable state
         unpicklable = UnpicklableState()
         
