@@ -23,7 +23,7 @@ class JobChain:
         result_processing_function (Optional[Callable[[Any], None]]):  code to handle results after the Job executes its task.
             By default, this hand-off happens in parallel, immediately after a Job processes a task. Typically, this function is 
             from an existing codebase that JobChain is supplementing. This function must be picklable, for parallel execution, 
-            see serial_processing parameter below.
+            see serial_processing parameter below.  This code is not assumed to be asyncio compatible.
 
         serial_processing (bool = False): forces result_processing_function to execute only after all tasks are completed by the Job.  
             Enables an unpicklable result_processing_function to be used by setting serial_processing=True.  However, in most cases 
@@ -141,6 +141,8 @@ class JobChain:
 
     # Must be static because it's passed as a target to multiprocessing.Process
     # Instance methods can't be pickled properly for multiprocessing
+    # TODO: it may be necessary to put a flag to execute this using asyncio event loops
+    #          for example, when handing off to an async web service
     @staticmethod
     def _result_processor(process_fn: Callable[[Any], None], result_queue: mp.Queue):
         """Process that handles processing results as they arrive."""
