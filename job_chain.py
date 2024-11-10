@@ -15,20 +15,23 @@ from utils.print_utils import printh
 setup_logging()
 
 class JobChain:
-    """JobChain executes tasks in parallel using a Job passed into constructor.  Optionally passes results to a pre-existing 
-            result processing function after task completion.
-        
+    """
+    JobChain executes tasks in parallel using a Job passed into constructor.
+    Optionally passes results to a pre-existing result processing function after task completion.
+
     Args:
-        job (Union[Dict[str, Any], Job]): either a dictionary containing job configuration or a Job instance.
+        job (Union[Dict[str, Any], Job]): Either a dictionary containing job configuration or a Job instance.
 
-        result_processing_function (Optional[Callable[[Any], None]]):  code to handle results after the Job executes its task.
-            By default, this hand-off happens in parallel, immediately after a Job processes a task. Typically, this function is 
-            from an existing codebase that JobChain is supplementing. This function must be picklable, for parallel execution, 
-            see serial_processing parameter below.  This code is not assumed to be asyncio compatible.
+        result_processing_function (Optional[Callable[[Any], None]]): Code to handle results after the Job executes its task.
+            By default, this hand-off happens in parallel, immediately after a Job processes a task.
+            Typically, this function is from an existing codebase that JobChain is supplementing.
+            This function must be picklable, for parallel execution, see serial_processing parameter below.
+            This code is not assumed to be asyncio compatible.
 
-        serial_processing (bool = False): forces result_processing_function to execute only after all tasks are completed by the Job.  
-            Enables an unpicklable result_processing_function to be used by setting serial_processing=True.  However, in most cases 
-            changing result_processing_function to be picklable is straightforward and should be the default. 
+        serial_processing (bool, optional): Forces result_processing_function to execute only after all tasks are completed by the Job.
+            Enables an unpicklable result_processing_function to be used by setting serial_processing=True.
+            However, in most cases changing result_processing_function to be picklable is straightforward and should be the default.
+            Defaults to False.
     """
     def __init__(self, job: Union[Dict[str, Any], Job], result_processing_function: Optional[Callable[[Any], None]] = None, serial_processing: bool = False):
         # Get logger for JobChain
