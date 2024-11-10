@@ -1,3 +1,15 @@
+"""
+    Tests parallel workloads with some meaningful load in parallel execution mode:
+        - test_parallel_execution: makes sure long running tasks are executed in 
+            parallel with short running tasks, and that task results are processed in 
+            parallel.
+        - run_batch_job_chain: simulates running a Job on several batches of tasks.
+        - test_parallel_execution_in_batches: runs batches in parallel
+        - test_maximum_parallel_execution: tests performance consistency up to 10,000
+          tasks submitted on an old intel Macbook.
+        
+        
+"""
 import multiprocessing as mp
 import asyncio
 import time

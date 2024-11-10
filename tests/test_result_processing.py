@@ -1,3 +1,8 @@
+"""
+    Tests parallel and serial functionality with picklable and non-picklable result
+        processing functions.
+"""
+
 import asyncio
 import multiprocessing as mp
 import os
