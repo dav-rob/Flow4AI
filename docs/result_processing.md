@@ -1,6 +1,15 @@
 # Result Processing in JobChain
 
-The most important thing to understand about JobChain's result processing is that **the pickling restriction only applies to the result_processing_function itself and its closure variables, not to what happens inside the function**. This means your result processing function can freely perform any operations including file I/O, database operations, logging, etc. - as long as the function itself is defined at module level.
+Pickling restrictions on result_processing_function, mean that for parallel-mode result processing (default mode) the function should:
+
+- not be local, it should be defined at module level (not inside another function),
+- not contain unpicklable closure variables,
+- not be a lambda.
+
+For serial mode:
+- No restrictions - can use any Python objects or resources
+
+JobChain's result processing pickling restriction **only applies to the result_processing_function itself not to what happens inside the function**. This means your result processing function can freely perform any operations including file I/O, database operations, logging, etc. - as long as the function itself is defined at module level not locally, the function is not a lambda and does not contain unpicklable closure variables.
 
 ## Quick Start
 
@@ -29,15 +38,6 @@ processor = Processor()
 job_chain = JobChain(job, processor.process_result, serial_processing=True)
 ```
 
-## Requirements
-
-For parallel mode (default):
-1. Function must be defined at module level (not inside another function)
-2. No unpicklable closure variables
-3. Not a lambda
-
-For serial mode:
-- No restrictions - can use any Python objects or resources
 
 ## Best Practices
 
@@ -51,18 +51,4 @@ def process_result(result):
     db.save(result)
 ```
 
-2. Use serial mode if you need shared state:
-```python
-class ResultAggregator:
-    def __init__(self):
-        self.results = []
-        self.db = create_database_connection()
-    
-    def process_result(self, result):
-        self.results.append(result)
-        self.db.save(result)
-
-aggregator = ResultAggregator()
-job_chain = JobChain(job, aggregator.process_result, serial_processing=True)
-```
 
