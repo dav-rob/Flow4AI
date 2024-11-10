@@ -2,6 +2,7 @@ import asyncio
 import logging
 import multiprocessing as mp
 import pickle
+# TODO: use dil instead of pickle in multiprocessor
 import queue
 from time import sleep
 from typing import Any, Callable, Dict, Optional, Union
