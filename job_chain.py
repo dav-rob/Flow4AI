@@ -16,7 +16,7 @@ setup_logging()
 
 class JobChain:
     """
-    JobChain executes tasks in parallel using a Job passed into constructor.
+    JobChain executes up to thousands of tasks in parallel using a Job passed into constructor.
     Optionally passes results to a pre-existing result processing function after task completion.
 
     Args:
