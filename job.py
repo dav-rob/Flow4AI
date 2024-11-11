@@ -1,7 +1,8 @@
 import asyncio
 import logging
-from typing import Dict, Any
 from abc import ABC, abstractmethod
+from typing import Any, Dict
+
 
 class Job(ABC):
     def __init__(self, name: str, prompt: str, model: str):
@@ -16,7 +17,7 @@ class Job(ABC):
         pass
 
 class SimpleJob(Job):
-    """A simple job implementation that provides the default behavior previously in Job."""
+    """A Job implementation that provides a simple default behavior."""
     async def execute(self, task) -> Dict[str, Any]:
         self.logger.info(f"Async JOB for {task}")
         await asyncio.sleep(1)  # Simulate network delay
