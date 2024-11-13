@@ -130,7 +130,8 @@ class JobChain:
             )
             self.result_processor_process.start()
             self.logger.info(f"Result processor process started with PID {self.result_processor_process.pid}")
-
+    # TODO: add ability to submit a task or an iterable: Iterable
+    # TODO: throw error, or just skip, if submitted task is None because this is a reserved value.
     def submit_task(self, task):
         """Submit a task to be processed."""
         self.logger.debug(f"Submitting task: {task}")
