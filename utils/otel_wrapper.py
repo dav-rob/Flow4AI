@@ -1,5 +1,6 @@
 from functools import wraps
 from threading import Lock
+import inspect
 
 import yaml
 from opentelemetry import trace
@@ -82,6 +83,44 @@ class TracerFactory:
             message: The message to trace
         """
         tracer = cls.get_tracer()
+        
+        # Get the calling frame
+        frame = inspect.currentframe()
+        if frame:
+            caller_frame = frame.f_back
+            if caller_frame:
+                # Get function info
+                func_name = caller_frame.f_code.co_name
+                module_name = inspect.getmodule(caller_frame).__name__ if inspect.getmodule(caller_frame) else "__main__"
+                
+                # Get local variables including 'self' if it exists
+                local_vars = caller_frame.f_locals
+                args = []
+                kwargs = {}
+                
+                # If this is a method call (has 'self')
+                if 'self' in local_vars:
+                    args.append(local_vars['self'])
+                    # Add other arguments if they exist
+                    if len(local_vars) > 1:
+                        # Filter out 'self' and get remaining arguments
+                        args.extend([v for k, v in local_vars.items() if k != 'self'])
+                
+                span_name = f"{module_name}.{func_name}"
+                with tracer.start_as_current_span(span_name) as span:
+                    span.set_attribute("trace.message", message)
+                    span.set_attribute("function.args", str(tuple(args)))
+                    span.set_attribute("function.kwargs", str(kwargs))
+                    if args and hasattr(args[0], "__dict__"):
+                        span.set_attribute("object.fields", str(vars(args[0])))
+                    print(message)
+                
+                # Clean up
+                del frame
+                del caller_frame
+                return
+        
+        # Fallback if not in a function context
         with tracer.start_as_current_span("trace_message") as span:
             span.set_attribute("trace.message", message)
             print(message)
