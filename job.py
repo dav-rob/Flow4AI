@@ -2,6 +2,7 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict
+from utils.otel_wrapper import trace_function
 
 
 class Job(ABC):
@@ -12,6 +13,7 @@ class Job(ABC):
         self.logger = logging.getLogger(self.__class__.__name__)
 
     @abstractmethod
+    @trace_function
     async def execute(self, task) -> Dict[str, Any]:
         """Execute the job on the given task. Must be implemented by subclasses."""
         pass
