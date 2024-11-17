@@ -36,4 +36,3 @@ htmlcov/
 
 # temporary files
 temp/
-tests/test_parallel_execution_old.py
