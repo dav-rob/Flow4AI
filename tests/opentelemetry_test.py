@@ -5,8 +5,6 @@ import yaml
 import json
 import time
 from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import ConsoleSpanExporter, BatchSpanProcessor
 from opentelemetry.trace import Status, StatusCode
 from utils.otel_wrapper import TracerFactory, trace_function
 
@@ -84,7 +82,7 @@ def test_file_exporter_yaml():
         TracerFactory._config = None
         time.sleep(0.1)
 
-def test_config_from_env_var(setup_tracer, temp_config_file):
+def test_config_from_env_var(temp_config_file):
     """Test that TracerFactory uses config from JOBCHAIN_OT_CONFIG environment variable"""
     os.environ['JOBCHAIN_OT_CONFIG'] = temp_config_file
     try:
@@ -96,28 +94,17 @@ def test_config_from_env_var(setup_tracer, temp_config_file):
     finally:
         if 'JOBCHAIN_OT_CONFIG' in os.environ:
             del os.environ['JOBCHAIN_OT_CONFIG']
+        TracerFactory._instance = None
+        TracerFactory._config = None
 
-def test_config_fallback_to_default(setup_tracer):
+def test_config_fallback_to_default():
     """Test that TracerFactory falls back to default config path when env var is not set"""
     if 'JOBCHAIN_OT_CONFIG' in os.environ:
         del os.environ['JOBCHAIN_OT_CONFIG']
+    TracerFactory._instance = None
+    TracerFactory._config = None
     tracer = TracerFactory.get_tracer()
     assert tracer is not None
-
-@pytest.fixture(scope="function")
-def setup_tracer():
-    """Setup a real tracer with console exporter for testing"""
-    provider = TracerProvider()
-    processor = BatchSpanProcessor(ConsoleSpanExporter())
-    provider.add_span_processor(processor)
-    trace.set_tracer_provider(provider)
-    TracerFactory._instance = None
-    TracerFactory._config = None
-    yield
-    if provider._active_span_processor:
-        provider._active_span_processor.shutdown()
-    TracerFactory._instance = None
-    TracerFactory._config = None
 
 @pytest.fixture
 def temp_config_file():
@@ -136,7 +123,7 @@ def temp_config_file():
     yield temp_path
     os.unlink(temp_path)
 
-def test_trace_function_decorator(setup_tracer):
+def test_trace_function_decorator():
     """Test that the trace_function decorator properly wraps a function"""
     @trace_function
     def sample_function(x, y):
@@ -144,7 +131,7 @@ def test_trace_function_decorator(setup_tracer):
     result = sample_function(3, 4)
     assert result == 7
 
-def test_class_methods(setup_tracer):
+def test_class_methods():
     """Test that methods within a class can be traced"""
     class SampleClass:
         def __init__(self, value):
@@ -164,7 +151,7 @@ def test_class_methods(setup_tracer):
     assert mult_result == 6
     assert add_result == 6
 
-def test_trace_method_decorator(setup_tracer):
+def test_trace_method_decorator():
     """Test that the trace_function decorator works on individual methods"""
     class SampleClass:
         def __init__(self, value):
@@ -178,17 +165,17 @@ def test_trace_method_decorator(setup_tracer):
     result = obj.multiply(3)
     assert result == 6
 
-def test_tracer_factory_singleton(setup_tracer):
+def test_tracer_factory_singleton():
     """Test that TracerFactory maintains singleton behavior"""
     tracer1 = TracerFactory.get_tracer()
     tracer2 = TracerFactory.get_tracer()
     assert tracer1 is tracer2
 
-def test_direct_trace_usage(setup_tracer):
+def test_direct_trace_usage():
     """Test direct usage of TracerFactory.trace method"""
     TracerFactory.trace("Test message")
 
-def test_nested_tracing(setup_tracer):
+def test_nested_tracing():
     """Test nested tracing behavior"""
     @trace_function
     def outer_function():
@@ -201,7 +188,7 @@ def test_nested_tracing(setup_tracer):
     result = outer_function()
     assert result == "result"
 
-def test_exception_handling(setup_tracer):
+def test_exception_handling():
     """Test that exceptions are properly recorded in spans"""
     @trace_function
     def failing_function():
@@ -211,7 +198,7 @@ def test_exception_handling(setup_tracer):
         failing_function()
     assert str(exc_info.value) == "Test error"
 
-def test_trace_with_context(setup_tracer):
+def test_trace_with_context():
     """Test that trace context is properly propagated"""
     @trace_function
     def parent_function():
@@ -228,7 +215,7 @@ def test_trace_with_context(setup_tracer):
     result = parent_function()
     assert result == "success"
 
-def test_trace_with_status(setup_tracer):
+def test_trace_with_status():
     """Test that span status can be set"""
     @trace_function
     def status_function(succeed):
