@@ -1,17 +1,118 @@
-from functools import wraps
-from threading import Lock
 import inspect
+import json
+import os
+from functools import wraps
+from pathlib import Path
+from threading import Lock
+from typing import Sequence
 
-import yaml
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import \
     OTLPSpanExporter
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export import (BatchSpanProcessor,
-                                            ConsoleSpanExporter)
+                                            ConsoleSpanExporter, SpanExporter,
+                                            SpanExportResult)
 
 # Explicitly define exports
-__all__ = ['TracerFactory', 'trace_function']
+__all__ = ['TracerFactory', 'trace_function', 'AsyncFileExporter']
+
+class AsyncFileExporter(SpanExporter):
+    """Asynchronous file exporter for OpenTelemetry spans."""
+    
+    def __init__(self, filepath: str):
+        """Initialize the exporter with the target file path.
+        
+        Args:
+            filepath: Path to the file where spans will be exported
+        """
+        self.filepath = os.path.expanduser(filepath)
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(self.filepath), exist_ok=True)
+        self._export_lock = Lock()
+        
+        # Initialize file with empty array if it doesn't exist
+        if not os.path.exists(self.filepath):
+            with open(self.filepath, 'w') as f:
+                json.dump([], f)
+        
+    def _serialize_span(self, span: ReadableSpan) -> dict:
+        """Convert a span to a JSON-serializable dictionary.
+        
+        Args:
+            span: The span to serialize
+        Returns:
+            dict: JSON-serializable representation of the span
+        """
+        return {
+            'name': span.name,
+            'context': {
+                'trace_id': format(span.context.trace_id, '032x'),
+                'span_id': format(span.context.span_id, '016x'),
+            },
+            'parent_id': format(span.parent.span_id, '016x') if span.parent else None,
+            'start_time': span.start_time,
+            'end_time': span.end_time,
+            'attributes': dict(span.attributes),
+            'events': [
+                {
+                    'name': event.name,
+                    'timestamp': event.timestamp,
+                    'attributes': dict(event.attributes)
+                }
+                for event in span.events
+            ],
+            'status': {
+                'status_code': str(span.status.status_code),
+                'description': span.status.description
+            }
+        }
+
+    def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
+        """Export spans to file.
+        
+        Args:
+            spans: Sequence of spans to export
+        Returns:
+            SpanExportResult indicating success or failure
+        """
+        try:
+            with self._export_lock:
+                # Create serializable span data
+                span_data = [self._serialize_span(span) for span in spans]
+                
+                # Read existing spans
+                try:
+                    with open(self.filepath, 'r') as f:
+                        try:
+                            existing_spans = json.load(f)
+                        except json.JSONDecodeError:
+                            existing_spans = []
+                except FileNotFoundError:
+                    existing_spans = []
+                
+                # Append new spans
+                existing_spans.extend(span_data)
+                
+                # Write all spans back to file
+                temp_file = f"{self.filepath}.tmp"
+                try:
+                    with open(temp_file, 'w') as f:
+                        json.dump(existing_spans, f, indent=2)
+                    # Atomic replace
+                    os.replace(temp_file, self.filepath)
+                finally:
+                    if os.path.exists(temp_file):
+                        os.unlink(temp_file)
+                
+            return SpanExportResult.SUCCESS
+        except Exception as e:
+            print(f"Error exporting spans to file: {e}")
+            return SpanExportResult.FAILURE
+
+    def shutdown(self) -> None:
+        """Shutdown the exporter."""
+        pass
 
 # Singleton TracerFactory
 class TracerFactory:
@@ -20,16 +121,20 @@ class TracerFactory:
     _lock = Lock()
     
     @classmethod
-    def _load_config(cls, yaml_file="resources/otel_config.yaml"):  # Updated path
+    def _load_config(cls, yaml_file=None):
         """Load configuration from YAML file.
         
         Args:
-            yaml_file: Path to the YAML configuration file
+            yaml_file: Optional path override for the YAML configuration file
         Returns:
             dict: Configuration dictionary
         """
         if cls._config is None:
-            with open(yaml_file, 'r') as file:
+            import yaml
+
+            # Get config path from environment variable or use default
+            config_path = yaml_file or os.environ.get('JOBCHAIN_OT_CONFIG', "resources/otel_config.yaml")
+            with open(config_path, 'r') as file:
                 cls._config = yaml.safe_load(file)
         return cls._config
     
@@ -48,13 +153,16 @@ class TracerFactory:
                     # Use provided config or load from file
                     cfg = config if config is not None else cls._load_config()
                     provider = TracerProvider()
-                    exporter = cls._configure_exporter(cfg['exporter'])
+                    
+                    # Configure main exporter
+                    main_exporter = cls._configure_exporter(cfg['exporter'])
                     batch_processor = BatchSpanProcessor(
-                        exporter,
+                        main_exporter,
                         max_queue_size=cfg['batch_processor']['max_queue_size'],
                         schedule_delay_millis=cfg['batch_processor']['schedule_delay_millis']
                     )
                     provider.add_span_processor(batch_processor)
+                    
                     trace.set_tracer_provider(provider)
                     cls._instance = trace.get_tracer(cfg["service_name"])
         return cls._instance
@@ -72,6 +180,11 @@ class TracerFactory:
             return OTLPSpanExporter()  # OTEL_EXPORTER_OTLP_... environment variables apply here
         elif exporter_type == "console":
             return ConsoleSpanExporter()  # OTEL_EXPORTER_CONSOLE_... environment variables apply here
+        elif exporter_type == "file":
+            # Load config to get file path
+            config = TracerFactory._load_config()
+            file_path = config.get('file_exporter', {}).get('path', "~/.JobChain/otel_trace.json")
+            return AsyncFileExporter(file_path)
         else:
             raise ValueError("Unsupported exporter type")
 

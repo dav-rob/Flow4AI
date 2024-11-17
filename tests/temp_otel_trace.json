@@ -1,0 +1,278 @@
+[
+  {
+    "name": "opentelemetry_test.sample_function",
+    "context": {
+      "trace_id": "ec0d5274f222f52eb3a5155ae8d587a7",
+      "span_id": "9b824d228e42fa7e"
+    },
+    "parent_id": null,
+    "start_time": 1731862777370301000,
+    "end_time": 1731862777370331000,
+    "attributes": {
+      "function.args": "(3, 4)",
+      "function.kwargs": "{}"
+    },
+    "events": [],
+    "status": {
+      "status_code": "StatusCode.UNSET",
+      "description": null
+    }
+  },
+  {
+    "name": "opentelemetry_test.multiply",
+    "context": {
+      "trace_id": "00816674a664959d65dc92f1872314c5",
+      "span_id": "07c43cb0f8e1e8bb"
+    },
+    "parent_id": null,
+    "start_time": 1731862777379618000,
+    "end_time": 1731862777379659000,
+    "attributes": {
+      "function.args": "(<opentelemetry_test.test_class_methods.<locals>.SampleClass object at 0x10e998650>, 3)",
+      "function.kwargs": "{}",
+      "object.fields": "{'value': 2}"
+    },
+    "events": [],
+    "status": {
+      "status_code": "StatusCode.UNSET",
+      "description": null
+    }
+  },
+  {
+    "name": "opentelemetry_test.add",
+    "context": {
+      "trace_id": "018accf19dc199c971c4b2e4dfa34c05",
+      "span_id": "a33d9ac82a51adb0"
+    },
+    "parent_id": null,
+    "start_time": 1731862777379712000,
+    "end_time": 1731862777379739000,
+    "attributes": {
+      "function.args": "(<opentelemetry_test.test_class_methods.<locals>.SampleClass object at 0x10e998650>, 4)",
+      "function.kwargs": "{}",
+      "object.fields": "{'value': 2}"
+    },
+    "events": [],
+    "status": {
+      "status_code": "StatusCode.UNSET",
+      "description": null
+    }
+  },
+  {
+    "name": "opentelemetry_test.multiply",
+    "context": {
+      "trace_id": "86cb82ea83ad767b2038c4a7d00ad756",
+      "span_id": "4b96c7adcc345450"
+    },
+    "parent_id": null,
+    "start_time": 1731862777389541000,
+    "end_time": 1731862777389586000,
+    "attributes": {
+      "function.args": "(<opentelemetry_test.test_trace_method_decorator.<locals>.SampleClass object at 0x10e9b0510>, 3)",
+      "function.kwargs": "{}",
+      "object.fields": "{'value': 2}"
+    },
+    "events": [],
+    "status": {
+      "status_code": "StatusCode.UNSET",
+      "description": null
+    }
+  },
+  {
+    "name": "opentelemetry_test.test_direct_trace_usage",
+    "context": {
+      "trace_id": "193d0ac7188980e93369ef149b3bbba7",
+      "span_id": "67f9fa1a66589c96"
+    },
+    "parent_id": null,
+    "start_time": 1731862777408287000,
+    "end_time": 1731862777408382000,
+    "attributes": {
+      "trace.message": "Test message",
+      "function.args": "()",
+      "function.kwargs": "{}"
+    },
+    "events": [],
+    "status": {
+      "status_code": "StatusCode.UNSET",
+      "description": null
+    }
+  },
+  {
+    "name": "opentelemetry_test.inner_function",
+    "context": {
+      "trace_id": "2b2e2fc3c1a5b4267334dd217946125f",
+      "span_id": "fe7d9dc78c59d503"
+    },
+    "parent_id": "36e4c485991a73b9",
+    "start_time": 1731862777418198000,
+    "end_time": 1731862777418216000,
+    "attributes": {
+      "function.args": "()",
+      "function.kwargs": "{}"
+    },
+    "events": [],
+    "status": {
+      "status_code": "StatusCode.UNSET",
+      "description": null
+    }
+  },
+  {
+    "name": "opentelemetry_test.outer_function",
+    "context": {
+      "trace_id": "2b2e2fc3c1a5b4267334dd217946125f",
+      "span_id": "36e4c485991a73b9"
+    },
+    "parent_id": null,
+    "start_time": 1731862777418116000,
+    "end_time": 1731862777418235000,
+    "attributes": {
+      "function.args": "()",
+      "function.kwargs": "{}"
+    },
+    "events": [],
+    "status": {
+      "status_code": "StatusCode.UNSET",
+      "description": null
+    }
+  },
+  {
+    "name": "opentelemetry_test.failing_function",
+    "context": {
+      "trace_id": "29a269ac6f1c44eeeaf1a758ed16b82c",
+      "span_id": "59c680aedfb06602"
+    },
+    "parent_id": null,
+    "start_time": 1731862777427803000,
+    "end_time": 1731862777429249000,
+    "attributes": {
+      "function.args": "()",
+      "function.kwargs": "{}"
+    },
+    "events": [
+      {
+        "name": "exception",
+        "timestamp": 1731862777428413000,
+        "attributes": {
+          "exception.type": "ValueError",
+          "exception.message": "Test error",
+          "exception.stacktrace": "Traceback (most recent call last):\n  File \"/Users/davidroberts/projects/workflow_app/JobChain/utils/otel_wrapper.py\", line 254, in wrapper\n    result = func(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/davidroberts/projects/workflow_app/JobChain/tests/opentelemetry_test.py\", line 208, in failing_function\n    raise ValueError(\"Test error\")\nValueError: Test error\n",
+          "exception.escaped": "False"
+        }
+      },
+      {
+        "name": "exception",
+        "timestamp": 1731862777429230000,
+        "attributes": {
+          "exception.type": "ValueError",
+          "exception.message": "Test error",
+          "exception.stacktrace": "Traceback (most recent call last):\n  File \"/Users/davidroberts/projects/workflow_app/JobChain/.venv/lib/python3.11/site-packages/opentelemetry/trace/__init__.py\", line 589, in use_span\n    yield span\n  File \"/Users/davidroberts/projects/workflow_app/JobChain/.venv/lib/python3.11/site-packages/opentelemetry/sdk/trace/__init__.py\", line 1104, in start_as_current_span\n    yield span\n  File \"/Users/davidroberts/projects/workflow_app/JobChain/utils/otel_wrapper.py\", line 254, in wrapper\n    result = func(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/davidroberts/projects/workflow_app/JobChain/tests/opentelemetry_test.py\", line 208, in failing_function\n    raise ValueError(\"Test error\")\nValueError: Test error\n",
+          "exception.escaped": "False"
+        }
+      }
+    ],
+    "status": {
+      "status_code": "StatusCode.ERROR",
+      "description": "ValueError: Test error"
+    }
+  },
+  {
+    "name": "opentelemetry_test.child_function",
+    "context": {
+      "trace_id": "161c8cb4efd4f4644d991ac2ab82ef30",
+      "span_id": "2725b5fedd013ff8"
+    },
+    "parent_id": "4c751e552805388d",
+    "start_time": 1731862777438643000,
+    "end_time": 1731862777438661000,
+    "attributes": {
+      "function.args": "()",
+      "function.kwargs": "{}",
+      "child.attr": "child_value"
+    },
+    "events": [],
+    "status": {
+      "status_code": "StatusCode.UNSET",
+      "description": null
+    }
+  },
+  {
+    "name": "opentelemetry_test.parent_function",
+    "context": {
+      "trace_id": "161c8cb4efd4f4644d991ac2ab82ef30",
+      "span_id": "4c751e552805388d"
+    },
+    "parent_id": null,
+    "start_time": 1731862777438586000,
+    "end_time": 1731862777438674000,
+    "attributes": {
+      "function.args": "()",
+      "function.kwargs": "{}",
+      "parent.attr": "parent_value"
+    },
+    "events": [],
+    "status": {
+      "status_code": "StatusCode.UNSET",
+      "description": null
+    }
+  },
+  {
+    "name": "opentelemetry_test.status_function",
+    "context": {
+      "trace_id": "3fde739978eb420cb194009a9ce4dce4",
+      "span_id": "2860c38970925d86"
+    },
+    "parent_id": null,
+    "start_time": 1731862777448757000,
+    "end_time": 1731862777448786000,
+    "attributes": {
+      "function.args": "(True,)",
+      "function.kwargs": "{}"
+    },
+    "events": [],
+    "status": {
+      "status_code": "StatusCode.UNSET",
+      "description": null
+    }
+  },
+  {
+    "name": "opentelemetry_test.status_function",
+    "context": {
+      "trace_id": "b3cbb575e1d2d0c160035af866cd31ad",
+      "span_id": "c49caf86a01e2f92"
+    },
+    "parent_id": null,
+    "start_time": 1731862777448843000,
+    "end_time": 1731862777449473000,
+    "attributes": {
+      "function.args": "(False,)",
+      "function.kwargs": "{}"
+    },
+    "events": [
+      {
+        "name": "exception",
+        "timestamp": 1731862777449170000,
+        "attributes": {
+          "exception.type": "ValueError",
+          "exception.message": "Operation failed",
+          "exception.stacktrace": "Traceback (most recent call last):\n  File \"/Users/davidroberts/projects/workflow_app/JobChain/utils/otel_wrapper.py\", line 254, in wrapper\n    result = func(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/davidroberts/projects/workflow_app/JobChain/tests/opentelemetry_test.py\", line 238, in status_function\n    raise ValueError(\"Operation failed\")\nValueError: Operation failed\n",
+          "exception.escaped": "False"
+        }
+      },
+      {
+        "name": "exception",
+        "timestamp": 1731862777449459000,
+        "attributes": {
+          "exception.type": "ValueError",
+          "exception.message": "Operation failed",
+          "exception.stacktrace": "Traceback (most recent call last):\n  File \"/Users/davidroberts/projects/workflow_app/JobChain/.venv/lib/python3.11/site-packages/opentelemetry/trace/__init__.py\", line 589, in use_span\n    yield span\n  File \"/Users/davidroberts/projects/workflow_app/JobChain/.venv/lib/python3.11/site-packages/opentelemetry/sdk/trace/__init__.py\", line 1104, in start_as_current_span\n    yield span\n  File \"/Users/davidroberts/projects/workflow_app/JobChain/utils/otel_wrapper.py\", line 254, in wrapper\n    result = func(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/davidroberts/projects/workflow_app/JobChain/tests/opentelemetry_test.py\", line 238, in status_function\n    raise ValueError(\"Operation failed\")\nValueError: Operation failed\n",
+          "exception.escaped": "False"
+        }
+      }
+    ],
+    "status": {
+      "status_code": "StatusCode.ERROR",
+      "description": "ValueError: Operation failed"
+    }
+  }
+]

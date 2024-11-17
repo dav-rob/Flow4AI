@@ -3,3 +3,5 @@ service_name: MyService  # Can be overridden by OTEL_SERVICE_NAME env variable.
 batch_processor:
   max_queue_size: 1000  # Batch processor will handle up to 1000 spans in queue.
   schedule_delay_millis: 1000  # 1-second timeout for exporting spans.
+file_exporter:
+  path: "~/.JobChain/otel_trace.json"  # Default path for trace export
