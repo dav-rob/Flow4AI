@@ -7,21 +7,21 @@
         - test_parallel_execution_in_batches: runs batches in parallel
         - test_maximum_parallel_execution: tests performance consistency up to 10,000
           tasks submitted on an old intel Macbook.
-        
-        
 """
-import multiprocessing as mp
 import asyncio
-import time
-import os
 import json
-import yaml
 import logging
+import multiprocessing as mp
+import os
+import time
 from time import sleep
-from utils.print_utils import printh
-from job_chain import JobChain
+
+import yaml
+
 from job import Job, JobFactory
-from utils.otel_wrapper import TracerFactory
+from job_chain import JobChain
+from utils.otel_wrapper import TracerFactory, trace_function
+from utils.print_utils import printh
 
 # Configure logging
 logging.basicConfig(level=logging.INFO,
@@ -35,14 +35,10 @@ class DelayedJob(Job):
         self.time_delay = time_delay
 
     async def execute(self, task) -> dict:
+        """Execute a delayed job with tracing."""
         logger.info(f"Executing DelayedJob for {task} with delay {self.time_delay}")
-        # Get tracer in the process where execute is running
-        tracer = TracerFactory.get_tracer()
-        with tracer.start_as_current_span("DelayedJob.execute") as span:
-            span.set_attribute("task", str(task))
-            span.set_attribute("delay", self.time_delay)
-            await asyncio.sleep(self.time_delay)  # Use specified delay
-            return {"task": task, "status": "complete"}
+        await asyncio.sleep(self.time_delay)  # Use specified delay
+        return {"task": task, "status": "complete"}
 
 def create_delayed_job(params: dict) -> Job:
     time_delay = params.get('time_delay', 1.0)
