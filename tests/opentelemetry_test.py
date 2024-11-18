@@ -1,12 +1,15 @@
-import os
-import pytest
-import tempfile
-import yaml
 import json
+import os
+import tempfile
 import time
+
+import pytest
+import yaml
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
+
 from utils.otel_wrapper import TracerFactory, trace_function
+
 
 @pytest.fixture
 def trace_file():
@@ -223,7 +226,7 @@ def test_exception_handling(trace_file, setup_file_exporter):
         }]
     )
 
-def test_trace_with_context(trace_file, setup_file_exporter):
+def test_parent_child_functions(trace_file, setup_file_exporter):
     """Test that trace context is properly propagated"""
     @trace_function
     def parent_function():
