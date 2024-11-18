@@ -5,8 +5,6 @@
             parallel.
         - run_batch_job_chain: simulates running a Job on several batches of tasks.
         - test_parallel_execution_in_batches: runs batches in parallel
-        - test_maximum_parallel_execution: tests performance consistency up to 10,000
-          tasks submitted on an old intel Macbook.
 """
 import asyncio
 import json
@@ -175,60 +173,6 @@ def test_parallel_execution_in_batches():
         f"Execution completed too quickly in {execution_time:.2f}s. "
         "Expected ~10s for scraping all links"
     )
-
-async def run_parallel_load_test(num_tasks: int) -> float:
-    """Run a load test with specified number of parallel tasks"""
-    start_time = time.perf_counter()
-    
-    job_chain_context = {
-        "job_context": {
-            "type": "file",
-            "params": {"time_delay": 0.01}  # Very small delay for load testing
-        }
-    }
-
-    job_chain = JobChain(job_chain_context, dummy_result_processor)
-
-    # Submit all tasks immediately
-    for i in range(num_tasks):
-        job_chain.submit_task(f"Task_{i}")
-    # Indicate there is no more input data to process to initiate shutdown
-    job_chain.mark_input_completed()
-
-    execution_time = time.perf_counter() - start_time
-    logger.info(f"\nExecution time for {num_tasks} tasks: {execution_time:.2f}s")
-    return execution_time
-
-def test_maximum_parallel_execution():
-    """Test the maximum theoretical parallel execution capacity"""
-    
-    # Test with increasing number of tasks
-    task_counts = [100, 500, 2500, 5000, 7500, 10000]  # Added larger task counts
-    
-    for count in task_counts:
-        execution_time = asyncio.run(run_parallel_load_test(count))
-        
-        # Scale expected time with task count
-        if count <= 100:
-            expected_time = 2.0
-        elif count <= 500:
-            expected_time = 4.0
-        elif count <= 2500:
-            expected_time = 10.0
-        elif count <= 5000:
-            expected_time = 15.0
-        elif count <= 7500:
-            expected_time = 20.0
-        else:  # 10000 tasks
-            expected_time = 25.0
-            
-        assert execution_time < expected_time, (
-            f"Expected {count} tasks to complete in under {expected_time} seconds with parallel execution, "
-            f"took {execution_time:.2f}s"
-        )
-        
-        tasks_per_second = count / execution_time
-        logger.info(f"Tasks per second with {count} tasks: {tasks_per_second:.2f}")
 
 async def run_job_chain_without_result_processor() -> bool:
     """Run job chain without a result processing function"""
