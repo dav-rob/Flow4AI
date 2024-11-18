@@ -79,21 +79,35 @@ class JobChain:
         
         if self.job_executor_process:
             if self.job_executor_process.is_alive():
+                self.logger.debug("Terminating job executor process")
                 self.job_executor_process.terminate()
+                self.logger.debug("Joining job executor process")
                 self.job_executor_process.join()
+                self.logger.debug("Job executor process joined")
         
         if self.result_processor_process:
             if self.result_processor_process.is_alive():
+                self.logger.debug("Terminating result processor process")
                 self.result_processor_process.terminate()
+                self.logger.debug("Joining result processor process")
                 self.result_processor_process.join()
+                self.logger.debug("Result processor process joined")
         
         if hasattr(self, '_task_queue'):
+            self.logger.debug("Closing task queue")
             self._task_queue.close()
+            self.logger.debug("Joining task queue thread")
             self._task_queue.join_thread()
+            self.logger.debug("Task queue thread joined")
         
         if hasattr(self, '_result_queue'):
+            self.logger.debug("Closing result queue")
             self._result_queue.close()
+            self.logger.debug("Joining result queue thread")
             self._result_queue.join_thread()
+            self.logger.debug("Result queue thread joined")
+        
+        self.logger.debug("Cleanup completed")
 
     def _check_picklable(self, result_processing_function):
         try:
