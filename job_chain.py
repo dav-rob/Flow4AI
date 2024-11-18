@@ -12,6 +12,7 @@ from logging_config import setup_logging
 from utils.print_utils import printh
 
 # Initialize logging configuration
+# TODO: test whether this works just for JobChain module or all code
 setup_logging()
 
 class JobChain:
@@ -132,6 +133,7 @@ class JobChain:
             self.logger.info(f"Result processor process started with PID {self.result_processor_process.pid}")
     # TODO: add ability to submit a task or an iterable: Iterable
     # TODO: throw error, or just skip, if submitted task is None because this is a reserved value.
+    # TODO: add resource usage monitoring which returns False if resource use is too high.
     def submit_task(self, task):
         """Submit a task to be processed."""
         self.logger.debug(f"Submitting task: {task}")

@@ -1,6 +1,5 @@
 import json
 import os
-import tempfile
 import time
 
 import pytest
@@ -147,7 +146,7 @@ def test_trace_function_decorator(trace_file, setup_file_exporter):
     
     verify_trace(
         trace_file,
-        expected_name="opentelemetry_test.sample_function",
+        expected_name="test_opentelemetry.sample_function",
         expected_attrs={"function.args": "(3, 4)", "function.kwargs": "{}"}
     )
 
@@ -174,7 +173,7 @@ def test_class_methods(trace_file, setup_file_exporter):
     # Verify add trace (last operation)
     verify_trace(
         trace_file,
-        expected_name="opentelemetry_test.add",
+        expected_name="test_opentelemetry.add",
         expected_attrs={"function.kwargs": "{}"}
     )
 
@@ -194,7 +193,7 @@ def test_nested_tracing(trace_file, setup_file_exporter):
     # Verify outer function trace (last operation)
     verify_trace(
         trace_file,
-        expected_name="opentelemetry_test.outer_function",
+        expected_name="test_opentelemetry.outer_function",
         expected_attrs={"function.args": "()", "function.kwargs": "{}"}
     )
 
@@ -210,7 +209,7 @@ def test_exception_handling(trace_file, setup_file_exporter):
     
     verify_trace(
         trace_file,
-        expected_name="opentelemetry_test.failing_function",
+        expected_name="test_opentelemetry.failing_function",
         expected_attrs={"function.args": "()", "function.kwargs": "{}"},
         expected_status={
             "status_code": "StatusCode.ERROR",
@@ -246,7 +245,7 @@ def test_parent_child_functions(trace_file, setup_file_exporter):
     # Verify parent function trace (last operation)
     verify_trace(
         trace_file,
-        expected_name="opentelemetry_test.parent_function",
+        expected_name="test_opentelemetry.parent_function",
         expected_attrs={
             "function.args": "()",
             "function.kwargs": "{}",
@@ -269,7 +268,7 @@ def test_trace_with_status(trace_file, setup_file_exporter):
     
     verify_trace(
         trace_file,
-        expected_name="opentelemetry_test.status_function",
+        expected_name="test_opentelemetry.status_function",
         expected_attrs={"function.args": "(True,)", "function.kwargs": "{}"},
         expected_status={"status_code": "StatusCode.UNSET"}
     )
@@ -279,7 +278,7 @@ def test_trace_with_status(trace_file, setup_file_exporter):
     
     verify_trace(
         trace_file,
-        expected_name="opentelemetry_test.status_function",
+        expected_name="test_opentelemetry.status_function",
         expected_attrs={"function.args": "(False,)", "function.kwargs": "{}"},
         expected_status={
             "status_code": "StatusCode.ERROR",
