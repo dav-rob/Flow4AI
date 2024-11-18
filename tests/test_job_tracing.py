@@ -1,18 +1,20 @@
-import pytest
 import inspect
-from typing import Dict, Any
-from job import Job, UntracableJob, _is_traced
+from typing import Any, Dict
+
+import pytest
+
+from job import Job, UntracedJob, _is_traced
 from utils.otel_wrapper import trace_function
 
 
-def test_untracable_job_allows_no_decorator():
-    """Test that UntracableJob subclasses don't require the decorator"""
-    class UnTracedJob(UntracableJob):
+def test_untraced_job_allows_no_decorator():
+    """Test that UntracedJob subclasses don't require the decorator"""
+    class UnTracedJob(UntracedJob):
         async def execute(self, task) -> Dict[str, Any]:
             return {"task": task, "status": "complete"}
     
     job = UnTracedJob("Test Job", "Test prompt", "test-model")
-    assert isinstance(job, UntracableJob)
+    assert isinstance(job, UntracedJob)
     assert not _is_traced(UnTracedJob.execute)
 
 
@@ -61,7 +63,7 @@ def test_job_requires_execute_implementation():
 
 def test_decorator_preserves_method_signature():
     """Test that the traced execute method preserves the original signature"""
-    class BaseJob(UntracableJob):
+    class BaseJob(UntracedJob):
         async def execute(self, task) -> Dict[str, Any]:
             return {"task": task, "status": "complete"}
     
@@ -85,7 +87,7 @@ def test_decorator_preserves_method_signature():
 def test_job_factory_returns_traced_jobs():
     """Test that JobFactory always returns properly traced Job instances"""
     from job import JobFactory
-    
+
     # Test file-based job loading
     file_job = JobFactory.load_job({"type": "file", "params": {}})
     assert isinstance(file_job, Job)

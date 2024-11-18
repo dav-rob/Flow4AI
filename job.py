@@ -1,6 +1,6 @@
 import asyncio
-import logging
 import functools
+import logging
 from abc import ABC, ABCMeta, abstractmethod
 from typing import Any, Dict, Type, TypeVar
 
@@ -34,7 +34,7 @@ def traced_job(cls: Type) -> Type:
     return cls
 
 
-class UntracableJob(ABC):
+class UntracedJob(ABC):
     """
     Abstract base class for jobs that don't require tracing.
     WARNING: This class should only be used in special cases where tracing is not desired.
@@ -61,7 +61,7 @@ class JobMeta(ABCMeta):
         return cls
 
 
-class Job(UntracableJob, metaclass=JobMeta):
+class Job(UntracedJob, metaclass=JobMeta):
     """
     Base class for all job implementations. Automatically applies tracing to
     execute method to ensure proper monitoring.
