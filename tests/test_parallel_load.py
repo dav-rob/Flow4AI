@@ -2,8 +2,12 @@ import asyncio
 import logging
 import time
 import pytest
+import yaml
+import os
+import json
 from job import Job, JobFactory
 from job_chain import JobChain
+from utils.otel_wrapper import TracerFactory, trace_function
 
 # Configure logging
 logging.basicConfig(level=logging.INFO,
@@ -196,3 +200,123 @@ def test_sustained_load_performance():
     logger.info(f"Sustained load test metrics:")
     logger.info(f"  Average latency: {avg_latency:.3f}s")
     logger.info(f"  Maximum latency: {max_latency:.3f}s")
+
+@pytest.fixture
+def trace_file():
+    """Fixture to create and clean up a temporary trace file"""
+    trace_file = "tests/temp_parallel_trace.json"
+    # Initialize trace file
+    os.makedirs("tests", exist_ok=True)
+    with open(trace_file, 'w') as f:
+        json.dump([], f)
+    yield trace_file
+    # Cleanup
+    if os.path.exists(trace_file):
+        os.unlink(trace_file)
+
+@pytest.fixture
+def setup_file_exporter(trace_file):
+    """Fixture to set up file exporter configuration"""
+    config_path = "tests/otel_config.yaml"
+    
+    # Create and write config file
+    config = {
+        "exporter": "file",
+        "service_name": "ParallelLoadTest",
+        "batch_processor": {
+            "max_queue_size": 10000,  # Increased for parallel load
+            "schedule_delay_millis": 100  # Decreased for faster processing
+        },
+        "file_exporter": {
+            "path": trace_file
+        }
+    }
+    
+    with open(config_path, 'w') as f:
+        yaml.dump(config, f)
+    
+    # Reset TracerFactory state
+    TracerFactory._instance = None
+    TracerFactory._config = None
+    
+    # Set config path in environment
+    os.environ['JOBCHAIN_OT_CONFIG'] = config_path
+    
+    yield
+    
+    # Cleanup
+    if os.path.exists(config_path):
+        os.unlink(config_path)
+    if 'JOBCHAIN_OT_CONFIG' in os.environ:
+        del os.environ['JOBCHAIN_OT_CONFIG']
+    TracerFactory._instance = None
+    TracerFactory._config = None
+    time.sleep(0.1)
+
+def test_maximum_parallel_file_trace(trace_file, setup_file_exporter):
+    """Test the impact of file tracing on parallel execution capacity
+    
+    This test verifies the system's ability to handle increasing loads of parallel tasks
+    while simultaneously writing trace data to a file. It helps identify any potential
+    bottlenecks in the AsyncFileExporter when under heavy parallel load.
+    
+    The test uses progressively larger task counts and measures both execution time
+    and trace file integrity to ensure proper operation under load.
+    
+    To run this test:
+    Use pytest's --full-suite option: pytest --full-suite
+    """
+    # Test with increasing number of tasks
+    task_counts = [100, 500, 2500, 5000]  # Reduced counts for trace testing
+    total_tasks = 0
+    
+    for count in task_counts:
+        execution_time = asyncio.run(run_parallel_load_test(count))
+        total_tasks += count
+        
+        # Scale expected time with task count, allowing extra time for tracing
+        if count <= 100:
+            expected_time = 3.0  # Additional second for tracing overhead
+        elif count <= 500:
+            expected_time = 6.0
+        elif count <= 2500:
+            expected_time = 15.0
+        else:  # 5000 tasks
+            expected_time = 25.0
+            
+        assert execution_time < expected_time, (
+            f"Expected {count} tasks to complete in under {expected_time} seconds with parallel execution and tracing, "
+            f"took {execution_time:.2f}s"
+        )
+        
+        tasks_per_second = count / execution_time
+        logger.info(f"Tasks per second with {count} tasks (with tracing): {tasks_per_second:.2f}")
+        
+        # Verify trace file integrity
+        time.sleep(1.0)  # Allow time for traces to be written
+        with open(trace_file, 'r') as f:
+            trace_data = json.load(f)
+            
+            # Verify we have traces
+            assert len(trace_data) > 0, "No traces were recorded"
+            
+            # Verify trace structure for a sample of traces
+            sample_size = min(10, len(trace_data))
+            for trace in trace_data[:sample_size]:
+                assert 'name' in trace, "Trace missing name"
+                assert 'context' in trace, "Trace missing context"
+                assert 'trace_id' in trace['context'], "Trace missing trace_id"
+                assert 'span_id' in trace['context'], "Trace missing span_id"
+                assert 'attributes' in trace, "Trace missing attributes"
+    
+    # After all tests complete, verify total number of traces matches total tasks executed
+    time.sleep(2.0)  # Additional time to ensure all traces are written
+    with open(trace_file, 'r') as f:
+        trace_data = json.load(f)
+        trace_count = len(trace_data)
+        # We expect at least one trace per task (there might be more due to additional instrumentation)
+        assert trace_count >= total_tasks, (
+            f"Expected at least {total_tasks} traces for all executed tasks, "
+            f"but found only {trace_count} traces"
+        )
+        logger.info(f"Total traces recorded: {trace_count} for {total_tasks} tasks executed")
