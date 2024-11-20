@@ -18,7 +18,7 @@ class ResultTimingJob(Job):
         super().__init__("Result Timing Job", "Test prompt", "test-model")
         self.executed_tasks = set()
 
-    async def execute(self, task) -> dict:
+    async def run(self, task) -> dict:
         # Record task execution
         self.executed_tasks.add(task)
         # Simulate some work

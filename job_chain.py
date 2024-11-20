@@ -250,7 +250,7 @@ class JobChain:
             """Process a single task and return its result"""
             logger.debug(f"Processing task: {task}")
             try:
-                result = await job.execute(task)
+                result = await job._execute(task)
                 logger.debug(f"Task {task} completed successfully")
                 result_queue.put(result)
                 logger.debug(f"Result for task {task} put in queue")

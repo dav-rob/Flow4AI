@@ -13,6 +13,7 @@ from job import Job
 from job_chain import JobChain
 from logging_config import setup_logging
 
+
 def intentionally_blocking(reason: str):
     """
     Decorator to mark methods that intentionally perform blocking operations in async context.
@@ -44,7 +45,7 @@ class CPUIntensiveJob(Job):
         reason="This job intentionally performs CPU-intensive work to demonstrate "
                "process monitoring capabilities via tools like ps/top"
     )
-    async def execute(self, task) -> dict:
+    async def run(self, task) -> dict:
         """Calculate prime numbers up to n using CPU-intensive operations"""
         self.logger.debug(f"Starting prime calculation for n={task}")
         

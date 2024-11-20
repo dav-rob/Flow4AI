@@ -31,7 +31,7 @@ class ErrorTestJob(Job):
             model="test-model"
         )
     
-    async def execute(self, task):
+    async def run(self, task):
         if task.get('raise_error'):
             raise Exception(task.get('error_message', 'Simulated error'))
         if task.get('timeout'):

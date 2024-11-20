@@ -23,18 +23,18 @@ def traced_job(cls: Type) -> Type:
     Class decorator that ensures the execute method is traced.
     This is automatically applied to all Job subclasses.
     """
-    if hasattr(cls, 'execute'):
-        original_execute = cls.execute
+    if hasattr(cls, '_execute'):
+        original_execute = cls._execute
         traced_execute = trace_function(original_execute)
         traced_execute = _mark_traced(traced_execute)
         # Store original as executeNoTrace
         cls.executeNoTrace = original_execute
         # Replace execute with traced version
-        cls.execute = traced_execute
+        cls._execute = traced_execute
     return cls
 
 
-class UntracedJob(ABC):
+class AbstractJob(ABC):
     """
     Abstract base class for jobs that don't require tracing.
     WARNING: This class should only be used in special cases where tracing is not desired.
@@ -46,10 +46,58 @@ class UntracedJob(ABC):
         self.model = model
         self.logger = logging.getLogger(self.__class__.__name__)
 
+    async def _execute(self, task) -> Dict[str, Any]:
+        """
+        Execute the job with the new control flow wrapper.
+        This implementation adds dependency checking and finishing actions.
+        """
+        if not self.has_all_dependencies():
+            self.logger.info(f"Dependencies not met for {self.name}, skipping execution")
+            return {}
+
+        result = await self.run(task)
+
+        if self.has_finished():
+            self.do_finishing_actions()
+        else:
+            self.do_intermediate_actions()
+
+        return result
+
+
     @abstractmethod
-    async def execute(self, task) -> Dict[str, Any]:
+    async def run(self, task) -> Dict[str, Any]:
         """Execute the job on the given task. Must be implemented by subclasses."""
         pass
+
+    def has_all_dependencies(self) -> bool:
+        """
+        Check if all dependencies are satisfied.
+        Returns False by default as specified.
+        """
+        return True
+
+    def has_finished(self) -> bool:
+        """
+        Check if the job has finished execution.
+        Returns True by default as specified.
+        """
+        return True
+
+    def do_finishing_actions(self) -> None:
+        """
+        Perform actions when job has finished successfully.
+        Stub implementation.
+        """
+        self.logger.info(f"Performing finishing actions for {self.name}")
+
+    def do_intermediate_actions(self) -> None:
+        """
+        Perform actions when job has not finished.
+        Stub implementation.
+        """
+        self.logger.info(f"Performing intermediate actions for {self.name}")
+
 
 
 class JobMeta(ABCMeta):
@@ -61,21 +109,20 @@ class JobMeta(ABCMeta):
         return cls
 
 
-class Job(UntracedJob, metaclass=JobMeta):
+class Job(AbstractJob, metaclass=JobMeta):
     """
     Base class for all job implementations. Automatically applies tracing to
     execute method to ensure proper monitoring.
     
     Example:
         class MyJob(Job):
-            async def execute(self, task):
+            async def run(self, task):
                 return {"result": "success"}
     
-    The execute method will automatically be traced, and the original untraced
+    The run method will automatically be traced, and the original untraced
     version will be available as executeNoTrace if needed.
     """
-    @abstractmethod
-    async def execute(self, task) -> Dict[str, Any]:
+    async def run(self, task) -> Dict[str, Any]:
         """
         Execute the job on the given task. Must be implemented by subclasses.
         This method is automatically traced in all subclasses.
@@ -86,7 +133,7 @@ class Job(UntracedJob, metaclass=JobMeta):
 class SimpleJob(Job):
     """A Job implementation that provides a simple default behavior."""
     
-    async def execute(self, task) -> Dict[str, Any]:
+    async def run(self, task) -> Dict[str, Any]:
         """Execute a simple job that logs and returns the task."""
         self.logger.info(f"Async JOB for {task}")
         await asyncio.sleep(1)  # Simulate network delay

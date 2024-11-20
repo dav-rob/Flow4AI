@@ -20,7 +20,7 @@ class DelayedJob(Job):
         super().__init__(name, "Demo prompt", "demo-model")
         self.delay = delay
 
-    async def execute(self, task) -> dict:
+    async def run(self, task) -> dict:
         """Execute job with specified delay"""
         task_id, delay = task  # Unpack the task data
         logger.info(f"Starting task {task_id} with delay {delay}s")

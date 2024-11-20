@@ -1,11 +1,13 @@
-import sys
-import os
 import asyncio
+import os
 import pickle
+import sys
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from job_chain import JobChain
 from job import Job
+from job_chain import JobChain
+
 
 # Example of a valid standalone function that can be pickled
 def valid_result_processor(result):
@@ -77,7 +79,7 @@ class ExampleJob(Job):
     def __init__(self):
         super().__init__("Example Job", "Sample prompt", "example-model")
 
-    async def execute(self, task):
+    async def run(self, task):
         return {"task": task, "result": f"Processed {task}"}
 
 def demonstrate_valid_usage():

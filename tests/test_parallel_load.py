@@ -1,10 +1,12 @@
 import asyncio
+import json
 import logging
+import os
 import time
+
 import pytest
 import yaml
-import os
-import json
+
 from job import Job, JobFactory
 from job_chain import JobChain
 from utils.otel_wrapper import TracerFactory, trace_function
@@ -20,7 +22,7 @@ class DelayedJob(Job):
         super().__init__(name, prompt, model)
         self.time_delay = time_delay
 
-    async def execute(self, task) -> dict:
+    async def run(self, task) -> dict:
         """Execute a delayed job with tracing."""
         logger.info(f"Executing DelayedJob for {task} with delay {self.time_delay}")
         await asyncio.sleep(self.time_delay)  # Use specified delay

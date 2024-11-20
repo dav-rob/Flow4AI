@@ -32,7 +32,7 @@ class DelayedJob(Job):
         super().__init__(name, prompt, model)
         self.time_delay = time_delay
 
-    async def execute(self, task) -> dict:
+    async def run(self, task) -> dict:
         """Execute a delayed job with tracing."""
         logger.info(f"Executing DelayedJob for {task} with delay {self.time_delay}")
         await asyncio.sleep(self.time_delay)  # Use specified delay
@@ -281,7 +281,7 @@ def test_parallel_execution_with_tracing(tmp_path):
         # Count execute method traces
         execute_traces = [
             span for span in trace_data 
-            if span['name'].endswith('.execute')
+            if span['name'].endswith('._execute')
         ]
         logger.info(f"Found {len(execute_traces)} execute traces")
         if len(execute_traces) > 0:

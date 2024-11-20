@@ -27,7 +27,7 @@ class StressTestJob(Job):
             model="test-model"
         )
     
-    async def execute(self, task):
+    async def run(self, task):
         if isinstance(task, dict):
             if task.get('memory_intensive'):
                 # Create temporary large data

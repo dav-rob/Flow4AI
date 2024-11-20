@@ -27,7 +27,7 @@ class AsyncTestJob(Job):
             model="test-model"
         )
     
-    async def execute(self, task):
+    async def run(self, task):
         if isinstance(task, dict) and task.get('fail'):
             raise ValueError("Simulated task failure")
         if isinstance(task, dict) and task.get('delay'):

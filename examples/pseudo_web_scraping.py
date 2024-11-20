@@ -17,7 +17,7 @@ class ExampleJob(Job):
         super().__init__("Example Job", "Sample prompt", "example-model")
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    async def execute(self, task):
+    async def run(self, task):
         self.logger.info(f"Processing task: {task}")
         await asyncio.sleep(0.1)  # Simulate processing
         return {"task": task, "result": f"Processed {task}"}
