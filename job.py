@@ -40,6 +40,19 @@ class AbstractJob(ABC):
     For normal usage, inherit from Job instead which ensures proper tracing.
     """
     def __init__(self, name: str):
+        """
+        Initialize an AbstractJob instance.
+
+        Args:
+            name (str): A unique identifier for this job within the context of a JobChain.
+                       The name must be unique among all jobs in the same JobChain to ensure
+                       proper job identification and dependency resolution.
+
+        Note:
+            The uniqueness of the name is crucial for proper JobChain operation. Using
+            duplicate names within the same JobChain can lead to unexpected behavior
+            in job execution and dependency management.
+        """
         self.name = name
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -118,9 +131,23 @@ class Job(AbstractJob, metaclass=JobMeta):
         class MyJob(Job):
             async def run(self, task):
                 return {"result": "success"}
-    
-    
     """
+    def __init__(self, name: str):
+        """
+        Initialize a Job instance.
+
+        Args:
+            name (str): A unique identifier for this job within the context of a JobChain.
+                       The name must be unique among all jobs in the same JobChain to ensure
+                       proper job identification and dependency resolution.
+
+        Note:
+            The uniqueness of the name is crucial for proper JobChain operation. Using
+            duplicate names within the same JobChain can lead to unexpected behavior
+            in job execution and dependency management.
+        """
+        super().__init__(name)
+
     async def run(self, task) -> Dict[str, Any]:
         """
         Run the job on the given task. Must be implemented by subclasses.
