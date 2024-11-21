@@ -1,8 +1,7 @@
 import asyncio
-import functools
 import logging
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Any, Dict, Type, TypeVar
+from typing import Any, Dict, Type
 
 from utils.otel_wrapper import trace_function
 
