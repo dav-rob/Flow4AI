@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Any, Dict, Type
+from typing import Any, Dict, Type, Set, Union
 
 from utils.otel_wrapper import trace_function
 
@@ -39,6 +39,14 @@ class AbstractJob(ABC):
     WARNING: This class should only be used in special cases where tracing is not desired.
     For normal usage, inherit from Job instead which ensures proper tracing.
     """
+    name: str  # this should be a unique name in the JobChain server / cluster
+    description: str
+    finished: bool
+    input_needed_jobs: Set['AbstractJob']
+    jobs_dependent_on: Set['AbstractJob']
+    job_output: Dict[str, Any]
+    input_to_process: Dict[str, Any]
+
     def __init__(self, name: str):
         """
         Initialize an AbstractJob instance.
@@ -54,7 +62,29 @@ class AbstractJob(ABC):
             in job execution and dependency management.
         """
         self.name = name
+        self.description = ""  # blank by default
+        self.finished = True  # True by default
+        self.job_output = {}  # initialized empty
+        self.input_to_process = {}  # initialized empty
         self.logger = logging.getLogger(self.__class__.__name__)
+
+    def add_input_needed_jobs(self, jobs: Union['AbstractJob', Set['AbstractJob']]) -> None:
+        """Add job(s) as input dependencies."""
+        if not hasattr(self, 'input_needed_jobs'):
+            self.input_needed_jobs = set()
+        if isinstance(jobs, AbstractJob):
+            self.input_needed_jobs.add(jobs)
+        else:
+            self.input_needed_jobs.update(jobs)
+
+    def add_dependent_jobs(self, jobs: Union['AbstractJob', Set['AbstractJob']]) -> None:
+        """Add job(s) that depend on this job."""
+        if not hasattr(self, 'jobs_dependent_on'):
+            self.jobs_dependent_on = set()
+        if isinstance(jobs, AbstractJob):
+            self.jobs_dependent_on.add(jobs)
+        else:
+            self.jobs_dependent_on.update(jobs)
 
     async def _execute(self, task) -> Dict[str, Any]:
         """
