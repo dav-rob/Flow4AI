@@ -14,7 +14,7 @@ from utils.timing import timing_decorator
 # Custom Job implementation for demonstration
 class ExampleJob(Job):
     def __init__(self):
-        super().__init__("Example Job", "Sample prompt", "example-model")
+        super().__init__("Example Job")
         self.logger = logging.getLogger(self.__class__.__name__)
 
     async def run(self, task):

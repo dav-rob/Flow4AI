@@ -29,7 +29,7 @@ atexit.register(log_shutdown)
 class DelayedJob(Job):
     """A simple job that delays for a specified time to demonstrate tracing"""
     def __init__(self, name: str, delay: float):
-        super().__init__(name, "Demo prompt", "demo-model")
+        super().__init__(name)
         self.delay = delay
 
     async def run(self, task) -> dict:

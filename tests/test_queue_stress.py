@@ -21,11 +21,7 @@ from job_chain import JobChain
 class StressTestJob(Job):
     """Job implementation for stress testing queues"""
     def __init__(self):
-        super().__init__(
-            name="StressTestJob",
-            prompt="Test prompt",
-            model="test-model"
-        )
+        super().__init__(name="StressTestJob")
     
     async def run(self, task):
         if isinstance(task, dict):

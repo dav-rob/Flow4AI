@@ -15,7 +15,7 @@ from job_chain import JobChain
 
 class ResultTimingJob(Job):
     def __init__(self):
-        super().__init__("Result Timing Job", "Test prompt", "test-model")
+        super().__init__("Result Timing Job")
         self.executed_tasks = set()
 
     async def run(self, task) -> dict:

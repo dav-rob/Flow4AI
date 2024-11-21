@@ -13,7 +13,7 @@ def test_untraced_job_allows_no_decorator():
         async def run(self, task) -> Dict[str, Any]:
             return {"task": task, "status": "complete"}
     
-    job = UnTracedJob("Test Job", "Test prompt", "test-model")
+    job = UnTracedJob("Test Job")
     assert isinstance(job, AbstractJob)
     assert not _is_traced(UnTracedJob._execute)
 
@@ -26,14 +26,14 @@ class SimpleTestJob(Job):
 
 def test_job_execute_is_traced():
     """Test that Job's execute method is automatically traced"""
-    job = SimpleTestJob("Test Job", "Test prompt", "test-model")
+    job = SimpleTestJob("Test Job")
     assert isinstance(job, Job)
     assert _is_traced(job.__class__._execute)
 
 
 def test_job_execute_no_trace_available():
     """Test that Job subclasses have access to untraced execute via executeNoTrace"""
-    job = SimpleTestJob("Test Job", "Test prompt", "test-model")
+    job = SimpleTestJob("Test Job")
     assert hasattr(job, 'executeNoTrace'), "Job should have executeNoTrace method"
     assert not _is_traced(job.__class__.executeNoTrace), "executeNoTrace should not be traced"
 
@@ -44,7 +44,7 @@ def test_job_subclass_gets_traced_execute():
         async def run(self, task) -> Dict[str, Any]:
             return {"task": task, "status": "success"}
     
-    job = CustomJob("Test Job", "Test prompt", "test-model")
+    job = CustomJob("Test Job")
     assert _is_traced(job.__class__._execute)
     assert hasattr(job, 'executeNoTrace')
     assert not _is_traced(job.__class__.executeNoTrace)
@@ -128,7 +128,7 @@ def test_execute_no_trace_matches_original():
         async def run(self, task) -> Dict[str, Any]:
             return {"task": task, "result": "success"}
     
-    job = TestJob("Test Job", "Test prompt", "test-model")
+    job = TestJob("Test Job")
     
     # Get the source code of both methods
     execute_source = inspect.getsource(job.__class__.executeNoTrace)

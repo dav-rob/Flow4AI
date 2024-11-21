@@ -25,11 +25,7 @@ from job_chain import JobChain
 class ErrorTestJob(Job):
     """Job implementation for testing error conditions"""
     def __init__(self):
-        super().__init__(
-            name="ErrorTestJob",
-            prompt="Test prompt",
-            model="test-model"
-        )
+        super().__init__(name="ErrorTestJob")
     
     async def run(self, task):
         if task.get('raise_error'):

@@ -13,16 +13,12 @@ class TestJobLoader(unittest.TestCase):
         job = JobFactory._load_from_file(params)
         self.assertIsInstance(job, Job)
         self.assertEqual(job.name, "File Job")
-        self.assertEqual(job.prompt, "Sample prompt from file")
-        self.assertEqual(job.model, "gpt-3.5-turbo")
 
     def test_load_from_datastore(self):
         params = {"job_id": "123"}
         job = JobFactory._load_from_datastore(params)
         self.assertIsInstance(job, Job)
         self.assertEqual(job.name, "Datastore Job")
-        self.assertEqual(job.prompt, "Sample prompt from datastore")
-        self.assertEqual(job.model, "gpt-3.5-turbo")
 
     def test_factory_file(self):
         job_context = {"type": "file", "params": {"file_path": "sample_job.json"}}

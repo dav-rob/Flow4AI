@@ -77,7 +77,7 @@ def run_with_invalid_instance():
 
 class ExampleJob(Job):
     def __init__(self):
-        super().__init__("Example Job", "Sample prompt", "example-model")
+        super().__init__("Example Job")
 
     async def run(self, task):
         return {"task": task, "result": f"Processed {task}"}

@@ -39,10 +39,8 @@ class AbstractJob(ABC):
     WARNING: This class should only be used in special cases where tracing is not desired.
     For normal usage, inherit from Job instead which ensures proper tracing.
     """
-    def __init__(self, name: str, prompt: str, model: str):
+    def __init__(self, name: str):
         self.name = name
-        self.prompt = prompt
-        self.model = model
         self.logger = logging.getLogger(self.__class__.__name__)
 
     async def _execute(self, task) -> Dict[str, Any]:
@@ -148,14 +146,14 @@ class JobFactory:
         """Create a traced job instance from file configuration."""
         logger = logging.getLogger('JobFactory')
         logger.info(f"Loading job with params: {params}")
-        return SimpleJob("File Job", "Sample prompt from file", "gpt-3.5-turbo")
+        return SimpleJob("File Job")
 
     @staticmethod
     def _load_from_datastore(params: Dict[str, Any]) -> Job:
         """Create a traced job instance from datastore."""
         logger = logging.getLogger('JobFactory')
         logger.info(f"Loading job from datastore with params: {params}")
-        return SimpleJob("Datastore Job", "Sample prompt from datastore", "gpt-3.5-turbo")
+        return SimpleJob("Datastore Job")
 
     @staticmethod
     def load_job(job_context: Dict[str, Any]) -> Job:

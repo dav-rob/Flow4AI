@@ -21,11 +21,7 @@ from job_chain import JobChain
 class AsyncTestJob(Job):
     """Job to confirm the basics of async functionality are working: """
     def __init__(self):
-        super().__init__(
-            name="AsyncTestJob",
-            prompt="Test prompt",
-            model="test-model"
-        )
+        super().__init__(name="AsyncTestJob")
     
     async def run(self, task):
         if isinstance(task, dict) and task.get('fail'):

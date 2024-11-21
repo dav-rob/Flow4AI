@@ -216,7 +216,7 @@ def test_job_metaclass_tracing(trace_file, setup_file_exporter):
             return {"result": task}
 
     # Create and execute job
-    job = TestJob("test", "test prompt", "test model")
+    job = TestJob("test")
     import asyncio
     result = asyncio.run(job._execute("test task"))
     assert result == {"result": "test task"}

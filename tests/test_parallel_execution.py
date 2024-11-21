@@ -29,7 +29,7 @@ logger.setLevel(logging.INFO)
 
 class DelayedJob(Job):
     def __init__(self, name: str, prompt: str, model: str, time_delay: float):
-        super().__init__(name, prompt, model)
+        super().__init__(name)
         self.time_delay = time_delay
 
     async def run(self, task) -> dict:

@@ -37,7 +37,7 @@ setup_logging()
 
 class CPUIntensiveJob(Job):
     def __init__(self):
-        super().__init__("CPU Intensive", "Calculate primes", "cpu-model")
+        super().__init__("CPU Intensive")
         self.logger = logging.getLogger('CPUIntensiveJob')
         self.logger.debug("Initializing CPUIntensiveJob")
         
