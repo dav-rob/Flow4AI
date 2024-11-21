@@ -189,11 +189,12 @@ class TracerFactory:
             raise ValueError("Unsupported exporter type")
 
     @classmethod
-    def trace(cls, message: str):
+    def trace(cls, message: str, detailed_trace: bool = False):
         """Trace a message with OpenTelemetry tracing.
         
         Args:
             message: The message to trace
+            detailed_trace: Whether to include detailed tracing information (args, kwargs, object fields)
         """
         tracer = cls.get_tracer()
         
@@ -222,10 +223,11 @@ class TracerFactory:
                 span_name = f"{module_name}.{func_name}"
                 with tracer.start_as_current_span(span_name) as span:
                     span.set_attribute("trace.message", message)
-                    span.set_attribute("function.args", str(tuple(args)))
-                    span.set_attribute("function.kwargs", str(kwargs))
-                    if args and hasattr(args[0], "__dict__"):
-                        span.set_attribute("object.fields", str(vars(args[0])))
+                    if detailed_trace:
+                        span.set_attribute("function.args", str(tuple(args)))
+                        span.set_attribute("function.kwargs", str(kwargs))
+                        if args and hasattr(args[0], "__dict__"):
+                            span.set_attribute("object.fields", str(vars(args[0])))
                     print(message)
                 
                 # Clean up
@@ -239,22 +241,27 @@ class TracerFactory:
             print(message)
 
 # Decorator for OpenTelemetry tracing
-def trace_function(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        tracer = TracerFactory.get_tracer()
-        span_name = f"{func.__module__}.{func.__name__}"
-        with tracer.start_as_current_span(span_name) as span:
-            # Record function arguments
-            span.set_attribute("function.args", str(args))
-            span.set_attribute("function.kwargs", str(kwargs))
-            if args and hasattr(args[0], "__dict__"):
-                span.set_attribute("object.fields", str(vars(args[0])))
-            try:
-                result = func(*args, **kwargs)
-                return result
-            except Exception as e:
-                span.record_exception(e)
-                raise
-
-    return wrapper
+def trace_function(func=None, *, detailed_trace: bool = False):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            tracer = TracerFactory.get_tracer()
+            span_name = f"{func.__module__}.{func.__name__}"
+            with tracer.start_as_current_span(span_name) as span:
+                # Record function arguments only if detailed_trace is True
+                if detailed_trace:
+                    span.set_attribute("function.args", str(args))
+                    span.set_attribute("function.kwargs", str(kwargs))
+                    if args and hasattr(args[0], "__dict__"):
+                        span.set_attribute("object.fields", str(vars(args[0])))
+                try:
+                    result = func(*args, **kwargs)
+                    return result
+                except Exception as e:
+                    span.record_exception(e)
+                    raise
+        return wrapper
+    
+    if func is None:
+        return decorator
+    return decorator(func)

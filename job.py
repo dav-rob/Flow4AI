@@ -25,7 +25,7 @@ def traced_job(cls: Type) -> Type:
     """
     if hasattr(cls, '_execute'):
         original_execute = cls._execute
-        traced_execute = trace_function(original_execute)
+        traced_execute = trace_function(original_execute, detailed_trace=True)
         traced_execute = _mark_traced(traced_execute)
         # Store original as executeNoTrace
         cls.executeNoTrace = original_execute
