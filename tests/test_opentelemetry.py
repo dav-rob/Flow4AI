@@ -423,3 +423,40 @@ def test_trace_with_status(trace_file, setup_file_exporter):
             }
         }]
     )
+
+def test_trace_function_with_attributes(trace_file, setup_file_exporter):
+    """Test that trace_function decorator properly handles additional attributes"""
+    @trace_function(attributes={"custom.attr1": "value1", "custom.attr2": 42})
+    def sample_function():
+        return "success"
+    
+    result = sample_function()
+    assert result == "success"
+    
+    verify_trace(
+        trace_file,
+        expected_name="test_opentelemetry.sample_function",
+        expected_attrs={
+            "custom.attr1": "value1",
+            "custom.attr2": "42"  # Note: all attributes are converted to strings
+        }
+    )
+
+def test_tracer_factory_with_attributes(trace_file, setup_file_exporter):
+    """Test that TracerFactory.trace properly handles additional attributes"""
+    test_message = "Test message with attributes"
+    TracerFactory.trace(test_message, attributes={
+        "environment": "test",
+        "version": "1.0.0",
+        "priority": 1
+    })
+    
+    verify_trace(
+        trace_file,
+        expected_attrs={
+            "trace.message": test_message,
+            "environment": "test",
+            "version": "1.0.0",
+            "priority": "1"  # Note: all attributes are converted to strings
+        }
+    )

@@ -4,7 +4,7 @@ import os
 from functools import wraps
 from pathlib import Path
 from threading import Lock
-from typing import Sequence
+from typing import Sequence, Optional, Dict, Any
 
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import \
@@ -189,12 +189,13 @@ class TracerFactory:
             raise ValueError("Unsupported exporter type")
 
     @classmethod
-    def trace(cls, message: str, detailed_trace: bool = False):
+    def trace(cls, message: str, detailed_trace: bool = False, attributes: Optional[Dict[str, Any]] = None):
         """Trace a message with OpenTelemetry tracing.
         
         Args:
             message: The message to trace
             detailed_trace: Whether to include detailed tracing information (args, kwargs, object fields)
+            attributes: Optional dictionary of additional attributes to add to the span
         """
         tracer = cls.get_tracer()
         
@@ -228,6 +229,9 @@ class TracerFactory:
                         span.set_attribute("function.kwargs", str(kwargs))
                         if args and hasattr(args[0], "__dict__"):
                             span.set_attribute("object.fields", str(vars(args[0])))
+                    if attributes:
+                        for key, value in attributes.items():
+                            span.set_attribute(key, str(value))
                     print(message)
                 
                 # Clean up
@@ -238,10 +242,13 @@ class TracerFactory:
         # Fallback if not in a function context
         with tracer.start_as_current_span("trace_message") as span:
             span.set_attribute("trace.message", message)
+            if attributes:
+                for key, value in attributes.items():
+                    span.set_attribute(key, str(value))
             print(message)
 
 # Decorator for OpenTelemetry tracing
-def trace_function(func=None, *, detailed_trace: bool = False):
+def trace_function(func=None, *, detailed_trace: bool = False, attributes: Optional[Dict[str, Any]] = None):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -254,6 +261,9 @@ def trace_function(func=None, *, detailed_trace: bool = False):
                     span.set_attribute("function.kwargs", str(kwargs))
                     if args and hasattr(args[0], "__dict__"):
                         span.set_attribute("object.fields", str(vars(args[0])))
+                if attributes:
+                    for key, value in attributes.items():
+                        span.set_attribute(key, str(value))
                 try:
                     result = func(*args, **kwargs)
                     return result
