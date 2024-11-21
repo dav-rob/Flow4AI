@@ -48,8 +48,11 @@ class AbstractJob(ABC):
 
     async def _execute(self, task) -> Dict[str, Any]:
         """
-        Execute the job with the new control flow wrapper.
-        This implementation adds dependency checking and finishing actions.
+        This method is called by JobChain to start-off the Jobs, and is 
+        responsible for the control flow of starting Jobs when dependencies are
+        met and for Jobs handing-off to other Jobs.
+        This method will automatically be traced in the Job subclass, and the 
+        original untraced version will be available as executeNoTrace if needed.
         """
         if not self.has_all_dependencies():
             self.logger.info(f"Dependencies not met for {self.name}, skipping execution")
@@ -112,20 +115,18 @@ class JobMeta(ABCMeta):
 class Job(AbstractJob, metaclass=JobMeta):
     """
     Base class for all job implementations. Automatically applies tracing to
-    execute method to ensure proper monitoring.
+    _execute method to ensure proper monitoring.
     
     Example:
         class MyJob(Job):
             async def run(self, task):
                 return {"result": "success"}
     
-    The run method will automatically be traced, and the original untraced
-    version will be available as executeNoTrace if needed.
+    
     """
     async def run(self, task) -> Dict[str, Any]:
         """
-        Execute the job on the given task. Must be implemented by subclasses.
-        This method is automatically traced in all subclasses.
+        Run the job on the given task. Must be implemented by subclasses.
         """
         pass
 
@@ -134,7 +135,7 @@ class SimpleJob(Job):
     """A Job implementation that provides a simple default behavior."""
     
     async def run(self, task) -> Dict[str, Any]:
-        """Execute a simple job that logs and returns the task."""
+        """Run a simple job that logs and returns the task."""
         self.logger.info(f"Async JOB for {task}")
         await asyncio.sleep(1)  # Simulate network delay
         return {"task": task, "status": "complete"}
