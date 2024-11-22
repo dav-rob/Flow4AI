@@ -7,7 +7,7 @@ import time
 import pytest
 import yaml
 
-from job import Job, JobFactory
+from job import AbstractJob, JobFactory
 from job_chain import JobChain
 from utils.otel_wrapper import TracerFactory, trace_function
 
@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-class DelayedJob(Job):
+class DelayedJob(AbstractJob):
     def __init__(self, name: str, prompt: str, model: str, time_delay: float):
         super().__init__(name)
         self.time_delay = time_delay
@@ -28,7 +28,7 @@ class DelayedJob(Job):
         await asyncio.sleep(self.time_delay)  # Use specified delay
         return {"task": task, "status": "complete"}
 
-def create_delayed_job(params: dict) -> Job:
+def create_delayed_job(params: dict) -> AbstractJob:
     time_delay = params.get('time_delay', 1.0)
     return DelayedJob("Test Job", "Test prompt", "test-model", time_delay)
 

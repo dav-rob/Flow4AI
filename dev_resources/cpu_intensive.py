@@ -9,7 +9,7 @@ from functools import wraps
 # Add parent directory to Python path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from job import Job
+from job import AbstractJob
 from job_chain import JobChain
 from logging_config import setup_logging
 
@@ -35,7 +35,7 @@ def intentionally_blocking(reason: str):
 # Initialize logging configuration
 setup_logging()
 
-class CPUIntensiveJob(Job):
+class CPUIntensiveJob(AbstractJob):
     def __init__(self):
         super().__init__("CPU Intensive")
         self.logger = logging.getLogger('CPUIntensiveJob')

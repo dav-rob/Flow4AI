@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Any, Dict, Type, Set, Union
+from typing import Any, Dict, Set, Type, Union
 
 from utils.otel_wrapper import trace_function
 
@@ -159,39 +159,7 @@ class AbstractJob(ABC, metaclass=JobMeta):
         self.logger.info(f"Performing intermediate actions for {self.name}")
 
 
-class Job(AbstractJob):
-    """
-    Base class for all job implementations. Inherits from AbstractJob but does not add tracing.
-    
-    Example:
-        class MyJob(Job):
-            async def run(self, task):
-                return {"result": "success"}
-    """
-    def __init__(self, name: str):
-        """
-        Initialize a Job instance.
-
-        Args:
-            name (str): A unique identifier for this job within the context of a JobChain.
-                       The name must be unique among all jobs in the same JobChain to ensure
-                       proper job identification and dependency resolution.
-
-        Note:
-            The uniqueness of the name is crucial for proper JobChain operation. Using
-            duplicate names within the same JobChain can lead to unexpected behavior
-            in job execution and dependency management.
-        """
-        super().__init__(name)
-
-    async def run(self, task) -> Dict[str, Any]:
-        """
-        Run the job on the given task. Must be implemented by subclasses.
-        """
-        pass
-
-
-class SimpleJob(Job):
+class SimpleJob(AbstractJob):
     """A Job implementation that provides a simple default behavior."""
     
     async def run(self, task) -> Dict[str, Any]:
@@ -205,21 +173,21 @@ class JobFactory:
     """Factory class for creating Job instances with proper tracing."""
     
     @staticmethod
-    def _load_from_file(params: Dict[str, Any]) -> Job:
+    def _load_from_file(params: Dict[str, Any]) -> AbstractJob:
         """Create a traced job instance from file configuration."""
         logger = logging.getLogger('JobFactory')
         logger.info(f"Loading job with params: {params}")
         return SimpleJob("File Job")
 
     @staticmethod
-    def _load_from_datastore(params: Dict[str, Any]) -> Job:
+    def _load_from_datastore(params: Dict[str, Any]) -> AbstractJob:
         """Create a traced job instance from datastore."""
         logger = logging.getLogger('JobFactory')
         logger.info(f"Loading job from datastore with params: {params}")
         return SimpleJob("Datastore Job")
 
     @staticmethod
-    def load_job(job_context: Dict[str, Any]) -> Job:
+    def load_job(job_context: Dict[str, Any]) -> AbstractJob:
         """Load a job instance with proper tracing based on context."""
         load_type = job_context.get("type", "").lower()
         params = job_context.get("params", {})

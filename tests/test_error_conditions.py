@@ -18,11 +18,11 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from job import Job
+from job import AbstractJob
 from job_chain import JobChain
 
 
-class ErrorTestJob(Job):
+class ErrorTestJob(AbstractJob):
     """Job implementation for testing error conditions"""
     def __init__(self):
         super().__init__(name="ErrorTestJob")

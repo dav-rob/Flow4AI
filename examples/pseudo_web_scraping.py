@@ -6,13 +6,13 @@ from time import sleep
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from job import Job
+from job import AbstractJob
 from job_chain import JobChain
 from utils.timing import timing_decorator
 
 
 # Custom Job implementation for demonstration
-class ExampleJob(Job):
+class ExampleJob(AbstractJob):
     def __init__(self):
         super().__init__("Example Job")
         self.logger = logging.getLogger(self.__class__.__name__)

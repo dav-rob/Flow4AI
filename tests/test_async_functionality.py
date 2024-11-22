@@ -14,11 +14,11 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from job import Job
+from job import AbstractJob
 from job_chain import JobChain
 
 
-class AsyncTestJob(Job):
+class AsyncTestJob(AbstractJob):
     """Job to confirm the basics of async functionality are working: """
     def __init__(self):
         super().__init__(name="AsyncTestJob")

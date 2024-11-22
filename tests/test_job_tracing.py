@@ -3,7 +3,7 @@ from typing import Any, Dict
 
 import pytest
 
-from job import AbstractJob, Job, _is_traced, _has_own_traced_execute
+from job import AbstractJob, _has_own_traced_execute, _is_traced
 from utils.otel_wrapper import trace_function
 
 

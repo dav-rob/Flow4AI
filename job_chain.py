@@ -4,10 +4,9 @@ import multiprocessing as mp
 import pickle
 # TODO: use dil instead of pickle in multiprocessor
 import queue
-from time import sleep
 from typing import Any, Callable, Dict, Optional, Union
 
-from job import Job, JobFactory, AbstractJob
+from job import AbstractJob, JobFactory
 from logging_config import setup_logging
 from utils.print_utils import printh
 

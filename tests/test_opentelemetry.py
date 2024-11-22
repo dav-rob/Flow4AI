@@ -7,7 +7,7 @@ import yaml
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
 
-from job import AbstractJob, Job, JobFactory
+from job import AbstractJob, JobFactory
 from utils.otel_wrapper import TracerFactory, trace_function
 
 

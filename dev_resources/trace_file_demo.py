@@ -8,7 +8,7 @@ from pathlib import Path
 # Add parent directory to Python path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from job import Job
+from job import AbstractJob
 from job_chain import JobChain
 
 # Set the OpenTelemetry configuration file
@@ -26,7 +26,7 @@ def log_shutdown():
     logger.debug("Python interpreter shutdown started")
 atexit.register(log_shutdown)
 
-class DelayedJob(Job):
+class DelayedJob(AbstractJob):
     """A simple job that delays for a specified time to demonstrate tracing"""
     def __init__(self, name: str, delay: float):
         super().__init__(name)

@@ -14,11 +14,11 @@ import time
 import psutil
 import pytest
 
-from job import Job
+from job import AbstractJob
 from job_chain import JobChain
 
 
-class StressTestJob(Job):
+class StressTestJob(AbstractJob):
     """Job implementation for stress testing queues"""
     def __init__(self):
         super().__init__(name="StressTestJob")
