@@ -11,6 +11,11 @@ def _is_traced(method):
     return hasattr(method, '_is_traced') and method._is_traced
 
 
+def _has_own_traced_execute(cls):
+    """Helper function to check if a class has its own traced _execute (not inherited)."""
+    return '_execute' in cls.__dict__ and _is_traced(cls.__dict__['_execute'])
+
+
 def _mark_traced(method):
     """Helper function to mark a method as traced."""
     method._is_traced = True
@@ -20,7 +25,7 @@ def _mark_traced(method):
 def traced_job(cls: Type) -> Type:
     """
     Class decorator that ensures the execute method is traced.
-    This is automatically applied to all Job subclasses.
+    This is only applied to the AbstractJob class itself.
     """
     if hasattr(cls, '_execute'):
         original_execute = cls._execute
@@ -34,17 +39,24 @@ def traced_job(cls: Type) -> Type:
 
 
 class JobMeta(ABCMeta):
-    """Metaclass that automatically applies the traced_job decorator to all AbstractJob subclasses."""
+    """Metaclass that automatically applies the traced_job decorator to AbstractJob only."""
     def __new__(mcs, name, bases, namespace):
         cls = super().__new__(mcs, name, bases, namespace)
-        if name != 'AbstractJob':  # Don't decorate the AbstractJob class itself
+        if name == 'AbstractJob':  # Only decorate the AbstractJob class itself
             return traced_job(cls)
+        # For subclasses, ensure they inherit AbstractJob's traced _execute
+        if '_execute' in namespace:
+            # If subclass defines its own _execute, ensure it's not traced again
+            # but still inherits the tracing from AbstractJob
+            del namespace['_execute']
+            cls = super().__new__(mcs, name, bases, namespace)
         return cls
 
 
 class AbstractJob(ABC, metaclass=JobMeta):
     """
-    Abstract base class for jobs. All jobs will have tracing enabled through the JobMeta metaclass.
+    Abstract base class for jobs. Only this class will have tracing enabled through the JobMeta metaclass.
+    Subclasses will inherit the traced version of _execute but won't add additional tracing.
     """
     name: str  # this should be a unique name in the JobChain server / cluster
     description: str
@@ -98,7 +110,7 @@ class AbstractJob(ABC, metaclass=JobMeta):
         This method is called by JobChain to start-off the Jobs, and is 
         responsible for the control flow of starting Jobs when dependencies are
         met and for Jobs handing-off to other Jobs.
-        This method will automatically be traced through the JobMeta metaclass.
+        This method will be traced only in the AbstractJob class through the JobMeta metaclass.
         """
         if not self.has_all_dependencies():
             self.logger.info(f"Dependencies not met for {self.name}, skipping execution")
@@ -149,7 +161,7 @@ class AbstractJob(ABC, metaclass=JobMeta):
 
 class Job(AbstractJob):
     """
-    Base class for all job implementations. Inherits tracing functionality from AbstractJob.
+    Base class for all job implementations. Inherits from AbstractJob but does not add tracing.
     
     Example:
         class MyJob(Job):
