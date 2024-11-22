@@ -7,7 +7,7 @@ import yaml
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
 
-from job import AbstractJob
+from job import JobABC
 from utils.otel_wrapper import TracerFactory, trace_function
 
 
@@ -210,8 +210,8 @@ def test_tracer_factory_detailed_on(trace_file, setup_file_exporter):
     )
 
 def test_job_metaclass_tracing(trace_file, setup_file_exporter):
-    """Test that AbstractJob metaclass properly applies detailed tracing"""
-    class TestJob(AbstractJob):
+    """Test that JobABC metaclass properly applies detailed tracing"""
+    class TestJob(JobABC):
         async def run(self, task):
             return {"result": task}
 

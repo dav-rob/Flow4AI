@@ -6,7 +6,7 @@ from pathlib import Path
 # Add parent directory to Python path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from job import AbstractJob
+from job import JobABC
 from job_chain import JobChain
 
 # Configure logging
@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO,
                    format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-class DelayedJob(AbstractJob):
+class DelayedJob(JobABC):
     """A simple job that delays for a specified time to demonstrate tracing"""
     def __init__(self, name: str, delay: float):
         super().__init__(name)

@@ -12,11 +12,11 @@ import asyncio
 
 import pytest
 
-from job import AbstractJob
+from job import JobABC
 from job_chain import JobChain
 
 
-class AsyncTestJob(AbstractJob):
+class AsyncTestJob(JobABC):
     """Job to confirm the basics of async functionality are working: """
     def __init__(self):
         super().__init__(name="AsyncTestJob")

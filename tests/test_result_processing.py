@@ -8,11 +8,11 @@ import os
 import time
 from time import sleep
 
-from job import AbstractJob
+from job import JobABC
 from job_chain import JobChain
 
 
-class ResultTimingJob(AbstractJob):
+class ResultTimingJob(JobABC):
     def __init__(self):
         super().__init__("Result Timing Job")
         self.executed_tasks = set()

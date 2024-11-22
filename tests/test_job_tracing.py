@@ -1,10 +1,10 @@
 import inspect
 from typing import Any, Dict
 
-from job import AbstractJob, _has_own_traced_execute, _is_traced
+from job import JobABC, _has_own_traced_execute, _is_traced
 
 
-class Level1Job(AbstractJob):
+class Level1Job(JobABC):
     """First level in the inheritance hierarchy."""
     async def run(self, task) -> Dict[str, Any]:
         return {"task": task, "level": 1}
@@ -23,7 +23,7 @@ class Level3Job(Level2Job):
 
 
 def test_deep_hierarchy_tracing():
-    """Test that only AbstractJob._execute is traced, not its subclasses."""
+    """Test that only JobABC._execute is traced, not its subclasses."""
     # Create instances of each level
     level1_job = Level1Job("Level 1")
     level2_job = Level2Job("Level 2")
@@ -40,43 +40,43 @@ def test_deep_hierarchy_tracing():
         return count
 
     # Each instance should only have one class with its own traced _execute
-    # (AbstractJob)
+    # (JobABC)
     assert count_own_traced_execute(level1_job) == 1, "Should only have one class with own traced _execute"
     assert count_own_traced_execute(level2_job) == 1, "Should only have one class with own traced _execute"
     assert count_own_traced_execute(level3_job) == 1, "Should only have one class with own traced _execute"
 
 
-class SimpleTestJob(AbstractJob):
+class SimpleTestJob(JobABC):
     """A simple Job implementation for testing."""
     async def run(self, task) -> Dict[str, Any]:
         return {"task": task, "status": "complete"}
 
 
 def test_abstractjob_execute_is_traced():
-    """Test that AbstractJob's execute method is traced"""
+    """Test that JobABC's execute method is traced"""
     # Create a test job instance
     job = SimpleTestJob("Test Job")
     
-    # Get the actual AbstractJob class
-    abstract_job_cls = AbstractJob
+    # Get the actual JobABC class
+    abstract_job_cls = JobABC
     
-    # Verify AbstractJob's _execute is traced
-    assert _has_own_traced_execute(abstract_job_cls), "AbstractJob should have its own traced _execute"
+    # Verify JobABC's _execute is traced
+    assert _has_own_traced_execute(abstract_job_cls), "JobABC should have its own traced _execute"
     
     # Verify the subclass doesn't have its own traced _execute
     assert not _has_own_traced_execute(job.__class__), "Subclass should not have its own traced _execute"
 
 
 def test_job_execute_no_trace_available():
-    """Test that AbstractJob subclasses have access to untraced execute via executeNoTrace"""
+    """Test that JobABC subclasses have access to untraced execute via executeNoTrace"""
     job = SimpleTestJob("Test Job")
     assert hasattr(job, 'executeNoTrace'), "Job should have executeNoTrace method"
     assert not _is_traced(job.__class__.executeNoTrace), "executeNoTrace should not be traced"
 
 
 def test_subclass_execute_not_traced():
-    """Test that AbstractJob subclasses do not have their own traced execute methods"""
-    class CustomJob(AbstractJob):
+    """Test that JobABC subclasses do not have their own traced execute methods"""
+    class CustomJob(JobABC):
         async def run(self, task) -> Dict[str, Any]:
             return {"task": task, "status": "success"}
     
@@ -87,13 +87,13 @@ def test_subclass_execute_not_traced():
 
 def test_decorator_preserves_method_signature():
     """Test that the traced execute method preserves the original signature"""
-    class TestJob(AbstractJob):
+    class TestJob(JobABC):
         async def run(self, task) -> Dict[str, Any]:
             return {"task": task, "status": "complete"}
     
     # Get the signatures of the traced and untraced versions
     untraced_sig = inspect.signature(TestJob.executeNoTrace)
-    traced_sig = inspect.signature(AbstractJob._execute)
+    traced_sig = inspect.signature(JobABC._execute)
     
     # Compare parameters and return annotation
     assert str(untraced_sig.parameters) == str(traced_sig.parameters), (
@@ -110,13 +110,13 @@ def test_job_factory_returns_untraced_jobs():
 
     # Test file-based job loading
     file_job = JobFactory.load_job({"type": "file", "params": {}})
-    assert isinstance(file_job, AbstractJob)
+    assert isinstance(file_job, JobABC)
     assert not _has_own_traced_execute(file_job.__class__), "Factory-created jobs should not have their own traced _execute"
     assert hasattr(file_job, 'executeNoTrace')
     
     # Test datastore-based job loading
     datastore_job = JobFactory.load_job({"type": "datastore", "params": {}})
-    assert isinstance(datastore_job, AbstractJob)
+    assert isinstance(datastore_job, JobABC)
     assert not _has_own_traced_execute(datastore_job.__class__), "Factory-created jobs should not have their own traced _execute"
     assert hasattr(datastore_job, 'executeNoTrace')
 
@@ -131,8 +131,8 @@ def test_job_implementations_not_traced():
             subclasses.update(get_all_subclasses(subclass))
         return subclasses
     
-    # Get all AbstractJob subclasses (excluding our test classes)
-    job_subclasses = {cls for cls in get_all_subclasses(AbstractJob)
+    # Get all JobABC subclasses (excluding our test classes)
+    job_subclasses = {cls for cls in get_all_subclasses(JobABC)
                      if not cls.__module__.startswith('test_job_tracing')}
     
     # Check each subclass
@@ -145,13 +145,13 @@ def test_job_implementations_not_traced():
         f"Found Job subclasses with their own traced execute method: "
         f"{', '.join(traced_classes)}\n"
         "Job subclasses should not have their own traced execute method.\n"
-        "Only AbstractJob should have tracing."
+        "Only JobABC should have tracing."
     )
 
 
 def test_execute_no_trace_matches_original():
     """Test that executeNoTrace matches the original implementation"""
-    class TestJob(AbstractJob):
+    class TestJob(JobABC):
         async def run(self, task) -> Dict[str, Any]:
             return {"task": task, "result": "success"}
     

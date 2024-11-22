@@ -4,7 +4,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from job import AbstractJob
+from job import JobABC
 from job_chain import JobChain
 
 
@@ -74,7 +74,7 @@ def run_with_invalid_instance():
         if os.path.exists('temp.log'):
             os.remove('temp.log')
 
-class ExampleJob(AbstractJob):
+class ExampleJob(JobABC):
     def __init__(self):
         super().__init__("Example Job")
 

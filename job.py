@@ -25,7 +25,7 @@ def _mark_traced(method):
 def traced_job(cls: Type) -> Type:
     """
     Class decorator that ensures the execute method is traced.
-    This is only applied to the AbstractJob class itself.
+    This is only applied to the JobABC class itself.
     """
     if hasattr(cls, '_execute'):
         original_execute = cls._execute
@@ -39,21 +39,21 @@ def traced_job(cls: Type) -> Type:
 
 
 class JobMeta(ABCMeta):
-    """Metaclass that automatically applies the traced_job decorator to AbstractJob only."""
+    """Metaclass that automatically applies the traced_job decorator to JobABC only."""
     def __new__(mcs, name, bases, namespace):
         cls = super().__new__(mcs, name, bases, namespace)
-        if name == 'AbstractJob':  # Only decorate the AbstractJob class itself
+        if name == 'JobABC':  # Only decorate the JobABC class itself
             return traced_job(cls)
-        # For subclasses, ensure they inherit AbstractJob's traced _execute
+        # For subclasses, ensure they inherit JobABC's traced _execute
         if '_execute' in namespace:
             # If subclass defines its own _execute, ensure it's not traced again
-            # but still inherits the tracing from AbstractJob
+            # but still inherits the tracing from JobABC
             del namespace['_execute']
             cls = super().__new__(mcs, name, bases, namespace)
         return cls
 
 
-class AbstractJob(ABC, metaclass=JobMeta):
+class JobABC(ABC, metaclass=JobMeta):
     """
     Abstract base class for jobs. Only this class will have tracing enabled through the JobMeta metaclass.
     Subclasses will inherit the traced version of _execute but won't add additional tracing.
@@ -61,14 +61,14 @@ class AbstractJob(ABC, metaclass=JobMeta):
     name: str  # this should be a unique name in the JobChain server / cluster
     description: str
     finished: bool
-    input_needed_jobs: Set['AbstractJob']
-    jobs_dependent_on: Set['AbstractJob']
+    input_needed_jobs: Set['JobABC']
+    jobs_dependent_on: Set['JobABC']
     job_output: Dict[str, Any]
     input_to_process: Dict[str, Any]
 
     def __init__(self, name: str):
         """
-        Initialize an AbstractJob instance.
+        Initialize an JobABC instance.
 
         Args:
             name (str): A unique identifier for this job within the context of a JobChain.
@@ -87,20 +87,20 @@ class AbstractJob(ABC, metaclass=JobMeta):
         self.input_to_process = {}  # initialized empty
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def add_input_needed_jobs(self, jobs: Union['AbstractJob', Set['AbstractJob']]) -> None:
+    def add_input_needed_jobs(self, jobs: Union['JobABC', Set['JobABC']]) -> None:
         """Add job(s) as input dependencies."""
         if not hasattr(self, 'input_needed_jobs'):
             self.input_needed_jobs = set()
-        if isinstance(jobs, AbstractJob):
+        if isinstance(jobs, JobABC):
             self.input_needed_jobs.add(jobs)
         else:
             self.input_needed_jobs.update(jobs)
 
-    def add_dependent_jobs(self, jobs: Union['AbstractJob', Set['AbstractJob']]) -> None:
+    def add_dependent_jobs(self, jobs: Union['JobABC', Set['JobABC']]) -> None:
         """Add job(s) that depend on this job."""
         if not hasattr(self, 'jobs_dependent_on'):
             self.jobs_dependent_on = set()
-        if isinstance(jobs, AbstractJob):
+        if isinstance(jobs, JobABC):
             self.jobs_dependent_on.add(jobs)
         else:
             self.jobs_dependent_on.update(jobs)
@@ -110,7 +110,7 @@ class AbstractJob(ABC, metaclass=JobMeta):
         This method is called by JobChain to start-off the Jobs, and is 
         responsible for the control flow of starting Jobs when dependencies are
         met and for Jobs handing-off to other Jobs.
-        This method will be traced only in the AbstractJob class through the JobMeta metaclass.
+        This method will be traced only in the JobABC class through the JobMeta metaclass.
         """
         if not self.has_all_dependencies():
             self.logger.info(f"Dependencies not met for {self.name}, skipping execution")
@@ -159,7 +159,7 @@ class AbstractJob(ABC, metaclass=JobMeta):
         self.logger.info(f"Performing intermediate actions for {self.name}")
 
 
-class SimpleJob(AbstractJob):
+class SimpleJob(JobABC):
     """A Job implementation that provides a simple default behavior."""
     
     async def run(self, task) -> Dict[str, Any]:
@@ -173,21 +173,21 @@ class JobFactory:
     """Factory class for creating Job instances with proper tracing."""
     
     @staticmethod
-    def _load_from_file(params: Dict[str, Any]) -> AbstractJob:
+    def _load_from_file(params: Dict[str, Any]) -> JobABC:
         """Create a traced job instance from file configuration."""
         logger = logging.getLogger('JobFactory')
         logger.info(f"Loading job with params: {params}")
         return SimpleJob("File Job")
 
     @staticmethod
-    def _load_from_datastore(params: Dict[str, Any]) -> AbstractJob:
+    def _load_from_datastore(params: Dict[str, Any]) -> JobABC:
         """Create a traced job instance from datastore."""
         logger = logging.getLogger('JobFactory')
         logger.info(f"Loading job from datastore with params: {params}")
         return SimpleJob("Datastore Job")
 
     @staticmethod
-    def load_job(job_context: Dict[str, Any]) -> AbstractJob:
+    def load_job(job_context: Dict[str, Any]) -> JobABC:
         """Load a job instance with proper tracing based on context."""
         load_type = job_context.get("type", "").lower()
         params = job_context.get("params", {})

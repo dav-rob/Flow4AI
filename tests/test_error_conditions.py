@@ -15,11 +15,11 @@ import asyncio
 
 import pytest
 
-from job import AbstractJob
+from job import JobABC
 from job_chain import JobChain
 
 
-class ErrorTestJob(AbstractJob):
+class ErrorTestJob(JobABC):
     """Job implementation for testing error conditions"""
     def __init__(self):
         super().__init__(name="ErrorTestJob")
