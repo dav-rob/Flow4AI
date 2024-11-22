@@ -1,5 +1,8 @@
 import uuid
-from typing import Any, Dict, Set, Union, Collection, Optional
+from typing import Any, Collection, Dict, Optional, Set, Union
+
+from job import AbstractJob
+
 
 class Task:
     def __init__(self, data: Dict[str, Any]):
@@ -96,7 +99,7 @@ class JobMonitor:
         self.update_datastore()
         self.update_UI()
 
-    def update_datastore(self, job: 'Job' = None) -> None:
+    def update_datastore(self, job: 'AbstractJob' = None) -> None:
         """
         Update the persistent storage with current task status.
         To be implemented based on specific storage requirements.
@@ -106,7 +109,7 @@ class JobMonitor:
         """
         pass
 
-    def update_UI(self, job: 'Job' = None) -> None:
+    def update_UI(self, job: 'AbstractJob' = None) -> None:
         """
         Update the user interface with current task status.
         To be implemented based on specific UI requirements.
