@@ -4,7 +4,6 @@
 """
 
 import asyncio
-import multiprocessing as mp
 import os
 import time
 from time import sleep

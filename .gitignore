@@ -13,7 +13,6 @@ api.env
 *.log
 
 # Cache files
-__pycache__/
 /jupyter/.ipynb_checkpoints/
 
 # Distribution / Packaging

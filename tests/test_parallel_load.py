@@ -9,7 +9,7 @@ import yaml
 
 from job import AbstractJob, JobFactory
 from job_chain import JobChain
-from utils.otel_wrapper import TracerFactory, trace_function
+from utils.otel_wrapper import TracerFactory
 
 # Configure logging
 logging.basicConfig(level=logging.INFO,
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 class DelayedJob(AbstractJob):
-    def __init__(self, name: str, prompt: str, model: str, time_delay: float):
+    def __init__(self, name: str, time_delay: float):
         super().__init__(name)
         self.time_delay = time_delay
 
@@ -30,7 +30,7 @@ class DelayedJob(AbstractJob):
 
 def create_delayed_job(params: dict) -> AbstractJob:
     time_delay = params.get('time_delay', 1.0)
-    return DelayedJob("Test Job", "Test prompt", "test-model", time_delay)
+    return DelayedJob("Test Job", time_delay)
 
 # Store original load_from_file function
 original_load_from_file = JobFactory._load_from_file

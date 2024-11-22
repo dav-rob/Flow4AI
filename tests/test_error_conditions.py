@@ -12,9 +12,6 @@
 """
 
 import asyncio
-import multiprocessing as mp
-import signal
-from unittest.mock import Mock, patch
 
 import pytest
 

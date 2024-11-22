@@ -7,7 +7,7 @@ import yaml
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
 
-from job import AbstractJob, JobFactory
+from job import AbstractJob
 from utils.otel_wrapper import TracerFactory, trace_function
 
 
@@ -226,7 +226,7 @@ def test_job_metaclass_tracing(trace_file, setup_file_exporter):
         expected_attrs={
             "function.args": "(<test_opentelemetry.test_job_metaclass_tracing.<locals>.TestJob object at",  # Just verify it starts with this
             "function.kwargs": "{}",
-            "object.fields": "{'name': 'test', 'prompt': 'test prompt', 'model': 'test model'}"
+            "object.fields": "{'name': 'test'}"
         }
     )
 

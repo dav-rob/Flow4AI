@@ -9,8 +9,6 @@
 """
 
 import asyncio
-import multiprocessing as mp
-from unittest.mock import Mock, patch
 
 import pytest
 

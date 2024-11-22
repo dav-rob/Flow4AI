@@ -7,7 +7,6 @@ Tests for stress testing queues:
         - Tests CPU-intensive workloads
         - Tests mixed workload scenarios
 """
-import multiprocessing as mp
 import os
 import time
 

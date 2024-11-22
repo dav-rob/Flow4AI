@@ -1,10 +1,7 @@
 import inspect
 from typing import Any, Dict
 
-import pytest
-
 from job import AbstractJob, _has_own_traced_execute, _is_traced
-from utils.otel_wrapper import trace_function
 
 
 class Level1Job(AbstractJob):
