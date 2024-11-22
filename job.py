@@ -33,11 +33,18 @@ def traced_job(cls: Type) -> Type:
     return cls
 
 
-class AbstractJob(ABC):
+class JobMeta(ABCMeta):
+    """Metaclass that automatically applies the traced_job decorator to all AbstractJob subclasses."""
+    def __new__(mcs, name, bases, namespace):
+        cls = super().__new__(mcs, name, bases, namespace)
+        if name != 'AbstractJob':  # Don't decorate the AbstractJob class itself
+            return traced_job(cls)
+        return cls
+
+
+class AbstractJob(ABC, metaclass=JobMeta):
     """
-    Abstract base class for jobs that don't require tracing.
-    WARNING: This class should only be used in special cases where tracing is not desired.
-    For normal usage, inherit from Job instead which ensures proper tracing.
+    Abstract base class for jobs. All jobs will have tracing enabled through the JobMeta metaclass.
     """
     name: str  # this should be a unique name in the JobChain server / cluster
     description: str
@@ -91,8 +98,7 @@ class AbstractJob(ABC):
         This method is called by JobChain to start-off the Jobs, and is 
         responsible for the control flow of starting Jobs when dependencies are
         met and for Jobs handing-off to other Jobs.
-        This method will automatically be traced in the Job subclass, and the 
-        original untraced version will be available as executeNoTrace if needed.
+        This method will automatically be traced through the JobMeta metaclass.
         """
         if not self.has_all_dependencies():
             self.logger.info(f"Dependencies not met for {self.name}, skipping execution")
@@ -106,7 +112,6 @@ class AbstractJob(ABC):
             self.do_intermediate_actions()
 
         return result
-
 
     @abstractmethod
     async def run(self, task) -> Dict[str, Any]:
@@ -142,20 +147,9 @@ class AbstractJob(ABC):
         self.logger.info(f"Performing intermediate actions for {self.name}")
 
 
-
-class JobMeta(ABCMeta):
-    """Metaclass that automatically applies the traced_job decorator to all Job subclasses."""
-    def __new__(mcs, name, bases, namespace):
-        cls = super().__new__(mcs, name, bases, namespace)
-        if name != 'Job':  # Don't decorate the Job class itself
-            return traced_job(cls)
-        return cls
-
-
-class Job(AbstractJob, metaclass=JobMeta):
+class Job(AbstractJob):
     """
-    Base class for all job implementations. Automatically applies tracing to
-    _execute method to ensure proper monitoring.
+    Base class for all job implementations. Inherits tracing functionality from AbstractJob.
     
     Example:
         class MyJob(Job):
