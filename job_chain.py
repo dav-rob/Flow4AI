@@ -7,7 +7,7 @@ import queue
 from time import sleep
 from typing import Any, Callable, Dict, Optional, Union
 
-from job import Job, JobFactory
+from job import Job, JobFactory, AbstractJob
 from logging_config import setup_logging
 from utils.print_utils import printh
 
@@ -21,7 +21,7 @@ class JobChain:
     Optionally passes results to a pre-existing result processing function after task completion.
 
     Args:
-        job (Union[Dict[str, Any], Job]): Either a dictionary containing job configuration or a Job instance.
+        job (Union[Dict[str, Any], AbstractJob]): Either a dictionary containing job configuration or an AbstractJob instance.
 
         result_processing_function (Optional[Callable[[Any], None]]): Code to handle results after the Job executes its task.
             By default, this hand-off happens in parallel, immediately after a Job processes a task.
@@ -34,7 +34,7 @@ class JobChain:
             However, in most cases changing result_processing_function to be picklable is straightforward and should be the default.
             Defaults to False.
     """
-    def __init__(self, job: Union[Dict[str, Any], Job], result_processing_function: Optional[Callable[[Any], None]] = None, serial_processing: bool = False):
+    def __init__(self, job: Union[Dict[str, Any], AbstractJob], result_processing_function: Optional[Callable[[Any], None]] = None, serial_processing: bool = False):
         # Get logger for JobChain
         self.logger = logging.getLogger('JobChain')
         self.logger.info("Initializing JobChain")
@@ -51,11 +51,11 @@ class JobChain:
             self.job_chain_context = job
             job_context: Dict[str, Any] = job.get("job_context")
             self.job = JobFactory.load_job(job_context)
-        elif isinstance(job, Job):
+        elif isinstance(job, AbstractJob):
             self.job_chain_context = {"job_context": {"type": "direct", "job": job}}
             self.job = job
         else:
-            raise TypeError("job must be either Dict[str, Any] or Job instance")
+            raise TypeError("job must be either Dict[str, Any] or AbstractJob instance")
         
         self._start()
 
@@ -240,7 +240,7 @@ class JobChain:
     # Must be static because it's passed as a target to multiprocessing.Process
     # Instance methods can't be pickled properly for multiprocessing
     @staticmethod
-    def _async_worker(job: Job, task_queue: mp.Queue, result_queue: mp.Queue):
+    def _async_worker(job: AbstractJob, task_queue: mp.Queue, result_queue: mp.Queue):
         """Process that handles making workflow calls using asyncio."""
         # Get logger for AsyncWorker
         logger = logging.getLogger('AsyncWorker')
