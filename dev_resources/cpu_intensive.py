@@ -1,5 +1,4 @@
 import argparse
-import logging
 import os
 import sys
 import time
@@ -10,8 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from job import JobABC
 from job_chain import JobChain
-from logging_config import setup_logging
-
+import jc_logging as logging
 
 def intentionally_blocking(reason: str):
     """
@@ -32,7 +30,7 @@ def intentionally_blocking(reason: str):
     return decorator
 
 # Initialize logging configuration
-setup_logging()
+logging.setup_logging()
 
 class CPUIntensiveJob(JobABC):
     def __init__(self):

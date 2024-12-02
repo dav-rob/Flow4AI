@@ -1,9 +1,9 @@
 import asyncio
-import logging
 from abc import ABC, ABCMeta, abstractmethod
 from typing import Any, Dict, Set, Type, Union
 
 from utils.otel_wrapper import trace_function
+import jc_logging as logging
 
 
 def _is_traced(method):
