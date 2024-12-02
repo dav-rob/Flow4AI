@@ -1,10 +1,11 @@
 import asyncio
-import logging
 import sys
 from pathlib import Path
 
 # Add parent directory to Python path
 sys.path.append(str(Path(__file__).parent.parent))
+
+import jc_logging as logging
 
 from job import JobABC
 from job_chain import JobChain

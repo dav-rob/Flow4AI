@@ -1,12 +1,12 @@
 import asyncio
 import json
-import logging
 import os
 import time
 
 import pytest
 import yaml
 
+import jc_logging as logging
 from job import JobABC, JobFactory
 from job_chain import JobChain
 from utils.otel_wrapper import TracerFactory
