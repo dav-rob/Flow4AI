@@ -1,6 +1,23 @@
 import os
 import pytest
 import jc_logging as logging
+import asyncio
+from job import JobABC
+from job_chain import JobChain
+
+class DebugDelayedJob(JobABC):
+    def __init__(self, name: str, delay: float):
+        super().__init__(name)
+        self.delay = delay
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    async def run(self, task) -> dict:
+        """Execute a delayed job with both debug and info logging."""
+        self.logger.debug(f"Starting task {task} with delay {self.delay}")
+        self.logger.info(f"Processing task {task}")
+        await asyncio.sleep(self.delay)
+        self.logger.debug(f"Completed task {task}")
+        return {"task": task, "status": "complete"}
 
 @pytest.fixture
 def clear_log_file():
@@ -40,6 +57,95 @@ def test_logging_config_info(clear_log_file):
         log_contents = f.read()
     assert 'This is a debug message' not in log_contents
     assert 'This is an info message' in log_contents
+
+def test_debug_logging_in_job_chain(clear_log_file):
+    """Test that both JobChain and Job debug logs are visible when JOBCHAIN_LOG_LEVEL=DEBUG."""
+    os.environ['JOBCHAIN_LOG_LEVEL'] = 'DEBUG'
+    logging.setup_logging()  # Reload config with new log level
+
+    # Create and run job chain with debug-enabled job
+    job = DebugDelayedJob("Debug Test Job", 0.1)
+    job_chain = JobChain(job)
+
+    # Submit tasks
+    for i in range(3):
+        job_chain.submit_task(f"Task {i}")
+    job_chain.mark_input_completed()
+
+    # Check log file contents
+    with open('jobchain.log', 'r') as f:
+        log_contents = f.read()
+        log_lines = log_contents.splitlines()
+
+    # Separate JobChain and DebugDelayedJob debug logs
+    jobchain_debug_logs = [line for line in log_lines if '[DEBUG]' in line and 'JobChain' in line]
+    delayed_job_debug_logs = [line for line in log_lines if '[DEBUG]' in line and 'DebugDelayedJob' in line]
+
+    # Verify JobChain has debug logs
+    assert len(jobchain_debug_logs) > 0, "No DEBUG logs found from JobChain"
+    print("\nJobChain DEBUG logs:")
+    for log in jobchain_debug_logs[:3]:  # Print first 3 for verification
+        print(log)
+
+    # Verify DebugDelayedJob has debug logs
+    assert len(delayed_job_debug_logs) > 0, "No DEBUG logs found from DebugDelayedJob"
+    print("\nDebugDelayedJob DEBUG logs:")
+    for log in delayed_job_debug_logs[:3]:  # Print first 3 for verification
+        print(log)
+
+    # Verify specific debug messages from DebugDelayedJob
+    delayed_job_debug_messages = [line.split('] ')[-1] for line in delayed_job_debug_logs]
+    assert any('Starting task Task 0' in msg for msg in delayed_job_debug_messages)
+    assert any('Starting task Task 1' in msg for msg in delayed_job_debug_messages)
+    assert any('Starting task Task 2' in msg for msg in delayed_job_debug_messages)
+    assert any('Completed task Task' in msg for msg in delayed_job_debug_messages)
+
+    # Verify info logs are also present
+    info_logs = [line for line in log_lines if '[INFO]' in line]
+    assert any('Processing task Task' in line for line in info_logs)
+
+def test_info_logging_in_job_chain(clear_log_file):
+    """Test that DEBUG logs are filtered when JOBCHAIN_LOG_LEVEL=INFO."""
+    os.environ['JOBCHAIN_LOG_LEVEL'] = 'INFO'
+    logging.setup_logging()  # Reload config with new log level
+
+    # Create and run job chain with debug-enabled job
+    job = DebugDelayedJob("Info Test Job", 0.1)
+    job_chain = JobChain(job)
+
+    # Submit tasks
+    for i in range(3):
+        job_chain.submit_task(f"Task {i}")
+    job_chain.mark_input_completed()
+
+    # Check log file contents
+    with open('jobchain.log', 'r') as f:
+        log_contents = f.read()
+        log_lines = log_contents.splitlines()
+
+    # Check for absence of DEBUG logs
+    debug_logs = [line for line in log_lines if '[DEBUG]' in line]
+    assert len(debug_logs) == 0, f"Found unexpected DEBUG logs:\n" + "\n".join(debug_logs[:3])
+
+    # Verify INFO logs are present for both components
+    jobchain_info_logs = [line for line in log_lines if '[INFO]' in line and 'JobChain' in line]
+    delayed_job_info_logs = [line for line in log_lines if '[INFO]' in line and 'DebugDelayedJob' in line]
+
+    # Verify JobChain info logs
+    assert len(jobchain_info_logs) > 0, "No INFO logs found from JobChain"
+    print("\nJobChain INFO logs:")
+    for log in jobchain_info_logs[:3]:  # Print first 3 for verification
+        print(log)
+
+    # Verify DebugDelayedJob info logs
+    assert len(delayed_job_info_logs) > 0, "No INFO logs found from DebugDelayedJob"
+    print("\nDebugDelayedJob INFO logs:")
+    for log in delayed_job_info_logs[:3]:  # Print first 3 for verification
+        print(log)
+
+    # Verify specific info messages from DebugDelayedJob
+    delayed_job_info_messages = [line.split('] ')[-1] for line in delayed_job_info_logs]
+    assert any('Processing task Task' in msg for msg in delayed_job_info_messages)
 
 if __name__ == '__main__':
     pytest.main([__file__])
