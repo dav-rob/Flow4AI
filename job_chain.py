@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import multiprocessing as mp
 import pickle
 # TODO: use dil instead of pickle in multiprocessor
@@ -7,12 +6,12 @@ import queue
 from typing import Any, Callable, Dict, Optional, Union
 
 from job import JobABC, JobFactory
-from logging_config import setup_logging
+import jc_logging as logging
 from utils.print_utils import printh
 
 # Initialize logging configuration
 # TODO: test whether this works just for JobChain module or all code
-setup_logging()
+# logging.setup_logging()
 
 class JobChain:
     """
