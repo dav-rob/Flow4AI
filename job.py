@@ -2,8 +2,8 @@ import asyncio
 from abc import ABC, ABCMeta, abstractmethod
 from typing import Any, Dict, Set, Type, Union
 
-from utils.otel_wrapper import trace_function
 import jc_logging as logging
+from utils.otel_wrapper import trace_function
 
 
 def _is_traced(method):
@@ -58,6 +58,11 @@ class JobABC(ABC, metaclass=JobMeta):
     Abstract base class for jobs. Only this class will have tracing enabled through the JobMeta metaclass.
     Subclasses will inherit the traced version of _execute but won't add additional tracing.
     """
+
+    # class variable to keep track of instance counts for each class
+    _instance_counts = {}
+
+    # type hints
     name: str  # this should be a unique name in the JobChain server / cluster
     description: str
     finished: bool
@@ -86,6 +91,16 @@ class JobABC(ABC, metaclass=JobMeta):
         self.job_output = {}  # initialized empty
         self.input_to_process = {}  # initialized empty
         self.logger = logging.getLogger(self.__class__.__name__)
+
+    @classmethod
+    def getUniqueName(cls):
+        # Increment the counter for the current class
+        cls._instance_counts[cls] = cls._instance_counts.get(cls, 0) + 1
+        # Return a unique name based on the current class
+        return f"{cls.__name__}_{cls._instance_counts[cls]}"
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} name={self.name}>"
 
     def add_input_needed_jobs(self, jobs: Union['JobABC', Set['JobABC']]) -> None:
         """Add job(s) as input dependencies."""
