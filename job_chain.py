@@ -5,7 +5,7 @@ import pickle
 import queue
 from typing import Any, Callable, Dict, Optional, Union
 
-from job import JobABC, JobFactory
+from job import JobABC, JobFactory, Task
 import jc_logging as logging
 from utils.print_utils import printh
 
@@ -38,8 +38,8 @@ class JobChain:
         self.logger.info("Initializing JobChain")
         if not serial_processing and result_processing_function:
             self._check_picklable(result_processing_function)
-        self._task_queue = mp.Queue()
-        self._result_queue = mp.Queue()
+        self._task_queue = mp.Queue()  # type: mp.Queue
+        self._result_queue = mp.Queue()  # type: mp.Queue
         self.job_executor_process = None
         self.result_processor_process = None
         self._result_processing_function = result_processing_function
@@ -146,10 +146,11 @@ class JobChain:
     # TODO: add ability to submit a task or an iterable: Iterable
     # TODO: throw error, or just skip, if submitted task is None because this is a reserved value.
     # TODO: add resource usage monitoring which returns False if resource use is too high.
-    def submit_task(self, task):
+    def submit_task(self, task: Dict[str, Any]):
         """Submit a task to be processed."""
         self.logger.debug(f"Submitting task: {task}")
-        self._task_queue.put(task)
+        task_obj = Task(task)
+        self._task_queue.put(task_obj)
 
     def mark_input_completed(self):
         """Signal completion of input and wait for all processing to finish."""
@@ -163,7 +164,7 @@ class JobChain:
     # TODO: it may be necessary to put a flag to execute this using asyncio event loops
     #          for example, when handing off to an async web service
     @staticmethod
-    def _result_processor(process_fn: Callable[[Any], None], result_queue: mp.Queue):
+    def _result_processor(process_fn: Callable[[Any], None], result_queue: 'mp.Queue'):
         """Process that handles processing results as they arrive."""
         logger = logging.getLogger('ResultProcessor')
         logger.debug("Starting result processor")
@@ -238,13 +239,13 @@ class JobChain:
     # Must be static because it's passed as a target to multiprocessing.Process
     # Instance methods can't be pickled properly for multiprocessing
     @staticmethod
-    def _async_worker(job: JobABC, task_queue: mp.Queue, result_queue: mp.Queue):
+    def _async_worker(job: JobABC, task_queue: 'mp.Queue', result_queue: 'mp.Queue'):
         """Process that handles making workflow calls using asyncio."""
         # Get logger for AsyncWorker
         logger = logging.getLogger('AsyncWorker')
         logger.debug("Starting async worker")
 
-        async def process_task(task):
+        async def process_task(task: Task):
             """Process a single task and return its result"""
             logger.debug(f"Processing task: {task}")
             try:

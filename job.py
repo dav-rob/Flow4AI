@@ -1,6 +1,7 @@
 import asyncio
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Any, Dict, Set, Type, Union
+from typing import Any, Dict, Set, Type, Union, Optional
+import uuid
 
 import jc_logging as logging
 from utils.otel_wrapper import trace_function
@@ -51,6 +52,31 @@ class JobMeta(ABCMeta):
             del namespace['_execute']
             cls = super().__new__(mcs, name, bases, namespace)
         return cls
+
+
+class Task(dict):
+    """A task dictionary with a unique identifier."""
+    def __init__(self, data: Union[Dict[str, Any], str], job_name: Optional[str] = None):
+        # Convert string input to dict
+        if isinstance(data, str):
+            data = {'task': data}
+        elif isinstance(data, dict):
+            data = data.copy()  # Create a copy to avoid modifying the original
+        else:
+            data = {'task': str(data)}
+        
+        super().__init__(data)
+        self.jobchain_unique_id = str(uuid.uuid4())
+        if job_name is not None:
+            self['job_name'] = job_name
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Task):
+            return NotImplemented
+        return self.jobchain_unique_id == other.jobchain_unique_id
+
+    def __hash__(self) -> int:
+        return hash(self.jobchain_unique_id)
 
 
 class JobABC(ABC, metaclass=JobMeta):
@@ -120,7 +146,7 @@ class JobABC(ABC, metaclass=JobMeta):
         else:
             self.jobs_dependent_on.update(jobs)
 
-    async def _execute(self, task) -> Dict[str, Any]:
+    async def _execute(self, task: Task) -> Dict[str, Any]:
         """
         This method is called by JobChain to start-off the Jobs, and is 
         responsible for the control flow of starting Jobs when dependencies are
@@ -141,7 +167,7 @@ class JobABC(ABC, metaclass=JobMeta):
         return result
 
     @abstractmethod
-    async def run(self, task) -> Dict[str, Any]:
+    async def run(self, task: Task) -> Dict[str, Any]:
         """Execute the job on the given task. Must be implemented by subclasses."""
         pass
 
@@ -177,11 +203,11 @@ class JobABC(ABC, metaclass=JobMeta):
 class SimpleJob(JobABC):
     """A Job implementation that provides a simple default behavior."""
     
-    async def run(self, task) -> Dict[str, Any]:
+    async def run(self, task: Task) -> Dict[str, Any]:
         """Run a simple job that logs and returns the task."""
         self.logger.info(f"Async JOB for {task}")
         await asyncio.sleep(1)  # Simulate network delay
-        return {"task": task, "status": "complete"}
+        return {"task": task._data, "status": "complete"}
 
 
 class JobFactory:

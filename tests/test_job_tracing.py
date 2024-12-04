@@ -162,6 +162,6 @@ def test_execute_no_trace_matches_original():
     
     # The source code should contain key implementation details
     assert "async def" in execute_source
-    assert "_execute(self, task)" in execute_source
+    assert "_execute(self, task" in execute_source  # More flexible check that works with type hints
     assert "self.has_all_dependencies()" in execute_source
     assert "self.run(task)" in execute_source

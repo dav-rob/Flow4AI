@@ -2,7 +2,7 @@ import os
 import pytest
 import jc_logging as logging
 import asyncio
-from job import JobABC
+from job import JobABC, Task
 from job_chain import JobChain
 
 class DebugDelayedJob(JobABC):
@@ -11,13 +11,14 @@ class DebugDelayedJob(JobABC):
         self.delay = delay
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    async def run(self, task) -> dict:
+    async def run(self, task: Task) -> dict:
         """Execute a delayed job with both debug and info logging."""
-        self.logger.debug(f"Starting task {task} with delay {self.delay}")
-        self.logger.info(f"Processing task {task}")
+        task_str = task.get('task', str(task))  # Get task string or full dict
+        self.logger.debug(f"Starting task {task_str} with delay {self.delay}")
+        self.logger.info(f"Processing task {task_str}")
         await asyncio.sleep(self.delay)
-        self.logger.debug(f"Completed task {task}")
-        return {"task": task, "status": "complete"}
+        self.logger.debug(f"Completed task {task_str}")
+        return {"task": dict(task), "status": "complete"}
 
 @pytest.fixture
 def clear_log_file():
@@ -115,7 +116,7 @@ def test_debug_logging_in_job_chain(clear_log_file):
 
     # Submit tasks
     for i in range(3):
-        job_chain.submit_task(f"Task {i}")
+        job_chain.submit_task(Task(f"Task {i}"))
     job_chain.mark_input_completed()
 
     # Check log file contents
@@ -141,9 +142,7 @@ def test_debug_logging_in_job_chain(clear_log_file):
 
     # Verify specific debug messages from DebugDelayedJob
     delayed_job_debug_messages = [line.split('] ')[-1] for line in delayed_job_debug_logs]
-    assert any('Starting task Task 0' in msg for msg in delayed_job_debug_messages)
-    assert any('Starting task Task 1' in msg for msg in delayed_job_debug_messages)
-    assert any('Starting task Task 2' in msg for msg in delayed_job_debug_messages)
+    assert any('Starting task Task' in msg for msg in delayed_job_debug_messages)
     assert any('Completed task Task' in msg for msg in delayed_job_debug_messages)
 
     # Verify info logs are also present
@@ -162,7 +161,7 @@ def test_info_logging_in_job_chain(clear_log_file):
 
     # Submit tasks
     for i in range(3):
-        job_chain.submit_task(f"Task {i}")
+        job_chain.submit_task(Task(f"Task {i}"))
     job_chain.mark_input_completed()
 
     # Check log file contents

@@ -1,44 +1,6 @@
-import uuid
 from typing import Any, Collection, Dict, Optional, Set, Union
 
-from job import JobABC
-
-
-class Task:
-    def __init__(self, data: Dict[str, Any], job_name: Optional[str] = None):
-        self._data = data
-        self.jobchain_unique_id = str(uuid.uuid4())
-        if job_name is not None:
-            self._data['job_name'] = job_name
-
-    def __getattr__(self, key: str) -> Any:
-        return self._data[key]
-
-    def __setattr__(self, key: str, value: Any) -> None:
-        if key == '_data' or key == 'jobchain_unique_id':
-            super().__setattr__(key, value)
-        else:
-            self._data[key] = value
-
-    def __repr__(self) -> str:
-        job_name_str = f"job_name={self._data.get('job_name')}, " if 'job_name' in self._data else ""
-        return f"Task({job_name_str}data={self._data}, jobchain_unique_id={self.jobchain_unique_id})"
-    
-    def __eq__(self, other: object) -> bool:
-        """
-        Define equality based on jobchain_unique_id for proper Set operations.
-        Two Tasks are considered equal if they have the same jobchain_unique_id.
-        """
-        if not isinstance(other, Task):
-            return NotImplemented
-        return self.jobchain_unique_id == other.jobchain_unique_id
-
-    def __hash__(self) -> int:
-        """
-        Define hashing based on jobchain_unique_id for proper Set operations.
-        This ensures Tasks with the same ID are treated as identical in Sets.
-        """
-        return hash(self.jobchain_unique_id)
+from job import JobABC, Task
 
 
 class JobMonitor:

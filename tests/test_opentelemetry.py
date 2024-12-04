@@ -151,6 +151,9 @@ def test_trace_function_detailed_off(trace_file, setup_file_exporter):
     result = sample_function(3, 4)
     assert result == 7
     
+    # Add a delay to ensure spans are exported
+    time.sleep(2)  # Increased delay to ensure export completes
+    
     verify_trace(
         trace_file,
         expected_attrs={
