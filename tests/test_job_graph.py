@@ -1,31 +1,31 @@
 import unittest
 from job import JobABC
 
-class TestJob(JobABC):
+class MockJob(JobABC):
     def run(self):
         pass
 
-class TestJobSubclass(TestJob):
+class MockJobSubclass(MockJob):
     pass
 
 class TestJobGraph(unittest.TestCase):
     def test_job_name_always_present(self):
         # Test with explicit name
-        job1 = TestJob(name="explicit_name")
+        job1 = MockJob(name="explicit_name")
         self.assertEqual(job1.name, "explicit_name")
         
         # Test with auto-generated name
-        job2 = TestJob()
+        job2 = MockJob()
         self.assertIsNotNone(job2.name)
         self.assertIsInstance(job2.name, str)
         self.assertGreater(len(job2.name), 0)
         
         # Test subclass with explicit name
-        job3 = TestJobSubclass(name="subclass_name")
+        job3 = MockJobSubclass(name="subclass_name")
         self.assertEqual(job3.name, "subclass_name")
         
         # Test subclass with auto-generated name
-        job4 = TestJobSubclass()
+        job4 = MockJobSubclass()
         self.assertIsNotNone(job4.name)
         self.assertIsInstance(job4.name, str)
         self.assertGreater(len(job4.name), 0)
@@ -33,7 +33,7 @@ class TestJobGraph(unittest.TestCase):
     def test_auto_generated_names_are_unique(self):
         # Create multiple jobs without explicit names
         num_jobs = 100  # Test with a significant number of jobs
-        jobs = [TestJob() for _ in range(num_jobs)]
+        jobs = [MockJob() for _ in range(num_jobs)]
         
         # Collect all names in a set
         names = {job.name for job in jobs}
@@ -43,7 +43,7 @@ class TestJobGraph(unittest.TestCase):
         
         # Test uniqueness across different subclass instances
         mixed_jobs = [
-            TestJob() if i % 2 == 0 else TestJobSubclass()
+            MockJob() if i % 2 == 0 else MockJobSubclass()
             for i in range(num_jobs)
         ]
         mixed_names = {job.name for job in mixed_jobs}
