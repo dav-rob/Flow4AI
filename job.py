@@ -97,21 +97,22 @@ class JobABC(ABC, metaclass=JobMeta):
     job_output: Dict[str, Any]
     input_to_process: Dict[str, Any]
 
-    def __init__(self, name: str):
+    def __init__(self, name: str = None):
         """
         Initialize an JobABC instance.
 
         Args:
-            name (str): A unique identifier for this job within the context of a JobChain.
+            name (str, optional): A unique identifier for this job within the context of a JobChain.
                        The name must be unique among all jobs in the same JobChain to ensure
-                       proper job identification and dependency resolution.
+                       proper job identification and dependency resolution. If not provided,
+                       a unique name will be auto-generated.
 
         Note:
             The uniqueness of the name is crucial for proper JobChain operation. Using
             duplicate names within the same JobChain can lead to unexpected behavior
             in job execution and dependency management.
         """
-        self.name = name
+        self.name = self.getUniqueName() if name is None else name
         self.description = ""  # blank by default
         self.finished = True  # True by default
         self.job_output = {}  # initialized empty
