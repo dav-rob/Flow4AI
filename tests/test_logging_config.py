@@ -116,7 +116,7 @@ def test_debug_logging_in_job_chain(clear_log_file):
 
     # Submit tasks
     for i in range(3):
-        job_chain.submit_task(Task(f"Task {i}"))
+        job_chain.submit_task({'task': f'Task {i}'})  # Changed to use dict format
     job_chain.mark_input_completed()
 
     # Check log file contents
@@ -161,7 +161,7 @@ def test_info_logging_in_job_chain(clear_log_file):
 
     # Submit tasks
     for i in range(3):
-        job_chain.submit_task(Task(f"Task {i}"))
+        job_chain.submit_task({'task': f'Task {i}'})  # Changed to use dict format
     job_chain.mark_input_completed()
 
     # Check log file contents

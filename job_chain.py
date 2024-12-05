@@ -3,7 +3,8 @@ import multiprocessing as mp
 import pickle
 # TODO: use dil instead of pickle in multiprocessor
 import queue
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any, Callable, Dict, Optional, Union, Collection
+from collections import OrderedDict
 
 from job import JobABC, JobFactory, Task
 import jc_logging as logging
@@ -15,11 +16,12 @@ from utils.print_utils import printh
 
 class JobChain:
     """
-    JobChain executes up to thousands of tasks in parallel using a Job passed into constructor.
+    JobChain executes up to thousands of tasks in parallel using one or more Jobs passed into constructor.
     Optionally passes results to a pre-existing result processing function after task completion.
 
     Args:
-        job (Union[Dict[str, Any], JobABC]): Either a dictionary containing job configuration or an JobABC instance.
+        job (Union[Dict[str, Any], JobABC, Collection[JobABC]]): Either a dictionary containing job configuration,
+            a single JobABC instance, or a collection of JobABC instances.
 
         result_processing_function (Optional[Callable[[Any], None]]): Code to handle results after the Job executes its task.
             By default, this hand-off happens in parallel, immediately after a Job processes a task.
@@ -32,28 +34,46 @@ class JobChain:
             However, in most cases changing result_processing_function to be picklable is straightforward and should be the default.
             Defaults to False.
     """
-    def __init__(self, job: Union[Dict[str, Any], JobABC], result_processing_function: Optional[Callable[[Any], None]] = None, serial_processing: bool = False):
+    def __init__(self, job: Union[Dict[str, Any], JobABC, Collection[JobABC]], 
+                 result_processing_function: Optional[Callable[[Any], None]] = None, 
+                 serial_processing: bool = False):
         # Get logger for JobChain
         self.logger = logging.getLogger('JobChain')
         self.logger.info("Initializing JobChain")
         if not serial_processing and result_processing_function:
             self._check_picklable(result_processing_function)
         self._task_queue = mp.Queue()  # type: mp.Queue
+        # INTERNAL USE ONLY. DO NOT ACCESS DIRECTLY.
+        # This queue is for internal communication between the job executor and result processor.
+        # To process results, use the result_processing_function parameter in the JobChain constructor.
+        # See test_result_processing.py for examples of proper result handling.
         self._result_queue = mp.Queue()  # type: mp.Queue
         self.job_executor_process = None
         self.result_processor_process = None
         self._result_processing_function = result_processing_function
         self._serial_processing = serial_processing
+        self.job_map = OrderedDict()  # Use OrderedDict to maintain insertion order
         
         if isinstance(job, Dict):
             self.job_chain_context = job
             job_context: Dict[str, Any] = job.get("job_context")
-            self.job = JobFactory.load_job(job_context)
+            loaded_job = JobFactory.load_job(job_context)
+            self.job_map[loaded_job.name] = loaded_job
         elif isinstance(job, JobABC):
             self.job_chain_context = {"job_context": {"type": "direct", "job": job}}
-            self.job = job
+            self.job_map[job.name] = job
+        elif isinstance(job, Collection) and not isinstance(job, (str, bytes, bytearray)):
+            if not job:  # Check if collection is empty
+                raise ValueError("Job collection cannot be empty")
+            if not all(isinstance(j, JobABC) for j in job):
+                raise TypeError("All items in job collection must be JobABC instances")
+            self.job_chain_context = {"job_context": {"type": "direct", "jobs": list(job)}}
+            for j in job:
+                if j.name in self.job_map:
+                    raise ValueError(f"Duplicate job name found: {j.name}")
+                self.job_map[j.name] = j
         else:
-            raise TypeError("job must be either Dict[str, Any] or JobABC instance")
+            raise TypeError("job must be either Dict[str, Any], JobABC instance, or Collection[JobABC]")
         
         self._start()
 
@@ -128,7 +148,7 @@ class JobChain:
         self.logger.debug("Starting job executor process")
         self.job_executor_process = mp.Process(
             target=self._async_worker,
-            args=(self.job, self._task_queue, self._result_queue),
+            args=(self.job_map, self._task_queue, self._result_queue),
             name="JobExecutorProcess"
         )
         self.job_executor_process.start()
@@ -146,11 +166,65 @@ class JobChain:
     # TODO: add ability to submit a task or an iterable: Iterable
     # TODO: throw error, or just skip, if submitted task is None because this is a reserved value.
     # TODO: add resource usage monitoring which returns False if resource use is too high.
-    def submit_task(self, task: Dict[str, Any]):
-        """Submit a task to be processed."""
-        self.logger.debug(f"Submitting task: {task}")
-        task_obj = Task(task)
-        self._task_queue.put(task_obj)
+    def submit_task(self, task: Union[Dict[str, Any], str], job_name: Optional[str] = None):
+        """
+        Submit a task to be processed by the job.
+
+        Args:
+            task: Either a dictionary containing task data or a string that will be converted to a task.
+            job_name: The name of the job to execute this task. Required if there is more than one job in the job_map,
+                     unless the task is a dictionary that includes a 'job_name' key.
+
+        Raises:
+            ValueError: If job_name is required but not provided, or if the specified job cannot be found.
+            TypeError: If the task is not a dictionary or string.
+        """
+        try:
+            if task is None:
+                self.logger.warning("Received None task, skipping")
+                return
+            
+            if isinstance(task, str):
+                task_dict = {'task': task}
+            elif isinstance(task, dict):
+                task_dict = task.copy()
+            elif isinstance(task, (list, tuple, set)):
+                self.logger.warning(f"Received sequence type {type(task)} as task, converting to string")
+                task_dict = {'task': str(task)}
+            else:
+                self.logger.warning(f"Received invalid task type {type(task)}, converting to string")
+                task_dict = {'task': str(task)}
+
+            # If job_name parameter is provided, it takes precedence
+            if job_name is not None:
+                if job_name not in self.job_map:
+                    raise ValueError(
+                        f"Job '{job_name}' not found. Available jobs: {list(self.job_map.keys())}"
+                    )
+                task_dict['job_name'] = job_name
+            
+            # If there's more than one job, we need a valid job name
+            if len(self.job_map) > 1:
+                if 'job_name' not in task_dict or not isinstance(task_dict['job_name'], str) or not task_dict['job_name']:
+                    raise ValueError(
+                        "When multiple jobs are present, you must either:\n"
+                        "1) Provide the job_name parameter in submit_task() OR\n"
+                        "2) Include a non-empty string 'job_name' in the task dictionary"
+                    )
+                if task_dict['job_name'] not in self.job_map:
+                    raise ValueError(
+                        f"Job '{task_dict['job_name']}' not found. Available jobs: {list(self.job_map.keys())}"
+                    )
+            elif len(self.job_map) == 1:
+                # If there's only one job, use its name
+                task_dict['job_name'] = next(iter(self.job_map.keys()))
+            else:
+                raise ValueError("No jobs available in JobChain")
+
+            task_obj = Task(task_dict)
+            self._task_queue.put(task_obj)
+        except Exception as e:
+            self.logger.error(f"Error submitting task: {e}")
 
     def mark_input_completed(self):
         """Signal completion of input and wait for all processing to finish."""
@@ -239,7 +313,7 @@ class JobChain:
     # Must be static because it's passed as a target to multiprocessing.Process
     # Instance methods can't be pickled properly for multiprocessing
     @staticmethod
-    def _async_worker(job: JobABC, task_queue: 'mp.Queue', result_queue: 'mp.Queue'):
+    def _async_worker(job_map: Dict[str, JobABC], task_queue: 'mp.Queue', result_queue: 'mp.Queue'):
         """Process that handles making workflow calls using asyncio."""
         # Get logger for AsyncWorker
         logger = logging.getLogger('AsyncWorker')
@@ -249,6 +323,16 @@ class JobChain:
             """Process a single task and return its result"""
             logger.debug(f"Processing task: {task}")
             try:
+                # If there's only one job, use it directly
+                if len(job_map) == 1:
+                    job = next(iter(job_map.values()))
+                else:
+                    # Otherwise, get the job from the map using job_name
+                    job_name = task.get('job_name')
+                    if not job_name:
+                        raise ValueError("Task missing job_name when multiple jobs are present")
+                    job = job_map[job_name]
+
                 result = await job._execute(task)
                 logger.debug(f"Task {task} completed successfully")
                 result_queue.put(result)
@@ -262,13 +346,12 @@ class JobChain:
             logger.debug("Starting queue monitor")
             tasks = set()
             pending_tasks = []
-            end_signal_received = False
             tasks_created = 0
             tasks_completed = 0
+            end_signal_received = False
 
-            # If there is no end signal or tasks are still remaining, then loop
             while not end_signal_received or tasks:
-                # Collect available tasks
+                # Get all available tasks from the queue
                 while True:
                     try:
                         task = task_queue.get_nowait()
@@ -283,7 +366,7 @@ class JobChain:
                 # Create tasks in batch if we have any pending
                 if pending_tasks:
                     logger.debug(f"Creating {len(pending_tasks)} new tasks")
-                    new_tasks = {asyncio.create_task(process_task(t)) for t in pending_tasks}
+                    new_tasks = {asyncio.create_task(process_task(pending_tasks[i])) for i in range(len(pending_tasks))}
                     tasks.update(new_tasks)
                     tasks_created += len(new_tasks)
                     logger.debug(f"Total tasks created: {tasks_created}")
@@ -320,7 +403,6 @@ class JobChain:
             loop.run_until_complete(queue_monitor())
         except Exception as e:
             logger.error(f"Error in async worker: {e}")
-            raise
         finally:
             logger.info("Closing event loop")
             loop.close()
