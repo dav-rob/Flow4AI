@@ -54,8 +54,108 @@ graph3: dict = {
     'D': {'next': []}
 }
 
+def test_print_format():
+    """
+    Test the print formatting of different graph structures.
+    Tests include:
+    1. Simple graph with multiple paths
+    2. Graph with single subgraph
+    3. Graph with nested subgraphs
+    """
+    print("--------")       
+    print("Graph 1:")
+    print("--------")
+    print_graph(graph1)
 
-def test_cycle_detection():
+    print("--------")
+    print("\nGraph 2:")
+    print("--------")
+    print_graph(graph2)
+
+    print("--------")
+    print("\nGraph 3:")
+    print("--------")
+    print_graph(graph3)
+
+def test_simple_cross_graph_cycle_detection():
+    """
+    Test cycle detection and edge addition rules for simple graphs and cross-graph scenarios.
+    Tests include:
+    1. Basic cycle detection on predefined graphs
+    2. Edge addition with cycle prevention
+    3. Cross-graph edge addition rules with subgraphs
+    """
+    # Check each graph for cycles
+    check_graph_for_cycles(graph1, "Graph 1")
+    check_graph_for_cycles(graph2, "Graph 2")
+    check_graph_for_cycles(graph3, "Graph 3")
+
+    # Test the cycle prevention
+    print("\nTesting cycle prevention:")
+    print("------------------------")
+
+    # Create a test graph
+    test_graph = {
+        'A': {'next': ['B']},
+        'B': {'next': ['C']},
+        'C': {'next': ['D']},
+        'D': {'next': []}
+    }
+
+    print("\nInitial test graph:")
+    print_graph(test_graph)
+
+    # Try to add some edges
+    print("\nTrying to add edges:")
+    add_edge_anywhere(test_graph, 'D', 'A')  # This should create a cycle and be prevented
+    add_edge_anywhere(test_graph, 'A', 'C')  # This should be fine (shortcut path)
+    add_edge_anywhere(test_graph, 'B', 'D')  # This should be fine (shortcut path)
+
+    print("\nFinal test graph after attempted modifications:")
+    print_graph(test_graph)
+
+    # Test subgraph edge addition
+    print("\nTesting subgraph edge addition:")
+    print("-----------------------------")
+
+    # Create a test graph with subgraphs
+    test_graph_with_sub = {
+        'A': {'next': ['B']},
+        'B': {
+            'next': ['C'],
+            'subgraph': {
+                'X': {'next': ['Y']},
+                'Y': {'next': ['Z']},
+                'Z': {'next': []}
+            }
+        },
+        'C': {'next': []}
+    }
+
+    print("\nInitial test graph with subgraph:")
+    print_graph(test_graph_with_sub)
+
+    print("\nTrying to add edges in subgraph:")
+    # Test cases for edge addition rules
+    print("\n1. Adding edge within same subgraph (should succeed):")
+    add_edge_anywhere(test_graph_with_sub, 'X', 'Z')  # Should succeed (valid shortcut within subgraph)
+
+    print("\n2. Adding edge that would create cycle in subgraph (should fail):")
+    add_edge_anywhere(test_graph_with_sub, 'Z', 'X')  # Should fail (would create cycle)
+
+    print("\n3. Adding cross-graph edge from main to subgraph (should fail):")
+    add_edge_anywhere(test_graph_with_sub, 'A', 'X')  # Should fail (cross-graph reference)
+
+    print("\n4. Adding cross-graph edge from subgraph to main (should fail):")
+    add_edge_anywhere(test_graph_with_sub, 'Z', 'C')  # Should fail (cross-graph reference)
+
+    print("\n5. Adding edge in main graph (should succeed):")
+    add_edge_anywhere(test_graph_with_sub, 'A', 'C')  # Should succeed (valid edge in main graph)
+
+    print("\nFinal test graph after attempted modifications:")
+    print_graph(test_graph_with_sub)
+
+def test_comprehensive_cycle_detection():
     """
     Comprehensive tests for cycle detection in graphs.
     Tests include:
@@ -187,94 +287,6 @@ def test_cycle_detection():
     }
     check_graph_for_cycles(complex_subgraph, "Complex subgraph paths")
 
-# Run the comprehensive tests
-test_cycle_detection()
-
-print("--------")       
-print("Graph 1:")
-print("--------")
-print_graph(graph1)
-
-print("--------")
-print("\nGraph 2:")
-print("--------")
-print_graph(graph2)
-
-print("--------")
-print("\nGraph 3:")
-print("--------")
-print_graph(graph3)
-
-# Check each graph for cycles
-check_graph_for_cycles(graph1, "Graph 1")
-check_graph_for_cycles(graph2, "Graph 2")
-check_graph_for_cycles(graph3, "Graph 3")
-
-# Test the cycle prevention
-print("\nTesting cycle prevention:")
-print("------------------------")
-
-# Create a test graph
-test_graph = {
-    'A': {'next': ['B']},
-    'B': {'next': ['C']},
-    'C': {'next': ['D']},
-    'D': {'next': []}
-}
-
-print("\nInitial test graph:")
-print_graph(test_graph)
-
-# Try to add some edges
-print("\nTrying to add edges:")
-add_edge_anywhere(test_graph, 'D', 'A')  # This should create a cycle and be prevented
-add_edge_anywhere(test_graph, 'A', 'C')  # This should be fine (shortcut path)
-add_edge_anywhere(test_graph, 'B', 'D')  # This should be fine (shortcut path)
-
-print("\nFinal test graph after attempted modifications:")
-print_graph(test_graph)
-
-# Test subgraph edge addition
-print("\nTesting subgraph edge addition:")
-print("-----------------------------")
-
-# Create a test graph with subgraphs
-test_graph_with_sub = {
-    'A': {'next': ['B']},
-    'B': {
-        'next': ['C'],
-        'subgraph': {
-            'X': {'next': ['Y']},
-            'Y': {'next': ['Z']},
-            'Z': {'next': []}
-        }
-    },
-    'C': {'next': []}
-}
-
-print("\nInitial test graph with subgraph:")
-print_graph(test_graph_with_sub)
-
-print("\nTrying to add edges in subgraph:")
-# Test cases for edge addition rules
-print("\n1. Adding edge within same subgraph (should succeed):")
-add_edge_anywhere(test_graph_with_sub, 'X', 'Z')  # Should succeed (valid shortcut within subgraph)
-
-print("\n2. Adding edge that would create cycle in subgraph (should fail):")
-add_edge_anywhere(test_graph_with_sub, 'Z', 'X')  # Should fail (would create cycle)
-
-print("\n3. Adding cross-graph edge from main to subgraph (should fail):")
-add_edge_anywhere(test_graph_with_sub, 'A', 'X')  # Should fail (cross-graph reference)
-
-print("\n4. Adding cross-graph edge from subgraph to main (should fail):")
-add_edge_anywhere(test_graph_with_sub, 'Z', 'C')  # Should fail (cross-graph reference)
-
-print("\n5. Adding edge in main graph (should succeed):")
-add_edge_anywhere(test_graph_with_sub, 'A', 'C')  # Should succeed (valid edge in main graph)
-
-print("\nFinal test graph after attempted modifications:")
-print_graph(test_graph_with_sub)
-
 def test_cross_graph_references():
     """
     Test validation of graph references to ensure nodes only reference other nodes
@@ -351,6 +363,9 @@ def test_cross_graph_references():
         for v in violations:
             print(f"- {v}")
 
+
 # Run all tests
-test_cycle_detection()
+test_print_format()
+test_simple_cross_graph_cycle_detection()
+test_comprehensive_cycle_detection()
 test_cross_graph_references()
