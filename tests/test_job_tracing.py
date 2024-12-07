@@ -163,6 +163,94 @@ def test_execute_no_trace_matches_original():
     # The source code should contain key implementation details
     assert "async def" in execute_source
     assert "_execute(self, task" in execute_source  # More flexible check that works with type hints
-    assert "self.has_finished()" in execute_source
-    assert "self.do_finishing_actions()" in execute_source
-    assert "self.do_intermediate_actions()" in execute_source
+
+
+def test_subclass_execute_not_traced():
+    """Test that JobABC subclasses do not have their own traced execute methods"""
+    class CustomJob(JobABC):
+        async def run(self, task) -> Dict[str, Any]:
+            return {"task": task, "status": "success"}
+    
+    job = CustomJob("Test Job")
+    assert not _has_own_traced_execute(job.__class__), "Subclass should not have its own traced _execute"
+    assert hasattr(job, 'executeNoTrace'), "Should still have executeNoTrace method"
+
+
+def test_decorator_preserves_method_signature():
+    """Test that the traced execute method preserves the original signature"""
+    class TestJob(JobABC):
+        async def run(self, task) -> Dict[str, Any]:
+            return {"task": task, "status": "complete"}
+    
+    # Get the signatures of the traced and untraced versions
+    untraced_sig = inspect.signature(TestJob.executeNoTrace)
+    traced_sig = inspect.signature(JobABC._execute)
+    
+    # Compare parameters and return annotation
+    assert str(untraced_sig.parameters) == str(traced_sig.parameters), (
+        "The traced execute method should preserve the parameter signature"
+    )
+    assert untraced_sig.return_annotation == traced_sig.return_annotation, (
+        "The traced execute method should preserve the return type annotation"
+    )
+
+
+def test_job_factory_returns_untraced_jobs():
+    """Test that JobFactory returns properly untraced Job instances"""
+    from job import JobFactory
+
+    # Test file-based job loading
+    file_job = JobFactory.load_job({"type": "file", "params": {}})
+    assert isinstance(file_job, JobABC)
+    assert not _has_own_traced_execute(file_job.__class__), "Factory-created jobs should not have their own traced _execute"
+    assert hasattr(file_job, 'executeNoTrace')
+    
+    # Test datastore-based job loading
+    datastore_job = JobFactory.load_job({"type": "datastore", "params": {}})
+    assert isinstance(datastore_job, JobABC)
+    assert not _has_own_traced_execute(datastore_job.__class__), "Factory-created jobs should not have their own traced _execute"
+    assert hasattr(datastore_job, 'executeNoTrace')
+
+
+def test_job_implementations_not_traced():
+    """Test that Job implementations do not have their own traced execute methods"""
+    def get_all_subclasses(cls):
+        """Recursively get all subclasses of a class"""
+        subclasses = set()
+        for subclass in cls.__subclasses__():
+            subclasses.add(subclass)
+            subclasses.update(get_all_subclasses(subclass))
+        return subclasses
+    
+    # Get all JobABC subclasses (excluding our test classes)
+    job_subclasses = {cls for cls in get_all_subclasses(JobABC)
+                     if not cls.__module__.startswith('test_job_tracing')}
+    
+    # Check each subclass
+    traced_classes = []
+    for cls in job_subclasses:
+        if _has_own_traced_execute(cls):
+            traced_classes.append(f"{cls.__module__}.{cls.__name__}")
+    
+    assert not traced_classes, (
+        f"Found Job subclasses with their own traced execute method: "
+        f"{', '.join(traced_classes)}\n"
+        "Job subclasses should not have their own traced execute method.\n"
+        "Only JobABC should have tracing."
+    )
+
+
+def test_execute_no_trace_matches_original():
+    """Test that executeNoTrace matches the original implementation"""
+    class TestJob(JobABC):
+        async def run(self, task) -> Dict[str, Any]:
+            return {"task": task, "result": "success"}
+    
+    job = TestJob("Test Job")
+    
+    # Get the source code of both methods
+    execute_source = inspect.getsource(job.__class__.executeNoTrace)
+    
+    # The source code should contain key implementation details
+    assert "async def" in execute_source
+    assert "_execute(self, task" in execute_source  # More flexible check that works with type hints

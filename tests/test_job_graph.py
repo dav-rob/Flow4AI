@@ -21,6 +21,7 @@ class DelayedMockJob(MockJob):
         self.delay = delay
 
     async def run(self, task):
+        task = task[self.name]  # Get the task from inputs dict
         await asyncio.sleep(self.delay)
         return {'input': task, 'output': f'processed by {self.name}'}
 
@@ -75,7 +76,7 @@ def test_parallel_execution_multiple_jobs():
         tasks = []
         for i in range(5):
             for j in range(4):  # 4 tasks per job = 20 total tasks
-                tasks.append({'task': f'task_{i}_{j}', 'job_name': f'job_{i}'})
+                tasks.append({f'job_{i}': {'task': f'task_{i}_{j}', 'job_name': f'job_{i}'}})
 
         # Time the execution
         start_time = time.time()
@@ -86,7 +87,8 @@ def test_parallel_execution_multiple_jobs():
             results.append(result)
         job_chain = JobChain(jobs, result_collector, serial_processing=True)
         for task in tasks:
-            job_chain.submit_task(task)
+            job_name = next(iter(task.keys()))  # Get the job name from the task dict
+            job_chain.submit_task(task, job_name=job_name)
         job_chain.mark_input_completed()
         
         end_time = time.time()

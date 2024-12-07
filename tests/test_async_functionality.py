@@ -22,6 +22,7 @@ class AsyncTestJob(JobABC):
         super().__init__(name="AsyncTestJob")
     
     async def run(self, task):
+        task = task[self.name]  # Get the task from inputs dict
         if isinstance(task, dict) and task.get('fail'):
             raise ValueError("Simulated task failure")
         if isinstance(task, dict) and task.get('delay'):
@@ -41,9 +42,9 @@ async def test_concurrent_task_execution():
     
     # Submit tasks with different delays
     tasks = [
-        {'task_id': 1, 'delay': 0.2},
-        {'task_id': 2, 'delay': 0.1},
-        {'task_id': 3, 'delay': 0.3}
+        {'AsyncTestJob': {'task_id': 1, 'delay': 0.2}},
+        {'AsyncTestJob': {'task_id': 2, 'delay': 0.1}},
+        {'AsyncTestJob': {'task_id': 3, 'delay': 0.3}}
     ]
     
     for task in tasks:
@@ -65,7 +66,7 @@ async def test_async_task_cancellation():
     job_chain = JobChain(AsyncTestJob())
     
     # Submit a long-running task
-    job_chain.submit_task({'delay': 1.0})
+    job_chain.submit_task({'AsyncTestJob': {'delay': 1.0}})
     
     # Force cleanup before completion
     job_chain._cleanup()
@@ -80,7 +81,7 @@ async def test_event_loop_handling():
     job_chain = JobChain(AsyncTestJob())
     
     # Submit a simple task
-    job_chain.submit_task({'task_id': 1})
+    job_chain.submit_task({'AsyncTestJob': {'task_id': 1}})
     job_chain.mark_input_completed()
     
     # Verify process cleanup
@@ -98,9 +99,9 @@ async def test_async_exception_handling():
     
     # Submit mix of successful and failing tasks
     tasks = [
-        {'task_id': 1},
-        {'task_id': 2, 'fail': True},
-        {'task_id': 3}
+        {'AsyncTestJob': {'task_id': 1}},
+        {'AsyncTestJob': {'task_id': 2, 'fail': True}},
+        {'AsyncTestJob': {'task_id': 3}}
     ]
     
     for task in tasks:
@@ -125,7 +126,7 @@ async def test_parallel_task_limit():
     # Submit many quick tasks
     num_tasks = 100
     for i in range(num_tasks):
-        job_chain.submit_task({'task_id': i, 'delay': 0.01})
+        job_chain.submit_task({'AsyncTestJob': {'task_id': i, 'delay': 0.01}})
     
     job_chain.mark_input_completed()
     

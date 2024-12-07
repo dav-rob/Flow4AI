@@ -25,6 +25,7 @@ class ErrorTestJob(JobABC):
         super().__init__(name="ErrorTestJob")
     
     async def run(self, task):
+        task = task[self.name]  # Get the task from inputs dict
         if task.get('raise_error'):
             raise Exception(task.get('error_message', 'Simulated error'))
         if task.get('timeout'):
@@ -54,10 +55,10 @@ def test_basic_error_handling():
     
     # Submit mix of successful and failing tasks
     tasks = [
-        {'task_id': 1},
-        {'task_id': 2, 'raise_error': True, 'error_message': 'Task 2 error'},
-        {'task_id': 3},
-        {'task_id': 4, 'raise_error': True, 'error_message': 'Task 4 error'}
+        {'ErrorTestJob': {'task_id': 1}},
+        {'ErrorTestJob': {'task_id': 2, 'raise_error': True, 'error_message': 'Task 2 error'}},
+        {'ErrorTestJob': {'task_id': 3}},
+        {'ErrorTestJob': {'task_id': 4, 'raise_error': True, 'error_message': 'Task 4 error'}}
     ]
     
     for task in tasks:
@@ -82,9 +83,9 @@ def test_timeout_handling():
     
     # Submit tasks with varying timeouts
     tasks = [
-        {'task_id': 1, 'timeout': 0.3},
-        {'task_id': 2, 'timeout': 0.2},
-        {'task_id': 3, 'timeout': 0.1}
+        {'ErrorTestJob': {'task_id': 1, 'timeout': 0.3}},
+        {'ErrorTestJob': {'task_id': 2, 'timeout': 0.2}},
+        {'ErrorTestJob': {'task_id': 3, 'timeout': 0.1}}
     ]
     
     for task in tasks:
@@ -105,7 +106,7 @@ def test_process_termination():
     job_chain = JobChain(ErrorTestJob())
     
     # Submit a long-running task
-    job_chain.submit_task({'task_id': 1, 'timeout': 1.0})
+    job_chain.submit_task({'ErrorTestJob': {'task_id': 1, 'timeout': 1.0}})
     
     # Force terminate the process
     job_chain.job_executor_process.terminate()
@@ -140,7 +141,7 @@ def test_resource_cleanup():
     
     # Submit some tasks
     for i in range(5):
-        job_chain.submit_task({'task_id': i})
+        job_chain.submit_task({'ErrorTestJob': {'task_id': i}})
     
     # Get queue references
     task_queue = job_chain._task_queue
@@ -167,7 +168,7 @@ def test_error_in_result_processing():
     
     # Submit tasks
     for i in range(3):
-        job_chain.submit_task({'task_id': i})
+        job_chain.submit_task({'ErrorTestJob': {'task_id': i}})
     
     job_chain.mark_input_completed()
     # Should complete without hanging or crashing
@@ -181,7 +182,7 @@ def test_memory_error_handling():
     job_chain = JobChain(ErrorTestJob(), collect_result, serial_processing=True)
     
     # Submit task that will cause memory error
-    job_chain.submit_task({'task_id': 1, 'memory_error': True})
+    job_chain.submit_task({'ErrorTestJob': {'task_id': 1, 'memory_error': True}})
     
     job_chain.mark_input_completed()
     
@@ -197,7 +198,7 @@ def test_unpicklable_result():
     job_chain = JobChain(ErrorTestJob(), collect_result, serial_processing=True)
     
     # Submit task that returns unpicklable result
-    job_chain.submit_task({'task_id': 1, 'invalid_result': True})
+    job_chain.submit_task({'ErrorTestJob': {'task_id': 1, 'invalid_result': True}})
     
     job_chain.mark_input_completed()
     

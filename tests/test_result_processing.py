@@ -18,13 +18,19 @@ class ResultTimingJob(JobABC):
         self.executed_tasks = set()
 
     async def run(self, task) -> dict:
-        # Record task execution
-        self.executed_tasks.add(task)
+        # Extract the actual task from the wrapped task
+        actual_task = task.get(self.name, task)
+        # Record task execution using the task string
+        if isinstance(actual_task, dict) and 'task' in actual_task:
+            task_str = actual_task['task']
+        else:
+            task_str = str(actual_task)
+        self.executed_tasks.add(task_str)
         # Simulate some work
         await asyncio.sleep(0.1)
         current_time = time.time()
-        print(f"Executing task {task} at {current_time}")
-        return {"task": task, "timestamp": current_time}
+        print(f"Executing task {actual_task} at {current_time}")
+        return {"task": actual_task, "timestamp": current_time}
 
 class UnpicklableState:
     def __init__(self):
@@ -93,7 +99,7 @@ def serial_mode():
         # Submit some tasks
         expected_tasks = {f"Task {i}" for i in range(3)}
         for task in expected_tasks:
-            job_chain.submit_task(task)
+            job_chain.submit_task({job.name: {'task': task}}, job_name=job.name)
             sleep(0.1)
         
         # Process tasks and wait for completion
@@ -108,7 +114,7 @@ def serial_mode():
         
         # Verify all tasks were processed by checking log content
         for task in expected_tasks:
-            assert f"'task': '{task}'" in content, f"Expected task {task} to be processed"
+            assert f"'task': {{'task': '{task}'}}" in content, f"Expected task {task} to be processed"
         
         print("All tasks were successfully processed and logged")
 

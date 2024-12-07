@@ -216,7 +216,7 @@ def test_job_metaclass_tracing(trace_file, setup_file_exporter):
     """Test that JobABC metaclass properly applies detailed tracing"""
     class TestJob(JobABC):
         async def run(self, task):
-            return {"result": task}
+            return {"result": task["test"]}
 
     # Create and execute job
     job = TestJob("test")
@@ -229,7 +229,7 @@ def test_job_metaclass_tracing(trace_file, setup_file_exporter):
         expected_attrs={
             "function.args": "(<test_opentelemetry.test_job_metaclass_tracing.<locals>.TestJob object at",  # Just verify it starts with this
             "function.kwargs": "{}",
-            "object.fields": "{'name': 'test'}"
+            "object.fields": "{'name': 'test', 'next_jobs': [], 'inputs': {}, 'expected_inputs': set()}"
         }
     )
 

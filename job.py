@@ -88,15 +88,6 @@ class JobABC(ABC, metaclass=JobMeta):
     # class variable to keep track of instance counts for each class
     _instance_counts = {}
 
-    # type hints
-    name: str  # this should be a unique name in the JobChain server / cluster
-    description: str
-    finished: bool
-    input_needed_jobs: Set['JobABC']
-    jobs_dependent_on: Set['JobABC']
-    job_output: Dict[str, Any]
-    input_to_process: Dict[str, Any]
-
     def __init__(self, name: str = None):
         """
         Initialize an JobABC instance.
@@ -113,12 +104,11 @@ class JobABC(ABC, metaclass=JobMeta):
             in job execution and dependency management.
         """
         self.name = self._getUniqueName() if name is None else name
-        self.description = ""  # blank by default
-        self.finished = True  # True by default
-        self.jobs_dependent_on = set()  # Initialize jobs_dependent_on as empty set
-        self.input_needed_jobs = set()  # Initialize input_needed_jobs as empty set
-        self.job_output = {}  # initialized empty
-        self.input_to_process = {}  # initialized empty
+        self.next_jobs = []
+        self.inputs = {}
+        self.input_event = asyncio.Event()
+        self.expected_inputs = set()
+        self.execution_started = False  # New flag to track execution status
         self.logger = logging.getLogger(self.__class__.__name__)
 
     @classmethod
@@ -131,111 +121,69 @@ class JobABC(ABC, metaclass=JobMeta):
     def __repr__(self):
         return f"<{self.__class__.__name__} name={self.name}>"
 
-    def add_input_needed_jobs(self, jobs: Union['JobABC', Set['JobABC']]) -> None:
-        """Add job(s) as input dependencies."""
-        if isinstance(jobs, JobABC):
-            self.input_needed_jobs.add(jobs)
+    async def _execute(self, task: Any) -> Any:
+        # Single input case (like A, B, C receiving from parent)
+        if isinstance(task, dict):
+            self.inputs.update(task)
         else:
-            self.input_needed_jobs.update(jobs)
+            # Convert single input to dict format
+            self.inputs[self.name] = task
 
-    def add_dependent_jobs(self, jobs: Union['JobABC', Set['JobABC']]) -> None:
-        """Add job(s) that depend on this job."""
-        if not hasattr(self, 'jobs_dependent_on'):
-            self.jobs_dependent_on = set()
-        if isinstance(jobs, JobABC):
-            self.jobs_dependent_on.add(jobs)
-        else:
-            self.jobs_dependent_on.update(jobs)
+        # If we expect multiple inputs, wait for them
+        if self.expected_inputs:
+            if self.execution_started:
+                # If execution already started, just return
+                return None
+            
+            self.execution_started = True
+            try:
+                await asyncio.wait_for(self.input_event.wait(), timeout=30.0)
+            except asyncio.TimeoutError:
+                self.execution_started = False  # Reset on timeout
+                raise TimeoutError(
+                    f"Timeout waiting for inputs in {self.name}. "
+                    f"Expected: {self.expected_inputs}, "
+                    f"Received: {list(self.inputs.keys())}"
+                )
 
-    async def _execute(self, task: Task) -> Dict[str, Any]:
-        """
-        This method is called by JobChain to start-off the Jobs, and is 
-        responsible for the control flow of starting Jobs when dependencies are
-        met and for Jobs handing-off to other Jobs.
-        This method will be traced only in the JobABC class through the JobMeta metaclass.
-        """
-        self.logger.info(f"[FLOW] _execute called for {self.name} with task {task}")
+        # Process inputs
+        result = await self.run(self.inputs)
 
-        result = await self.run(task)
+        # Clear state for potential reuse
+        self.inputs.clear()
+        self.input_event.clear()
+        self.execution_started = False
 
-        if self.has_finished():
-            await self.do_finishing_actions()
-        else:
-            await self.do_intermediate_actions()
+        if not self.next_jobs:
+            return result
+
+        # Execute all next jobs concurrently
+        tasks = []
+        for next_job in self.next_jobs:
+            # First send the input to the next job
+            await next_job.receive_input(self.name, result)
+            # If the next job has all its inputs, trigger its execution
+            if next_job.expected_inputs.issubset(set(next_job.inputs.keys())):
+                tasks.append(next_job._execute(None))
+        
+        if tasks:
+            results = await asyncio.gather(*tasks)
+            if any(results):  # If any result is not None
+                return results[0]  # Return the first non-None result
 
         return result
+
+    async def receive_input(self, from_job: str, data: Any) -> None:
+        """Receive input from a predecessor job"""
+        self.inputs[from_job] = data
+        if self.expected_inputs.issubset(set(self.inputs.keys())):
+            self.input_event.set()
+
+
     @abstractmethod
     async def run(self, task: Task) -> Dict[str, Any]:
         """Execute the job on the given task. Must be implemented by subclasses."""
         pass
-
-    async def notify_dependent_jobs(self) -> None:
-        """Notify dependent jobs that this job has finished."""
-        self.logger.info(f"[FLOW] notify_dependent_jobs called for {self.name}, dependent jobs: {[j.name for j in self.jobs_dependent_on]}")
-        if not self.jobs_dependent_on:
-            return
-        for job in self.jobs_dependent_on:
-            await job.receive_notification(self.name, self.job_output)
-
-    async def receive_notification(self, sender_job_name: str, sender_data: Dict[str, Any]) -> None:
-        """Receive notification from other jobs. And execute if dependencies are met."""
-        self.logger.info(f"[FLOW] receive_notification called for {self.name} from {sender_job_name}")
-        self.input_to_process[sender_job_name] = sender_data
-        if not self.has_all_dependencies():
-            self.logger.info(f"[FLOW] Dependencies not met for {self.name}, skipping execution")
-            return
-        task = self.get_task_data()
-        self.logger.info(f"[FLOW] All dependencies met for {self.name}, calling _execute")
-        #TODO: This needs to be async, and even if it is, is this the right place to execute, what's the effect on the event loop?
-        await self._execute(task)
-
-    def get_task_data(self) -> Task:
-        """Get the task data from the input_to_process dictionary.  Override this method 
-        to customize how the task data is constructed from the input_to_process dictionary.
-        """
-        self.logger.info(f"[FLOW] get_task_data called for {self.name}")
-        return Task(self.input_to_process)
-
-    def has_all_dependencies(self) -> bool:
-        """
-        Default implementation to check if all dependencies are satisfied.
-        Returns True if:
-        1. self.input_needed_jobs doesn't exist or self.input_needed_jobs is empty
-        3. All jobs in self.input_needed_jobs have corresponding entries in self.input_to_process
-        """
-        if not self.input_needed_jobs:
-            return True
-            
-        return all(job.name in self.input_to_process for job in self.input_needed_jobs)
-
-    def has_finished(self) -> bool:
-        """
-        Check if the job has finished execution.
-        Returns True by default as specified.
-        """
-        return True
-
-    def do_pre_actions(self) -> None:
-        """Perform any pre-actions before the task is executed.
-        
-        Stub implementation.
-        """
-        self.logger.info(f"[FLOW] do_pre_actions called for {self.name}")
-
-    async def do_finishing_actions(self) -> None:
-        """Perform any finishing actions after the task has been executed.
-        
-        Stub implementation.
-        """
-        self.logger.info(f"[FLOW] do_finishing_actions called for {self.name}")
-        await self.notify_dependent_jobs()
-
-    async def do_intermediate_actions(self) -> None:
-        """
-        Perform actions when job has not finished.
-        Stub implementation.
-        """
-        self.logger.info(f"[FLOW] do_intermediate_actions called for {self.name}")
 
 
 class SimpleJob(JobABC):
