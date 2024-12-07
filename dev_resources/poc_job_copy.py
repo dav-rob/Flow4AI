@@ -5,16 +5,51 @@ from abc import ABC, ABCMeta, abstractmethod
 from typing import Any, Dict, List, Optional, Set, Type, Union
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import jc_logging as logging
 from job import Task
 
+
 class JobABC(ABC):
-    def __init__(self):
+    """
+    Abstract base class for jobs. Only this class will have tracing enabled through the JobMeta metaclass.
+    Subclasses will inherit the traced version of _execute but won't add additional tracing.
+    """
+
+    # class variable to keep track of instance counts for each class
+    _instance_counts = {}
+
+    def __init__(self, name: str = None):
+        """
+        Initialize an JobABC instance.
+
+        Args:
+            name (str, optional): A unique identifier for this job within the context of a JobChain.
+                       The name must be unique among all jobs in the same JobChain to ensure
+                       proper job identification and dependency resolution. If not provided,
+                       a unique name will be auto-generated.
+
+        Note:
+            The uniqueness of the name is crucial for proper JobChain operation. Using
+            duplicate names within the same JobChain can lead to unexpected behavior
+            in job execution and dependency management.
+        """
+        self.name = self._getUniqueName() if name is None else name
         self.next_jobs = []
-        self.name = self.__class__.__name__
         self.inputs = {}
         self.input_event = asyncio.Event()
         self.expected_inputs = set()
         self.execution_started = False  # New flag to track execution status
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    @classmethod
+    def _getUniqueName(cls):
+        # Increment the counter for the current class
+        cls._instance_counts[cls] = cls._instance_counts.get(cls, 0) + 1
+        # Return a unique name based on the current class
+        return f"{cls.__name__}_{cls._instance_counts[cls]}"
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} name={self.name}>"
 
     async def _execute(self, task: Any) -> Any:
         # Single input case (like A, B, C receiving from parent)
@@ -73,6 +108,7 @@ class JobABC(ABC):
         self.inputs[from_job] = data
         if self.expected_inputs.issubset(set(self.inputs.keys())):
             self.input_event.set()
+
 
     @abstractmethod
     async def run(self, task: Task) -> Dict[str, Any]:
