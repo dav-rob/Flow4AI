@@ -4,80 +4,80 @@ import sys
 from abc import ABC, ABCMeta, abstractmethod
 from typing import Any, Dict, List, Optional, Set, Type, Union
 
-# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# from job import JobABC
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from job import JobABC
 
-class JobABC(ABC):
-    def __init__(self):
-        self.next_jobs = []
-        self.name = self.__class__.__name__
-        self.inputs = {}
-        self.input_event = asyncio.Event()
-        self.expected_inputs = set()
-        self.execution_started = False  # New flag to track execution status
+# class JobABC(ABC):
+#     def __init__(self):
+#         self.next_jobs = []
+#         self.name = self.__class__.__name__
+#         self.inputs = {}
+#         self.input_event = asyncio.Event()
+#         self.expected_inputs = set()
+#         self.execution_started = False  # New flag to track execution status
 
-    async def _execute(self, task: Any) -> Any:
-        # Single input case (like A, B, C receiving from parent)
-        if isinstance(task, dict):
-            self.inputs.update(task)
-        else:
-            # Convert single input to dict format
-            self.inputs[self.name] = task
+#     async def _execute(self, task: Any) -> Any:
+#         # Single input case (like A, B, C receiving from parent)
+#         if isinstance(task, dict):
+#             self.inputs.update(task)
+#         else:
+#             # Convert single input to dict format
+#             self.inputs[self.name] = task
 
-        # If we expect multiple inputs, wait for them
-        if self.expected_inputs:
-            if self.execution_started:
-                # If execution already started, just return
-                return None
+#         # If we expect multiple inputs, wait for them
+#         if self.expected_inputs:
+#             if self.execution_started:
+#                 # If execution already started, just return
+#                 return None
             
-            self.execution_started = True
-            try:
-                await asyncio.wait_for(self.input_event.wait(), timeout=30.0)
-            except asyncio.TimeoutError:
-                self.execution_started = False  # Reset on timeout
-                raise TimeoutError(
-                    f"Timeout waiting for inputs in {self.name}. "
-                    f"Expected: {self.expected_inputs}, "
-                    f"Received: {list(self.inputs.keys())}"
-                )
+#             self.execution_started = True
+#             try:
+#                 await asyncio.wait_for(self.input_event.wait(), timeout=30.0)
+#             except asyncio.TimeoutError:
+#                 self.execution_started = False  # Reset on timeout
+#                 raise TimeoutError(
+#                     f"Timeout waiting for inputs in {self.name}. "
+#                     f"Expected: {self.expected_inputs}, "
+#                     f"Received: {list(self.inputs.keys())}"
+#                 )
 
-        # Process inputs
-        result = await self.run(self.inputs)
+#         # Process inputs
+#         result = await self.run(self.inputs)
 
-        # Clear state for potential reuse
-        self.inputs.clear()
-        self.input_event.clear()
-        self.execution_started = False
+#         # Clear state for potential reuse
+#         self.inputs.clear()
+#         self.input_event.clear()
+#         self.execution_started = False
 
-        if not self.next_jobs:
-            return result
+#         if not self.next_jobs:
+#             return result
 
-        # Execute all next jobs concurrently
-        tasks = []
-        for next_job in self.next_jobs:
-            # First send the input to the next job
-            await next_job.receive_input(self.name, result)
-            # If the next job has all its inputs, trigger its execution
-            if next_job.expected_inputs.issubset(set(next_job.inputs.keys())):
-                tasks.append(next_job._execute(None))
+#         # Execute all next jobs concurrently
+#         tasks = []
+#         for next_job in self.next_jobs:
+#             # First send the input to the next job
+#             await next_job.receive_input(self.name, result)
+#             # If the next job has all its inputs, trigger its execution
+#             if next_job.expected_inputs.issubset(set(next_job.inputs.keys())):
+#                 tasks.append(next_job._execute(None))
         
-        if tasks:
-            results = await asyncio.gather(*tasks)
-            if any(results):  # If any result is not None
-                return results[0]  # Return the first non-None result
+#         if tasks:
+#             results = await asyncio.gather(*tasks)
+#             if any(results):  # If any result is not None
+#                 return results[0]  # Return the first non-None result
 
-        return result
+#         return result
 
-    async def receive_input(self, from_job: str, data: Any) -> None:
-        """Receive input from a predecessor job"""
-        self.inputs[from_job] = data
-        if self.expected_inputs.issubset(set(self.inputs.keys())):
-            self.input_event.set()
+#     async def receive_input(self, from_job: str, data: Any) -> None:
+#         """Receive input from a predecessor job"""
+#         self.inputs[from_job] = data
+#         if self.expected_inputs.issubset(set(self.inputs.keys())):
+#             self.input_event.set()
 
-    @abstractmethod
-    async def run(self, inputs: Dict[str, Any]) -> Any:
-        """Override in concrete classes to implement processing logic"""
-        pass
+#     @abstractmethod
+#     async def run(self, inputs: Dict[str, Any]) -> Any:
+#         """Override in concrete classes to implement processing logic"""
+#         pass
     
 class A(JobABC):
   async def run(self, inputs: Dict[str, Any]) -> Any:
