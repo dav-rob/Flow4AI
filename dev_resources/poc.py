@@ -152,25 +152,38 @@ def create_job_graph(graph_definition: dict, job_classes: dict) -> JobABC:
 
     return nodes[head_job_id]
 
-# Usage example:
-graph_definition = {
-    'A': {'next': ['B', 'C']},
-    'B': {'next': ['C', 'D']},
-    'C': {'next': ['D']},
-    'D': {'next': []}
-} 
+def execute_graph(graph_definition: dict, jobs: dict, data: dict) -> Any:
+    head_job = create_job_graph(graph_definition, jobs)
+    final_result = asyncio.run(head_job._execute(data))
+    return final_result
 
+# Usage example:
 jobs = {
     'A': A,
     'B': B,
     'C': C,
     'D': D
 }
-
-head_job = create_job_graph(graph_definition, jobs)
 data:dict = {
     '1': {},
     '2': {}
 }
-final_result = asyncio.run(head_job._execute(data))
-print(f"Final result: {final_result}")
+
+graph_definition1 = {
+    'A': {'next': ['B', 'C']},
+    'B': {'next': ['C', 'D']},
+    'C': {'next': ['D']},
+    'D': {'next': []}
+} 
+final_result1 = execute_graph(graph_definition1, jobs, data)
+print(f"Final result: {final_result1} for graph_definition1")
+
+print("\n-------------------------------------------------\n")
+
+graph_definition2 = {
+    'A': {'next': ['B', 'C']},
+    'B': {'next': ['C']},
+    'C': {'next': []},
+} 
+final_result2 = execute_graph(graph_definition2, jobs, data)
+print(f"Final result: {final_result2} for graph_definition2")
