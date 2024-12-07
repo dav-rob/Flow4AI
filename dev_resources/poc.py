@@ -4,9 +4,9 @@ from typing import Any, Dict, List, Optional, Set, Type, Union
 
 
 class JobABC(ABC):
-    def __init__(self, next_jobs: List['JobABC']):
-        self.next_jobs = next_jobs
-        self.job_id = self.__class__.__name__
+    def __init__(self):
+        self.next_jobs = []
+        self.name = self.__class__.__name__
         self.inputs = {}
         self.input_event = asyncio.Event()
         self.expected_inputs = set()
@@ -18,7 +18,7 @@ class JobABC(ABC):
             self.inputs.update(task)
         else:
             # Convert single input to dict format
-            self.inputs[self.job_id] = task
+            self.inputs[self.name] = task
 
         # If we expect multiple inputs, wait for them
         if self.expected_inputs:
@@ -32,7 +32,7 @@ class JobABC(ABC):
             except asyncio.TimeoutError:
                 self.execution_started = False  # Reset on timeout
                 raise TimeoutError(
-                    f"Timeout waiting for inputs in {self.job_id}. "
+                    f"Timeout waiting for inputs in {self.name}. "
                     f"Expected: {self.expected_inputs}, "
                     f"Received: {list(self.inputs.keys())}"
                 )
@@ -52,7 +52,7 @@ class JobABC(ABC):
         tasks = []
         for next_job in self.next_jobs:
             # First send the input to the next job
-            await next_job.receive_input(self.job_id, result)
+            await next_job.receive_input(self.name, result)
             # If the next job has all its inputs, trigger its execution
             if next_job.expected_inputs.issubset(set(next_job.inputs.keys())):
                 tasks.append(next_job._execute(None))
@@ -122,35 +122,36 @@ class D(JobABC):
 def create_job_graph(graph_definition: dict, job_classes: dict) -> JobABC:
     # First create all nodes with empty next_jobs
     nodes = {}
-    for job_id in graph_definition:
-        job_class = job_classes[job_id]
-        nodes[job_id] = job_class([])
+    for job_name in graph_definition:
+        job_class = job_classes[job_name]
+        # call the job_class constructor
+        nodes[job_name] = job_class()
 
     # Find the head node (node with no incoming edges)
-    incoming_edges = {job_id: set() for job_id in graph_definition}
-    for job_id, config in graph_definition.items():
-        for next_job_id in config['next']:
-            incoming_edges[next_job_id].add(job_id)
+    incoming_edges = {job_name: set() for job_name in graph_definition}
+    for job_name, config in graph_definition.items():
+        for next_job_name in config['next']:
+            incoming_edges[next_job_name].add(job_name)
     
-    head_job_id = next(job_id for job_id, inputs in incoming_edges.items() 
+    head_job_name = next(job_name for job_name, inputs in incoming_edges.items() 
                       if not inputs)
 
     # Set next_jobs for each node
-    for job_id, config in graph_definition.items():
-        nodes[job_id].next_jobs = [nodes[next_id] for next_id in config['next']]
+    for job_name, config in graph_definition.items():
+        nodes[job_name].next_jobs = [nodes[next_name] for next_name in config['next']]
 
     # Set expected_inputs for each node
-    for job_id, inputs in incoming_edges.items():
-        if inputs:  # if node has incoming edges
-            nodes[job_id].expected_inputs = inputs
+    for job_name, input_job_names_set in incoming_edges.items():
+        if input_job_names_set:  # if node has incoming edges
+            nodes[job_name].expected_inputs = input_job_names_set
 
     # Set reference to final node in head node
     # Find node with no next jobs
-    final_job_id = next(job_id for job_id, config in graph_definition.items() 
+    final_job_name = next(job_name for job_name, config in graph_definition.items() 
                        if not config['next'])
-    nodes[head_job_id].final_node = nodes[final_job_id]
+    nodes[head_job_name].final_node = nodes[final_job_name]
 
-    return nodes[head_job_id]
+    return nodes[head_job_name]
 
 def execute_graph(graph_definition: dict, jobs: dict, data: dict) -> Any:
     head_job = create_job_graph(graph_definition, jobs)
