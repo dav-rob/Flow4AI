@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Set, Type, Union
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import jc_logging as logging
-from job import JobABC, Task
+from job import JobABC, Task, create_job_graph
 
 
 class A(JobABC):
@@ -53,38 +53,6 @@ class D(JobABC):
     print(f"D returned: {dataD}")
     return dataD
 
-def create_job_graph(graph_definition: dict, job_classes: dict) -> JobABC:
-    # First create all nodes with empty next_jobs
-    nodes = {}
-    for job_name in graph_definition:
-        job_obj = job_classes[job_name]
-        nodes[job_name] = job_obj
-
-    # Find the head node (node with no incoming edges)
-    incoming_edges = {job_name: set() for job_name in graph_definition}
-    for job_name, config in graph_definition.items():
-        for next_job_name in config['next']:
-            incoming_edges[next_job_name].add(job_name)
-    
-    head_job_name = next(job_name for job_name, inputs in incoming_edges.items() 
-                      if not inputs)
-
-    # Set next_jobs for each node
-    for job_name, config in graph_definition.items():
-        nodes[job_name].next_jobs = [nodes[next_name] for next_name in config['next']]
-
-    # Set expected_inputs for each node
-    for job_name, input_job_names_set in incoming_edges.items():
-        if input_job_names_set:  # if node has incoming edges
-            nodes[job_name].expected_inputs = input_job_names_set
-
-    # Set reference to final node in head node
-    # Find node with no next jobs
-    final_job_name = next(job_name for job_name, config in graph_definition.items() 
-                       if not config['next'])
-    nodes[head_job_name].final_node = nodes[final_job_name]
-
-    return nodes[head_job_name]
 
 def execute_graph(graph_definition: dict, jobs: dict, data: dict) -> Any:
     head_job = create_job_graph(graph_definition, jobs)

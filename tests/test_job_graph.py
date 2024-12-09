@@ -1,9 +1,10 @@
 import asyncio
 import time
+from typing import Any, Dict
 
 import pytest
 
-from job import JobABC
+from job import JobABC, Task, create_job_graph
 from job_chain import JobChain
 
 
@@ -112,3 +113,93 @@ def collect_result(results):
     def collector(result):
         results.append(result)
     return collector
+
+
+class A(JobABC):
+  async def run(self, inputs: Dict[str, Any]) -> Any:
+    print(f"\nA expected inputs: {self.expected_inputs}")
+    print(f"A data inputs: {inputs}")
+    dataA:dict = {
+        'dataA1': {},
+        'dataA2': {}
+    }
+    print(f"A returned: {dataA}")
+    return dataA
+
+class B(JobABC):
+  async def run(self, inputs: Dict[str, Any]) -> Any:
+    print(f"\nB expected inputs: {self.expected_inputs}")
+    print(f"B data inputs: {inputs}")
+    dataB:dict = {
+        'dataB1': {},
+        'dataB2': {}
+    }
+    print(f"B returned: {dataB}")
+    return dataB
+
+class C(JobABC):
+  async def run(self, inputs: Dict[str, Any]) -> Any:
+    print(f"\nC expected inputs: {self.expected_inputs}")
+    print(f"C data inputs: {inputs}")
+    dataC:dict = {
+        'dataC1': {},
+        'dataC2': {}
+    } 
+    print(f"C returned: {dataC}")
+    return dataC
+
+class D(JobABC):
+  async def run(self, inputs: Dict[str, Any]) -> Any:
+    print(f"\nD expected inputs: {self.expected_inputs}")
+    print(f"D data inputs: {inputs}")
+    dataD:dict = {
+        'dataD1': {},
+        'dataD2': {}
+    } 
+    print(f"D returned: {dataD}")
+    return dataD
+
+
+jobs = {
+    'A': A('A'),
+    'B': B('B'),
+    'C': C('C'),
+    'D': D('D')
+}
+data:dict = {
+    '1': {},
+    '2': {}
+}
+
+graph_definition1 = {
+    'A': {'next': ['B', 'C']},
+    'B': {'next': ['C', 'D']},
+    'C': {'next': ['D']},
+    'D': {'next': []}
+} 
+
+def execute_graph(graph_definition: dict, jobs: dict, data: dict) -> Any:
+    head_job = create_job_graph(graph_definition, jobs)
+    final_result = asyncio.run(head_job._execute(data))
+    return final_result
+
+def test_execute_graph1():
+    final_result1 = execute_graph(graph_definition1, jobs, data)
+    assert final_result1 == {
+            'dataD1': {},
+            'dataD2': {}
+        }
+
+graph_definition2 = {
+    'A': {'next': ['B', 'C']},
+    'B': {'next': ['C']},
+    'C': {'next': []},
+} 
+
+def test_execute_graph2():
+    final_result2 = execute_graph(graph_definition2, jobs, data)
+    assert final_result2 == {
+            'dataC1': {},
+            'dataC2': {}
+        }
+    
