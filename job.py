@@ -104,10 +104,14 @@ class JobABC(ABC, metaclass=JobMeta):
             in job execution and dependency management.
         """
         self.name = self._getUniqueName() if name is None else name
-        self.next_jobs = []
+        self.next_jobs = []   # this is the outgoing edges in the graph definition, it is the jobs to execute
+                             #   after this job
         self.inputs = {}
         self.input_event = asyncio.Event()
-        self.expected_inputs = set()
+        self.expected_inputs = set() # create_job_graph() calculates incoming edges from the 
+                                     #   graph definition and sets this to the incoming edges.
+                                     #   Inputs are received in receive_input(), if the inputs
+                                     #   equal the expected inputs, then the job can be executed.
         self.execution_started = False  # New flag to track execution status
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -158,19 +162,21 @@ class JobABC(ABC, metaclass=JobMeta):
             return result
 
         # Execute all next jobs concurrently
-        tasks = []
+        executing_jobs = []
         for next_job in self.next_jobs:
-            # First send the input to the next job
+            # Tell the next job where this input data came from.
+            # so, the job can store its inputs data to with this job's name as a key.
             await next_job.receive_input(self.name, result)
             # If the next job has all its inputs, trigger its execution
             if next_job.expected_inputs.issubset(set(next_job.inputs.keys())):
-                tasks.append(next_job._execute(None))
+                executing_jobs.append(next_job._execute(None))
         
-        if tasks:
-            results = await asyncio.gather(*tasks)
+        if executing_jobs:
+            results = await asyncio.gather(*executing_jobs)
             if any(results):  # If any result is not None
                 return results[0]  # Return the first non-None result
-
+        
+        #  this returns the result of the last, tail, job in the Job Graph
         return result
 
     async def receive_input(self, from_job: str, data: Any) -> None:
