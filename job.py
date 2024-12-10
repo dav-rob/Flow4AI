@@ -55,7 +55,14 @@ class JobMeta(ABCMeta):
 
 
 class Task(dict):
-    """A task dictionary with a unique identifier."""
+    """A task dictionary with a unique identifier.
+    
+    Args:
+        data (Union[Dict[str, Any], str]): The task data as a dictionary or string. If a string,
+                                            it will be converted to a dictionary with a 'task' key.
+        job_name (Optional[str], optional): The name of the job that will process this task.
+                                            Required if there is more than one job in the job_map,
+                                            otherwise optional."""
     def __init__(self, data: Union[Dict[str, Any], str], job_name: Optional[str] = None):
         # Convert string input to dict
         if isinstance(data, str):
@@ -66,7 +73,7 @@ class Task(dict):
             data = {'task': str(data)}
         
         super().__init__(data)
-        self.jobchain_unique_id = str(uuid.uuid4())
+        self.jobchain_unique_id:str = str(uuid.uuid4())
         if job_name is not None:
             self['job_name'] = job_name
 
@@ -103,15 +110,15 @@ class JobABC(ABC, metaclass=JobMeta):
             duplicate names within the same JobChain can lead to unexpected behavior
             in job execution and dependency management.
         """
-        self.name = self._getUniqueName() if name is None else name
-        self.next_jobs = []   # this is the outgoing edges in the graph definition, it is the jobs to execute
-                             #   after this job
-        self.inputs = {}
+        self.name:str = self._getUniqueName() if name is None else name
+        self.next_jobs:list[JobABC] = []   # this is the outgoing edges in the graph definition, 
+                                           #  it is the jobs to execute after this job
+        self.inputs = {}        # these are set by preceding jobs or by the _execute method
         self.input_event = asyncio.Event()
         self.expected_inputs = set() # create_job_graph() calculates incoming edges from the 
                                      #   graph definition and sets this to the incoming edges.
-                                     #   Inputs are received in receive_input(), if the inputs
-                                     #   equal the expected inputs, then the job can be executed.
+                                     #   Inputs are received in receive_input(), if the inputs keys
+                                     #   equals the expected inputs, then the job can be executed.
         self.execution_started = False  # New flag to track execution status
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -125,7 +132,7 @@ class JobABC(ABC, metaclass=JobMeta):
     def __repr__(self):
         return f"<{self.__class__.__name__} name={self.name}>"
 
-    async def _execute(self, task: Any) -> Any:
+    async def _execute(self, task: Task) -> Dict[str, Any]:
         # Single input case (like A, B, C receiving from parent)
         if isinstance(task, dict):
             self.inputs.update(task)
@@ -158,6 +165,7 @@ class JobABC(ABC, metaclass=JobMeta):
         self.input_event.clear()
         self.execution_started = False
 
+        # If this is a single job or a tail job in a graph, return the result.
         if not self.next_jobs:
             return result
 

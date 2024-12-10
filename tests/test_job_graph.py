@@ -180,7 +180,7 @@ graph_definition1 = {
 
 def execute_graph(graph_definition: dict, jobs: dict, data: dict) -> Any:
     head_job = create_job_graph(graph_definition, jobs)
-    final_result = asyncio.run(head_job._execute(data))
+    final_result = asyncio.run(head_job._execute(Task(data)))
     return final_result
 
 def test_execute_graph1():

@@ -3,11 +3,11 @@ import multiprocessing as mp
 import pickle
 # TODO: use dil instead of pickle in multiprocessor
 import queue
-from typing import Any, Callable, Dict, Optional, Union, Collection
 from collections import OrderedDict
+from typing import Any, Callable, Collection, Dict, Optional, Union
 
-from job import JobABC, JobFactory, Task
 import jc_logging as logging
+from job import JobABC, JobFactory, Task
 from utils.print_utils import printh
 
 # Initialize logging configuration
@@ -42,7 +42,9 @@ class JobChain:
         self.logger.info("Initializing JobChain")
         if not serial_processing and result_processing_function:
             self._check_picklable(result_processing_function)
-        self._task_queue = mp.Queue()  # type: mp.Queue
+        # tasks are created by submit_task(), with ["job_name"] added to the task dict
+        # tasks are then sent to queue for processing
+        self._task_queue: mp.Queue[Task] = mp.Queue()  
         # INTERNAL USE ONLY. DO NOT ACCESS DIRECTLY.
         # This queue is for internal communication between the job executor and result processor.
         # To process results, use the result_processing_function parameter in the JobChain constructor.
@@ -52,26 +54,30 @@ class JobChain:
         self.result_processor_process = None
         self._result_processing_function = result_processing_function
         self._serial_processing = serial_processing
-        self.job_map = OrderedDict()  # Use OrderedDict to maintain insertion order
+        # This holds a map of job name to job, 
+        # when _execute is called on the job, the task must have a job_name
+        # associated with it, if there is more than one job in the job_map
+        self.job_map: OrderedDict[str, JobABC] = OrderedDict()
         
         if isinstance(job, Dict):
-            self.job_chain_context = job
-            job_context: Dict[str, Any] = job.get("job_context")
+            job_context: Dict[str, Any] = job.get("job_context") or {}
             loaded_job = JobFactory.load_job(job_context)
-            self.job_map[loaded_job.name] = loaded_job
+            if isinstance(loaded_job, JobABC):
+                self.job_map[loaded_job.name] = loaded_job
         elif isinstance(job, JobABC):
-            self.job_chain_context = {"job_context": {"type": "direct", "job": job}}
             self.job_map[job.name] = job
         elif isinstance(job, Collection) and not isinstance(job, (str, bytes, bytearray)):
             if not job:  # Check if collection is empty
                 raise ValueError("Job collection cannot be empty")
             if not all(isinstance(j, JobABC) for j in job):
                 raise TypeError("All items in job collection must be JobABC instances")
-            self.job_chain_context = {"job_context": {"type": "direct", "jobs": list(job)}}
             for j in job:
-                if j.name in self.job_map:
-                    raise ValueError(f"Duplicate job name found: {j.name}")
-                self.job_map[j.name] = j
+                if isinstance(j, JobABC):
+                    if j.name in self.job_map:
+                        raise ValueError(f"Duplicate job name found: {j.name}")
+                    self.job_map[j.name] = j
+                else:
+                    raise TypeError("Items in job collection must be JobABC instances")
         else:
             raise TypeError("job must be either Dict[str, Any], JobABC instance, or Collection[JobABC]")
         
@@ -188,9 +194,6 @@ class JobChain:
                 task_dict = {'task': task}
             elif isinstance(task, dict):
                 task_dict = task.copy()
-            elif isinstance(task, (list, tuple, set)):
-                self.logger.warning(f"Received sequence type {type(task)} as task, converting to string")
-                task_dict = {'task': str(task)}
             else:
                 self.logger.warning(f"Received invalid task type {type(task)}, converting to string")
                 task_dict = {'task': str(task)}
