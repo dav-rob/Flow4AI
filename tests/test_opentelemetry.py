@@ -7,7 +7,7 @@ import yaml
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
 
-from job import JobABC
+from job import JobABC, Task
 from utils.otel_wrapper import TracerFactory, trace_function
 
 # This marks all tests in this module as isolated
@@ -220,14 +220,14 @@ def test_job_metaclass_tracing(trace_file, setup_file_exporter):
     """Test that JobABC metaclass properly applies detailed tracing"""
     class TestJob(JobABC):
         async def run(self, task):
-            # Extract the task value from the inputs dictionary
-            task_value = task[self.name] if isinstance(task, dict) else task
-            return {"result": task_value}
+            # strings are converted to dicts with {'task':,<the string>}
+            return {"result": task['task']}
 
     # Create and execute job
     job = TestJob("test")
     import asyncio
-    result = asyncio.run(job._execute({"test": "test task"}))
+    task = Task("test task", job.name)
+    result = asyncio.run(job._execute(task))
     assert result == {"result": "test task"}
     
     verify_trace(

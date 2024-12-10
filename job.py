@@ -111,14 +111,17 @@ class JobABC(ABC, metaclass=JobMeta):
             in job execution and dependency management.
         """
         self.name:str = self._getUniqueName() if name is None else name
-        self.next_jobs:list[JobABC] = []   # this is the outgoing edges in the graph definition, 
-                                           #  it is the jobs to execute after this job
-        self.inputs = {}        # these are set by preceding jobs or by the _execute method
+        self.next_jobs:list[JobABC] = []   # next_jobs is the outgoing edges in the graph definition, 
+                                #  it is the jobs to execute after executing this job.
+        self.expected_inputs:set[str] = set() # a set of job names that are expected to provide data
+                                # as inputs to this job by calling receive_input(). The job will wait
+                                # until all expected inputs are received before running _execute().
+        self.inputs:Dict[str, Dict[str, Any]] = {} # inputs are set by preceding jobs 
+                                # by calling receive_input(). The key is the name of the job that 
+                                # sent the input, and the value is the result of the _execute()
+                                # method of that job
+        
         self.input_event = asyncio.Event()
-        self.expected_inputs = set() # create_job_graph() calculates incoming edges from the 
-                                     #   graph definition and sets this to the incoming edges.
-                                     #   Inputs are received in receive_input(), if the inputs keys
-                                     #   equals the expected inputs, then the job can be executed.
         self.execution_started = False  # New flag to track execution status
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -187,7 +190,7 @@ class JobABC(ABC, metaclass=JobMeta):
         #  this returns the result of the last, tail, job in the Job Graph
         return result
 
-    async def receive_input(self, from_job: str, data: Any) -> None:
+    async def receive_input(self, from_job: str, data: Dict[str, Any]) -> None:
         """Receive input from a predecessor job"""
         self.inputs[from_job] = data
         if self.expected_inputs.issubset(set(self.inputs.keys())):
