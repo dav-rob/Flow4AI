@@ -10,6 +10,10 @@ from opentelemetry.trace import Status, StatusCode
 from job import JobABC
 from utils.otel_wrapper import TracerFactory, trace_function
 
+# This marks all tests in this module as isolated
+# Run with "python -m pytest --isolated"
+pytestmark = pytest.mark.isolated
+
 
 @pytest.fixture
 def trace_file():
