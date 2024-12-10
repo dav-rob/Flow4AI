@@ -46,10 +46,18 @@ These tests run by default and are designed to be quick and focused on core func
 - test_job_loader.py
 - test_job_tracing.py
 - test_logging.py
-- test_opentelemetry.py
 - test_parallel_execution.py
 - test_queue_stress.py
 - test_result_processing.py
+
+### Isolated Tests
+Some tests need to run in an isolated environment due to their specific requirements:
+- test_opentelemetry.py - Requires isolation to enable file tracing tests
+
+To run isolated tests:
+```bash
+python -m pytest --isolated
+```
 
 ### Performance Tests (Requires --full-suite)
 These tests are skipped by default as they are time and resource-intensive:
