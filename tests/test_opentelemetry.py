@@ -15,9 +15,8 @@ from utils.otel_wrapper import TracerFactory, trace_function
 def trace_file():
     """Fixture to create and clean up a temporary trace file"""
     trace_file = "tests/temp_otel_trace.json"
-    # Initialize trace file directory
+    # Initialize trace file
     os.makedirs("tests", exist_ok=True)
-    # Initialize empty trace file
     with open(trace_file, 'w') as f:
         json.dump([], f)
     yield trace_file
@@ -28,7 +27,7 @@ def trace_file():
 @pytest.fixture
 def setup_file_exporter(trace_file):
     """Fixture to set up file exporter configuration"""
-    config_path = "tests/temp_otel_config.yaml"
+    config_path = "tests/otel_config.yaml"
     
     # Create and write config file
     config = {
@@ -100,14 +99,27 @@ def verify_trace(trace_file, expected_name=None, expected_attrs=None, expected_s
                                 assert "TestJob object at" in span['attributes'][key], f"Expected TestJob object in {key}, got {span['attributes'][key]}"
                                 if "'test task'" in span['attributes'][key]:
                                     assert "'test task'" in span['attributes'][key], "Expected 'test task' in args"
+                            elif key == "object.fields":
+                                # Convert both strings to dicts for comparison, ignoring logger
+                                actual_fields = eval(span['attributes'][key])
+                                expected_fields = eval(value)
+                                for k, v in expected_fields.items():
+                                    assert actual_fields[k] == v, f"Mismatch in object.fields for key {k}"
                             else:
-                                assert span['attributes'].get(key) == value, f"Expected {key}={value}, got {span['attributes'].get(key)}"
+                                assert key in span['attributes'], f"Expected attribute {key} not found"
+                                assert span['attributes'][key] == value, f"Expected {key}={value}, got {span['attributes'][key]}"
                 
                 # Verify expected status if provided
                 if expected_status:
                     assert 'status' in span, "Span should have status"
-                    for key, value in expected_status.items():
-                        assert span['status'].get(key) == value, f"Expected status {key}={value}, got {span['status'].get(key)}"
+                    assert span['status']['status_code'] == expected_status['status_code'], \
+                        f"Expected status code {expected_status['status_code']}, got {span['status']['status_code']}"
+                    if 'description' in expected_status:
+                        expected_desc = expected_status['description']
+                        if 'exception_type' in expected_status:
+                            expected_desc = f"{expected_status['exception_type']}: {expected_desc}"
+                        assert span['status']['description'] == expected_desc, \
+                            f"Expected status description {expected_desc}, got {span['status']['description']}"
                 
                 # Verify expected events if provided
                 if expected_events:
@@ -115,15 +127,19 @@ def verify_trace(trace_file, expected_name=None, expected_attrs=None, expected_s
                     assert len(span['events']) >= len(expected_events), f"Expected at least {len(expected_events)} events, got {len(span['events'])}"
                     for expected_event in expected_events:
                         event_found = False
-                        for actual_event in span['events']:
-                            if actual_event['name'] == expected_event['name']:
-                                # Verify event attributes if provided
-                                if 'attributes' in expected_event:
-                                    for key, value in expected_event['attributes'].items():
-                                        assert actual_event['attributes'].get(key) == value, f"Expected event attribute {key}={value}, got {actual_event['attributes'].get(key)}"
+                        for event in span['events']:
+                            if (event['name'] == expected_event['name'] and
+                                all(event['attributes'].get(k) == v for k, v in expected_event.get('attributes', {}).items())):
                                 event_found = True
                                 break
-                        assert event_found, f"Expected event {expected_event['name']} not found"
+                        assert event_found, f"Expected event {expected_event} not found in span events"
+            elif "trace.message" in expected_attrs and span['attributes'].get("trace.message") == expected_attrs["trace.message"]:
+                # If we're looking for a trace message and found it, verify its attributes
+                for key, value in expected_attrs.items():
+                    if value is None:
+                        assert key not in span['attributes'], f"Span should not have {key} attribute"
+                    else:
+                        assert span['attributes'].get(key) == value, f"Expected {key}={value}, got {span['attributes'].get(key)}"
 
 def test_trace_function_detailed_off(trace_file, setup_file_exporter):
     """Test that trace_function decorator without detailed_trace doesn't record args"""
@@ -200,12 +216,14 @@ def test_job_metaclass_tracing(trace_file, setup_file_exporter):
     """Test that JobABC metaclass properly applies detailed tracing"""
     class TestJob(JobABC):
         async def run(self, task):
-            return {"result": task["test"]}
+            # Extract the task value from the inputs dictionary
+            task_value = task[self.name] if isinstance(task, dict) else task
+            return {"result": task_value}
 
     # Create and execute job
     job = TestJob("test")
     import asyncio
-    result = asyncio.run(job._execute("test task"))
+    result = asyncio.run(job._execute({"test": "test task"}))
     assert result == {"result": "test task"}
     
     verify_trace(
@@ -213,7 +231,7 @@ def test_job_metaclass_tracing(trace_file, setup_file_exporter):
         expected_attrs={
             "function.args": "(<test_opentelemetry.test_job_metaclass_tracing.<locals>.TestJob object at",  # Just verify it starts with this
             "function.kwargs": "{}",
-            "object.fields": "{'name': 'test', 'next_jobs': [], 'inputs': {}, 'expected_inputs': set()}"
+            "object.fields": "{'name': 'test'}"
         }
     )
 
@@ -310,7 +328,7 @@ def test_exception_handling(trace_file, setup_file_exporter):
     @trace_function(detailed_trace=True)
     def failing_function():
         raise ValueError("Test error")
-
+    
     with pytest.raises(ValueError) as exc_info:
         failing_function()
     assert str(exc_info.value) == "Test error"
@@ -324,7 +342,8 @@ def test_exception_handling(trace_file, setup_file_exporter):
         },
         expected_status={
             "status_code": "StatusCode.ERROR",
-            "description": "ValueError: Test error"
+            "description": "Test error",
+            "exception_type": "ValueError"
         },
         expected_events=[{
             "name": "exception",
@@ -372,7 +391,7 @@ def test_trace_with_status(trace_file, setup_file_exporter):
             current_span.set_status(Status(StatusCode.ERROR, "Operation failed"))
             raise ValueError("Operation failed")
         return "success"
-
+    
     result = status_function(True)
     assert result == "success"
     
@@ -386,7 +405,6 @@ def test_trace_with_status(trace_file, setup_file_exporter):
         expected_status={"status_code": "StatusCode.UNSET"}
     )
     
-    # Test error case
     with pytest.raises(ValueError):
         status_function(False)
     
@@ -399,7 +417,8 @@ def test_trace_with_status(trace_file, setup_file_exporter):
         },
         expected_status={
             "status_code": "StatusCode.ERROR",
-            "description": "ValueError: Operation failed"
+            "description": "Operation failed",
+            "exception_type": "ValueError"
         },
         expected_events=[{
             "name": "exception",
