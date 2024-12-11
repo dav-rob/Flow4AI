@@ -111,18 +111,22 @@ class JobABC(ABC, metaclass=JobMeta):
             in job execution and dependency management.
         """
         self.name:str = self._getUniqueName() if name is None else name
-        self.next_jobs:list[JobABC] = []   # next_jobs is the outgoing edges in the graph definition, 
+        self.next_jobs:list[JobABC] = []   # next_jobs is the outgoing edges in the
+                                #  graph definition, 
                                 #  it is the jobs to execute after executing this job.
-        self.expected_inputs:set[str] = set() # a set of job names that are expected to provide data
-                                # as inputs to this job by calling receive_input(). The job will wait
-                                # until all expected inputs are received before running _execute().
+        self.expected_inputs:set[str] = set() # a set of job names that are expected to 
+                                # provide data as inputs to this job by calling 
+                                # receive_input(). The job will wait until all expected 
+                                # inputs are received before running _execute().
         self.inputs:Dict[str, Dict[str, Any]] = {} # inputs are set by preceding jobs 
-                                # by calling receive_input(). The key is the name of the job that 
-                                # sent the input, and the value is the result of the _execute()
-                                # method of that job
+                                # by calling receive_input(). The key is the name of the 
+                                # job that  sent the input, and the value is the result 
+                                # of the _execute() method of that job
         
-        self.input_event = asyncio.Event()
-        self.execution_started = False  # New flag to track execution status
+        self.execution_started = False  # Flag to track execution status
+        self.input_event = asyncio.Event() # Event waits for signal when all expected 
+                                        # inputs are received
+        self.timeout = 30 # how long to wait for inputs from predecessor jobs
         self.logger = logging.getLogger(self.__class__.__name__)
 
     @classmethod
@@ -136,6 +140,11 @@ class JobABC(ABC, metaclass=JobMeta):
         return f"<{self.__class__.__name__} name={self.name}>"
 
     async def _execute(self, task: Task) -> Dict[str, Any]:
+        """
+        Execute a job graph and return the result from the last job at the tail
+        of the graph.
+        
+        """
         # Single input case (like A, B, C receiving from parent)
         if isinstance(task, dict):
             self.inputs.update(task)
@@ -151,7 +160,7 @@ class JobABC(ABC, metaclass=JobMeta):
             
             self.execution_started = True
             try:
-                await asyncio.wait_for(self.input_event.wait(), timeout=30.0)
+                await asyncio.wait_for(self.input_event.wait(), self.timeout)
             except asyncio.TimeoutError:
                 self.execution_started = False  # Reset on timeout
                 raise TimeoutError(
