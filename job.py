@@ -243,35 +243,59 @@ class JobFactory:
         else:
             raise ValueError(f"Unsupported job type: {load_type}")
 
-def create_job_graph(graph_definition: dict, job_classes: dict) -> JobABC:
-    # First create all nodes with empty next_jobs
-    nodes = {}
+def create_job_graph(graph_definition: dict[str, dict], job_classes: dict[str, JobABC]) -> JobABC:
+    """
+    graph definition defines the job graph and looks like this:
+
+    graph_definition: dict[str, Any] = {
+        "A": {"next": ["B", "C"]},
+        "B": {"next": ["D"]},
+        "C": {"next": ["D"]},
+        "D": {"next": []},
+    }
+
+    job classes are a dictionary of job classes in the job graph and looks like this:
+
+    job_classes: dict[str, JobABC] = {
+        "A": SimpleJob("A"),
+        "B": SimpleJob("B"),
+        "C": SimpleJob("C"),
+        "D": SimpleJob("D"),
+    }
+    
+    """
+    
+    nodes:dict[str, JobABC] = {} # nodes holds Jobs which will be hydrated with next_jobs 
+                                # and expected_inputs fields from the graph_definition.
     for job_name in graph_definition:
         job_obj = job_classes[job_name]
         nodes[job_name] = job_obj
 
-    # Find the head node (node with no incoming edges)
-    incoming_edges = {job_name: set() for job_name in graph_definition}
+    # determine the incoming edges i.e the Jobs that each Job depends on
+    # so we can determine the head node ( which depends on no Jobs) 
+    # and set the expected_inputs (i.e. the dependencies) for each Job.
+    incoming_edges: dict[str, set[str]] = {job_name: set() for job_name in graph_definition}
     for job_name, config in graph_definition.items():
         for next_job_name in config['next']:
             incoming_edges[next_job_name].add(job_name)
     
+    # 1) Find the head node (node with no incoming edges)
     head_job_name = next(job_name for job_name, inputs in incoming_edges.items() 
                       if not inputs)
 
-    # Set next_jobs for each node
+    # 2) Set next_jobs for each node
     for job_name, config in graph_definition.items():
         nodes[job_name].next_jobs = [nodes[next_name] for next_name in config['next']]
 
-    # Set expected_inputs for each node
+    # 3) Set expected_inputs for each node
     for job_name, input_job_names_set in incoming_edges.items():
         if input_job_names_set:  # if node has incoming edges
             nodes[job_name].expected_inputs = input_job_names_set
 
-    # Set reference to final node in head node
+    # 4) Set reference to final node in head node -- not needed!
     # Find node with no next jobs
-    final_job_name = next(job_name for job_name, config in graph_definition.items() 
-                       if not config['next'])
-    nodes[head_job_name].final_node = nodes[final_job_name]
+    # final_job_name = next(job_name for job_name, config in graph_definition.items() 
+    #                    if not config['next'])
+    # nodes[head_job_name].final_node = nodes[final_job_name]
 
     return nodes[head_job_name]
