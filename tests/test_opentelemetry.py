@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import logging
 
 import pytest
 import yaml
@@ -14,19 +15,29 @@ from utils.otel_wrapper import TracerFactory, trace_function
 # Run with "python -m pytest --isolated"
 pytestmark = pytest.mark.isolated
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @pytest.fixture
 def trace_file():
-    """Fixture to create and clean up a temporary trace file"""
-    trace_file = "tests/temp_otel_trace.json"
-    # Initialize trace file
-    os.makedirs("tests", exist_ok=True)
-    with open(trace_file, 'w') as f:
-        json.dump([], f)
-    yield trace_file
-    # Cleanup
-    if os.path.exists(trace_file):
-        os.unlink(trace_file)
+    """Fixture to provide a temporary trace file path and clean up after tests."""
+    temp_file = "tests/temp_otel_trace.json"
+    yield temp_file
+    
+    # Clean up the main trace file
+    if os.path.exists(temp_file):
+        os.unlink(temp_file)
+    
+    # Clean up any rotated files
+    test_dir = os.path.dirname(temp_file)
+    base_name = os.path.basename(temp_file)
+    rotated_files = [f for f in os.listdir(test_dir) 
+                    if f.startswith(base_name + '.')]
+    
+    for rotated in rotated_files:
+        rotated_path = os.path.join(test_dir, rotated)
+        if os.path.exists(rotated_path):
+            os.unlink(rotated_path)
 
 @pytest.fixture
 def setup_file_exporter(trace_file):
@@ -469,3 +480,138 @@ def test_tracer_factory_with_attributes(trace_file, setup_file_exporter):
             "priority": "1"  # Note: all attributes are converted to strings
         }
     )
+
+def test_file_exporter_with_rotation_config(trace_file, setup_file_exporter):
+    """Test that file exporter works with rotation configuration."""
+    # Create config with rotation settings
+    config_path = "tests/otel_config.yaml"
+    config = {
+        "exporter": "file",
+        "service_name": "MyService",
+        "batch_processor": {
+            "max_queue_size": 1000,
+            "schedule_delay_millis": 1000
+        },
+        "file_exporter": {
+            "path": trace_file,
+            "max_size_bytes": 1048576,  # 1MB
+            "rotation_time_days": 1
+        }
+    }
+    
+    with open(config_path, 'w') as f:
+        yaml.dump(config, f)
+    
+    # Reset TracerFactory state
+    TracerFactory._instance = None
+    TracerFactory._config = None
+    
+    # Generate a trace
+    test_message = "Test with rotation config"
+    TracerFactory.trace(test_message)
+    
+    # Wait for async operations
+    time.sleep(2)
+    
+    # Verify file exists and contains the trace
+    assert os.path.exists(trace_file), "Trace file should exist"
+    
+    # Log the file size
+    file_size = os.path.getsize(trace_file)
+    logger.info("Trace file size after single trace: %d bytes", file_size)
+    
+    with open(trace_file, 'r') as f:
+        data = json.load(f)
+        assert isinstance(data, list), "Trace data should be a list"
+        assert len(data) > 0, "Trace data should not be empty"
+        # Log size of individual trace
+        single_trace = data[0]
+        trace_json = json.dumps(single_trace)
+        logger.info("Size of single trace JSON: %d bytes", len(trace_json))
+        assert any(trace['attributes'].get('trace.message') == test_message for trace in data), \
+            "Test message should be in trace data"
+
+def test_file_rotation_with_size_limit(trace_file, setup_file_exporter):
+    """Test that file rotation occurs when size limit is exceeded."""
+    # Create config with small size limit
+    config_path = "tests/otel_config.yaml"
+    config = {
+        "exporter": "file",
+        "service_name": "MyService",
+        "batch_processor": {
+            "max_queue_size": 1000,
+            "schedule_delay_millis": 1000
+        },
+        "file_exporter": {
+            "path": trace_file,
+            "max_size_bytes": 700,  # Should rotate after two traces
+            "rotation_time_days": 1
+        }
+    }
+    
+    with open(config_path, 'w') as f:
+        yaml.dump(config, f)
+    
+    # Reset TracerFactory state
+    TracerFactory._instance = None
+    TracerFactory._config = None
+    
+    # Generate first trace
+    test_message_1 = "First test trace"
+    TracerFactory.trace(test_message_1)
+    time.sleep(2)  # Wait for async operations
+    
+    # Verify first trace file exists and contains data
+    assert os.path.exists(trace_file), "First trace file should exist"
+    with open(trace_file, 'r') as f:
+        data = json.load(f)
+        assert isinstance(data, list), "Trace data should be a list"
+        assert len(data) > 0, "Trace data should not be empty"
+        assert any(trace['attributes'].get('trace.message') == test_message_1 for trace in data), \
+            "First test message should be in trace data"
+    
+    # Log size after first trace
+    first_size = os.path.getsize(trace_file)
+    logger.info("File size after first trace: %d bytes", first_size)
+    
+    # Generate second trace
+    test_message_2 = "Second test trace"
+    TracerFactory.trace(test_message_2)
+    time.sleep(2)  # Wait for async operations
+    
+    # Generate third trace - this should trigger rotation
+    test_message_3 = "Third test trace"
+    TracerFactory.trace(test_message_3)
+    time.sleep(2)  # Wait for async operations
+    
+    # Find rotated files
+    test_dir = os.path.dirname(trace_file)
+    base_name = os.path.basename(trace_file)
+    rotated_files = sorted([f for f in os.listdir(test_dir) 
+                    if f.startswith(base_name + '.') and f != base_name])
+    
+    assert len(rotated_files) >= 1, f"Expected at least 1 rotated file, found {len(rotated_files)}"
+    
+    # Get the most recent rotated file
+    rotated_file = os.path.join(test_dir, rotated_files[-1])
+    
+    # Verify files exist and contain correct data
+    assert os.path.exists(trace_file), "Original trace file should still exist"
+    assert os.path.exists(rotated_file), "Rotated file should exist"
+    
+    # Check contents of current file (should contain third trace)
+    with open(trace_file, 'r') as f:
+        current_data = json.load(f)
+        assert isinstance(current_data, list), "Current file should contain a list"
+        assert len(current_data) > 0, "Current file should not be empty"
+        assert any(trace['attributes'].get('trace.message') == test_message_3 for trace in current_data), \
+            "Third test message should be in current file"
+    
+    # Log final sizes
+    logger.info("Original file final size: %d bytes", os.path.getsize(trace_file))
+    logger.info("Most recent rotated file size: %d bytes", os.path.getsize(rotated_file))
+    
+    # Log all rotated files for debugging
+    for rotated in rotated_files:
+        full_path = os.path.join(test_dir, rotated)
+        logger.info("Rotated file %s size: %d bytes", rotated, os.path.getsize(full_path))

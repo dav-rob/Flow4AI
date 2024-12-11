@@ -5,3 +5,5 @@ batch_processor:
   schedule_delay_millis: 1000  # 1-second timeout for exporting spans.
 file_exporter:
   path: "~/.JobChain/otel_trace.json"  # Default path for trace export
+  max_size_bytes: 5242880  # 5MB (5 * 1024 * 1024 bytes)
+  rotation_time_days: 1  # Rotate daily

@@ -17,15 +17,21 @@ from opentelemetry.sdk.trace.export import (BatchSpanProcessor,
 __all__ = ['TracerFactory', 'trace_function', 'AsyncFileExporter']
 
 class AsyncFileExporter(SpanExporter):
-    """Asynchronous file exporter for OpenTelemetry spans."""
+    """Asynchronous file exporter for OpenTelemetry spans with log rotation support."""
     
-    def __init__(self, filepath: str):
-        """Initialize the exporter with the target file path.
+    def __init__(self, filepath: str, max_size_bytes: int = None, rotation_time_days: int = None):
+        """Initialize the exporter with the target file path and rotation settings.
         
         Args:
             filepath: Path to the file where spans will be exported
+            max_size_bytes: Maximum file size in bytes before rotation
+            rotation_time_days: Number of days before rotating file
         """
         self.filepath = os.path.expanduser(filepath)
+        self.max_size_bytes = max_size_bytes
+        self.rotation_time_days = rotation_time_days
+        self.last_rotation_time = None
+        
         # Ensure directory exists
         os.makedirs(os.path.dirname(self.filepath), exist_ok=True)
         self._export_lock = Lock()
@@ -34,7 +40,57 @@ class AsyncFileExporter(SpanExporter):
         if not os.path.exists(self.filepath):
             with open(self.filepath, 'w') as f:
                 json.dump([], f)
+                
+        # Record initial rotation time
+        if self.rotation_time_days:
+            self.last_rotation_time = os.path.getmtime(self.filepath)
+    
+    def _should_rotate(self, additional_size: int = 0) -> bool:
+        """Check if file should be rotated based on size or time.
         
+        Args:
+            additional_size: Additional size in bytes that will be added
+        """
+        if not os.path.exists(self.filepath):
+            return False
+            
+        should_rotate = False
+        
+        # Check size-based rotation
+        if self.max_size_bytes:
+            current_size = os.path.getsize(self.filepath)
+            if (current_size + additional_size) >= self.max_size_bytes:
+                should_rotate = True
+                
+        # Check time-based rotation
+        if self.rotation_time_days and self.last_rotation_time:
+            current_time = os.path.getmtime(self.filepath)
+            days_elapsed = (current_time - self.last_rotation_time) / (24 * 3600)
+            if days_elapsed >= self.rotation_time_days:
+                should_rotate = True
+                
+        return should_rotate
+    
+    def _rotate_file(self):
+        """Rotate the current file if it exists."""
+        if not os.path.exists(self.filepath):
+            return
+            
+        # Generate rotation suffix based on timestamp
+        import datetime
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        rotated_path = f"{self.filepath}.{timestamp}"
+        
+        # Rotate the file
+        os.rename(self.filepath, rotated_path)
+        
+        # Create new empty file
+        with open(self.filepath, 'w') as f:
+            json.dump([], f)
+            
+        # Update rotation time
+        self.last_rotation_time = os.path.getmtime(self.filepath)
+    
     def _serialize_span(self, span: ReadableSpan) -> dict:
         """Convert a span to a JSON-serializable dictionary.
         
@@ -68,7 +124,7 @@ class AsyncFileExporter(SpanExporter):
         }
 
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
-        """Export spans to file.
+        """Export spans to file with rotation support.
         
         Args:
             spans: Sequence of spans to export
@@ -88,6 +144,16 @@ class AsyncFileExporter(SpanExporter):
                         except json.JSONDecodeError:
                             existing_spans = []
                 except FileNotFoundError:
+                    existing_spans = []
+                
+                # Calculate size of new data
+                new_data = existing_spans + span_data
+                new_data_str = json.dumps(new_data, indent=2)
+                additional_size = len(new_data_str.encode('utf-8'))
+                
+                # Check rotation after calculating new size
+                if self._should_rotate(additional_size - os.path.getsize(self.filepath) if os.path.exists(self.filepath) else 0):
+                    self._rotate_file()
                     existing_spans = []
                 
                 # Append new spans
@@ -183,7 +249,9 @@ class TracerFactory:
             # Load config to get file path
             config = TracerFactory._load_config()
             file_path = config.get('file_exporter', {}).get('path', "~/.JobChain/otel_trace.json")
-            return AsyncFileExporter(file_path)
+            max_size_bytes = config.get('file_exporter', {}).get('max_size_bytes')
+            rotation_time_days = config.get('file_exporter', {}).get('rotation_time_days')
+            return AsyncFileExporter(file_path, max_size_bytes, rotation_time_days)
         else:
             raise ValueError("Unsupported exporter type")
 
