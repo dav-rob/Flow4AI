@@ -126,7 +126,7 @@ class JobABC(ABC, metaclass=JobMeta):
         self.execution_started = False  # Flag to track execution status
         self.input_event = asyncio.Event() # Event waits for signal when all expected 
                                         # inputs are received
-        self.timeout = 30 # how long to wait for inputs from predecessor jobs
+        self.timeout = 3000 # how long to wait for inputs from predecessor jobs
         self.logger = logging.getLogger(self.__class__.__name__)
 
     @classmethod
@@ -148,6 +148,8 @@ class JobABC(ABC, metaclass=JobMeta):
         # Single input case (like A, B, C receiving from parent)
         if isinstance(task, dict):
             self.inputs.update(task)
+        elif task is None:
+            pass # do nothing, self.inputs will contain the data to process
         else:
             # Convert single input to dict format
             self.inputs[self.name] = task
@@ -168,8 +170,9 @@ class JobABC(ABC, metaclass=JobMeta):
                     f"Expected: {self.expected_inputs}, "
                     f"Received: {list(self.inputs.keys())}"
                 )
-
-        # Process inputs
+        # Once the signal is received saying all inputs are ready,
+        #  call run with the inputs provided by predecessor jobs
+        #  or the Task provided on the head Job in the Job Graph.
         result = await self.run(self.inputs)
 
         # Clear state for potential reuse
@@ -180,7 +183,8 @@ class JobABC(ABC, metaclass=JobMeta):
         # If this is a single job or a tail job in a graph, return the result.
         if not self.next_jobs:
             return result
-
+        
+        # if there are next_jobs then call those jobs with receive_input()
         # Execute all next jobs concurrently
         executing_jobs = []
         for next_job in self.next_jobs:
@@ -188,6 +192,9 @@ class JobABC(ABC, metaclass=JobMeta):
             # so, the job can store its inputs data to with this job's name as a key.
             await next_job.receive_input(self.name, result)
             # If the next job has all its inputs, trigger its execution
+            #   this can be called multiple time for a single next_job
+            #   presumably, if the next_job has received all its inputs quickly
+            #   in that case, _execute returns None.
             if next_job.expected_inputs.issubset(set(next_job.inputs.keys())):
                 executing_jobs.append(next_job._execute(None))
         
@@ -196,7 +203,7 @@ class JobABC(ABC, metaclass=JobMeta):
             if any(results):  # If any result is not None
                 return results[0]  # Return the first non-None result
         
-        #  this returns the result of the last, tail, job in the Job Graph
+        #  this appears never to be reached
         return result
 
     async def receive_input(self, from_job: str, data: Dict[str, Any]) -> None:
