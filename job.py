@@ -61,8 +61,8 @@ class Task(dict):
         data (Union[Dict[str, Any], str]): The task data as a dictionary or string. If a string,
                                             it will be converted to a dictionary with a 'task' key.
         job_name (Optional[str], optional): The name of the job that will process this task.
-                                            Required if there is more than one job in the job_map,
-                                            otherwise optional."""
+                                            Required if there is more than one job graph in the
+                                            JobChain class"""
     def __init__(self, data: Union[Dict[str, Any], str], job_name: Optional[str] = None):
         # Convert string input to dict
         if isinstance(data, str):
@@ -85,6 +85,11 @@ class Task(dict):
     def __hash__(self) -> int:
         return hash(self.jobchain_unique_id)
 
+    def __repr__(self) -> str:
+        job_name = self.get('job_name', 'None')
+        task_preview = str(dict(self))[:50] + '...' if len(str(dict(self))) > 50 else str(dict(self))
+        return f"Task(id={self.jobchain_unique_id}, job_name={job_name}, data={task_preview})"
+
 
 class JobABC(ABC, metaclass=JobMeta):
     """
@@ -93,7 +98,7 @@ class JobABC(ABC, metaclass=JobMeta):
     """
 
     # class variable to keep track of instance counts for each class
-    _instance_counts = {}
+    _instance_counts: Dict[Type, int] = {}
 
     def __init__(self, name: str = None):
         """
@@ -139,19 +144,21 @@ class JobABC(ABC, metaclass=JobMeta):
     def __repr__(self):
         return f"<{self.__class__.__name__} name={self.name}>"
 
-    async def _execute(self, task: Task) -> Dict[str, Any]:
+    async def _execute(self, task: Union[Task, None]) -> Dict[str, Any]:
         """
         Execute a job graph and return the result from the last job at the tail
         of the graph.
         
         """
-        # Single input case (like A, B, C receiving from parent)
+        # This is called when the job is the head of the graph
+        #  and the task is provided as an argument
         if isinstance(task, dict):
             self.inputs.update(task)
         elif task is None:
             pass # do nothing, self.inputs will contain the data to process
         else:
             # Convert single input to dict format
+            #  this is never called currently.
             self.inputs[self.name] = task
 
         # If we expect multiple inputs, wait for them
@@ -191,12 +198,12 @@ class JobABC(ABC, metaclass=JobMeta):
             # Tell the next job where this input data came from.
             # so, the job can store its inputs data to with this job's name as a key.
             await next_job.receive_input(self.name, result)
-            # If the next job has all its inputs, trigger its execution
-            #   this can be called multiple time for a single next_job
-            #   presumably, if the next_job has received all its inputs quickly
-            #   in that case, _execute returns None.
+            # If the next job has all its inputs, trigger its execution.
+            #   This can be called multiple time for a single next_job
+            #   called by different parent jobs, in that case, execution_started
+            #   is marked as True, and multiple calls will be ignored.
             if next_job.expected_inputs.issubset(set(next_job.inputs.keys())):
-                executing_jobs.append(next_job._execute(None))
+                executing_jobs.append(next_job._execute(task=None))
         
         if executing_jobs:
             results = await asyncio.gather(*executing_jobs)
@@ -214,7 +221,7 @@ class JobABC(ABC, metaclass=JobMeta):
 
 
     @abstractmethod
-    async def run(self, task: Task) -> Dict[str, Any]:
+    async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
         """Execute the job on the given task. Must be implemented by subclasses."""
         pass
 
