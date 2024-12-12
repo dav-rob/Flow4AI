@@ -100,12 +100,12 @@ class JobABC(ABC, metaclass=JobMeta):
     # class variable to keep track of instance counts for each class
     _instance_counts: Dict[Type, int] = {}
 
-    def __init__(self, name: str = None):
+    def __init__(self, name: Optional[str] = None):
         """
         Initialize an JobABC instance.
 
         Args:
-            name (str, optional): A unique identifier for this job within the context of a JobChain.
+            name (Optional[str], optional): A unique identifier for this job within the context of a JobChain.
                        The name must be unique among all jobs in the same JobChain to ensure
                        proper job identification and dependency resolution. If not provided,
                        a unique name will be auto-generated.
@@ -229,7 +229,7 @@ class JobABC(ABC, metaclass=JobMeta):
 class SimpleJob(JobABC):
     """A Job implementation that provides a simple default behavior."""
     
-    async def run(self, task: Task) -> Dict[str, Any]:
+    async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
         """Run a simple job that logs and returns the task."""
         self.logger.info(f"Async JOB for {task}")
         await asyncio.sleep(1)  # Simulate network delay
