@@ -82,6 +82,9 @@ class Task(dict):
             return NotImplemented
         return self.jobchain_unique_id == other.jobchain_unique_id
 
+    # mypy highlights this as an error because dicts are mutable
+    #   and so not hashable, but I want each Task to have a unique id
+    #   so it is hashable.
     def __hash__(self) -> int:
         return hash(self.jobchain_unique_id)
 
