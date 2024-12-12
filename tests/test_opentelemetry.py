@@ -1,7 +1,7 @@
 import json
+import logging
 import os
 import time
-import logging
 
 import pytest
 import yaml
@@ -17,6 +17,8 @@ pytestmark = pytest.mark.isolated
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+TracerFactory.set_test_mode(True)
 
 @pytest.fixture
 def trace_file():

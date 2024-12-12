@@ -179,11 +179,60 @@ class AsyncFileExporter(SpanExporter):
         """Shutdown the exporter."""
         pass
 
+class TestTracerProvider(TracerProvider):
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(TestTracerProvider, cls).__new__(cls)
+        return cls._instance
+
+    def __init__(self):
+        if not hasattr(self, '_initialized'):
+            super().__init__()
+            self._initialized = True
+            
+    def get_tracer(
+        self,
+        instrumenting_module_name: str,
+        instrumenting_library_version: str = None,
+        schema_url: str = None,
+        attributes: dict = None,
+    ) -> trace.Tracer:
+        """Get a tracer for use in tests.
+        
+        Args:
+            instrumenting_module_name: The name of the instrumenting module
+            instrumenting_library_version: Optional version of the instrumenting module
+            schema_url: Optional URL of the OpenTelemetry schema
+            attributes: Optional attributes to add to the tracer
+            
+        Returns:
+            A tracer instance for use in tests
+        """
+        return super().get_tracer(
+            instrumenting_module_name,
+            instrumenting_library_version,
+            schema_url,
+            attributes,
+        )
+
 # Singleton TracerFactory
 class TracerFactory:
     _instance = None
     _config = None
     _lock = Lock()
+    _is_test_mode = False
+    
+    @classmethod
+    def set_test_mode(cls, enabled: bool = True):
+        """Enable or disable test mode.
+        
+        Args:
+            enabled: Whether to enable test mode
+        """
+        cls._is_test_mode = enabled
+        cls._instance = None  # Reset instance to force recreation with new provider
     
     @classmethod
     def _load_config(cls, yaml_file=None):
@@ -217,7 +266,9 @@ class TracerFactory:
                 if cls._instance is None:
                     # Use provided config or load from file
                     cfg = config if config is not None else cls._load_config()
-                    provider = TracerProvider()
+                    
+                    # Use TestTracerProvider in test mode
+                    provider = TestTracerProvider() if cls._is_test_mode else TracerProvider()
                     
                     # Configure main exporter
                     main_exporter = cls._configure_exporter(cfg['exporter'])
