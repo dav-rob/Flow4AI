@@ -4,7 +4,7 @@ Provides functionality for graph traversal, cycle detection, and validation.
 """
 
 from typing import Any, Dict, List, Optional, Set, Tuple
-
+import logging
 
 def has_cycle(graph: Dict[str, Dict[str, Any]], node: str, 
              visited: Optional[Set[str]] = None, path: Optional[Set[str]] = None) -> Tuple[bool, List[str]]:
@@ -265,3 +265,118 @@ def validate_graph_references(graph: Dict[str, Dict[str, Any]], path: Optional[L
             violations.extend(subgraph_violations)
     
     return len(violations) == 0, violations
+
+def find_head_nodes(graph: Dict[str, Dict[str, Any]]) -> Set[str]:
+    """
+    Find all nodes that have no incoming edges (head nodes) in a graph.
+    
+    Args:
+        graph: The graph structure to check
+        
+    Returns:
+        Set[str]: Set of nodes that have no incoming edges
+    """
+    # First collect all nodes that are destinations
+    has_incoming_edges = set()
+    for node in graph:
+        # Check next nodes
+        for next_node in graph[node].get('next', []):
+            has_incoming_edges.add(next_node)
+        # Check subgraph if it exists
+        if 'subgraph' in graph[node]:
+            subgraph = graph[node]['subgraph']
+            # Recursively find head nodes in subgraph
+            subgraph_heads = find_head_nodes(subgraph)
+            # All nodes in subgraph are considered to have an incoming edge
+            # from the parent node that contains the subgraph
+            has_incoming_edges.update(subgraph.keys())
+    
+    # Head nodes are those that exist in the graph but have no incoming edges
+    return set(graph.keys()) - has_incoming_edges
+
+def find_tail_nodes(graph: Dict[str, Dict[str, Any]]) -> Set[str]:
+    """
+    Find all nodes that have no outgoing edges (tail nodes) in a graph.
+    
+    Args:
+        graph: The graph structure to check
+        
+    Returns:
+        Set[str]: Set of nodes that have no outgoing edges
+    """
+    tail_nodes = set()
+    for node, node_data in graph.items():
+        has_next = bool(node_data.get('next', []))
+        has_subgraph = 'subgraph' in node_data
+        
+        if not has_next:
+            if has_subgraph:
+                # If node has no next but has subgraph, the tail nodes are in the subgraph
+                subgraph_tails = find_tail_nodes(node_data['subgraph'])
+                tail_nodes.update(subgraph_tails)
+            else:
+                # Node with no next and no subgraph is a tail
+                tail_nodes.add(node)
+    
+    return tail_nodes
+
+def validate_graph(graph: Dict[str, Dict[str, Any]], name: str = "") -> None:
+    """
+    Performs comprehensive validation of a graph structure.
+    Checks for:
+    1. Graph cycles
+    2. Cross-graph reference violations
+    3. Head node requirements (exactly one head node)
+    4. Tail node requirements (exactly one tail node)
+    
+    Args:
+        graph: The graph structure to validate
+        name: Optional name for the graph (for logging)
+        
+    Raises:
+        ValueError: If any validation fails, with detailed error message
+    """
+    errors = []
+    
+    # Check for cycles
+    has_cycles = check_graph_for_cycles(graph, name)
+    if has_cycles:
+        msg = f"Graph {name} contains cycles"
+        logging.error(msg)
+        errors.append(msg)
+    
+    # Check for cross-graph reference violations
+    is_valid_refs, violations = validate_graph_references(graph)
+    if not is_valid_refs:
+        msg = f"Graph {name} contains invalid cross-graph references:\n" + "\n".join(violations)
+        logging.error(msg)
+        errors.append(msg)
+    
+    # Check for head node requirements
+    head_nodes = find_head_nodes(graph)
+    if len(head_nodes) == 0:
+        msg = f"Graph {name} has no head nodes (nodes with no incoming edges)"
+        logging.error(msg)
+        errors.append(msg)
+    elif len(head_nodes) > 1:
+        msg = f"Graph {name} has multiple head nodes: {head_nodes}. Exactly one head node is required."
+        logging.error(msg)
+        errors.append(msg)
+    
+    # Check for tail node requirements
+    tail_nodes = find_tail_nodes(graph)
+    if len(tail_nodes) == 0:
+        msg = f"Graph {name} has no tail nodes (nodes with no outgoing edges)"
+        logging.error(msg)
+        errors.append(msg)
+    elif len(tail_nodes) > 1:
+        msg = f"Graph {name} has multiple tail nodes: {tail_nodes}. Exactly one tail node is required."
+        logging.error(msg)
+        errors.append(msg)
+    
+    # If any errors were found, raise exception with all error messages
+    if errors:
+        raise ValueError(f"Graph validation failed:\n" + "\n".join(errors))
+    
+    # Log success if no errors
+    logging.info(f"Graph {name} passed all validations")

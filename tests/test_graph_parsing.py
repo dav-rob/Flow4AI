@@ -1,5 +1,7 @@
 from jc_graph import (add_edge_anywhere, check_graph_for_cycles, print_graph,
-                      validate_graph_references)
+                      validate_graph_references, find_head_nodes, find_tail_nodes,
+                      validate_graph)
+import pytest
 
 graph1: dict = {
     'A': {'next': ['B', 'C']},
@@ -48,6 +50,89 @@ graph3: dict = {
     },
     'D': {'next': []}
 }
+
+def test_head_graph():
+    """
+    Test that graphs have exactly one head node (node with no incoming edges).
+    Tests include:
+    1. Valid graphs with single head node (graph1, graph2, graph3)
+    2. Invalid graph with no head nodes (cycle)
+    3. Invalid graph with multiple head nodes
+    4. Invalid graph with no nodes
+    """
+    # Test valid graphs (should have exactly one head node)
+    assert find_head_nodes(graph1) == {'A'}, "graph1 should have exactly one head node 'A'"
+    assert find_head_nodes(graph2) == {'A'}, "graph2 should have exactly one head node 'A'"
+    assert find_head_nodes(graph3) == {'A'}, "graph3 should have exactly one head node 'A'"
+    
+    # Test graph with no head nodes (cycle)
+    cycle_graph = {
+        'X': {'next': ['Y']},
+        'Y': {'next': ['Z']},
+        'Z': {'next': ['X']}
+    }
+    assert len(find_head_nodes(cycle_graph)) == 0, "Cycle graph should have no head nodes"
+    
+    # Test graph with multiple head nodes
+    multi_head_graph = {
+        'A': {'next': ['C']},
+        'B': {'next': ['C']},
+        'C': {'next': []}
+    }
+    heads = find_head_nodes(multi_head_graph)
+    assert len(heads) > 1, f"Multi-head graph should have multiple head nodes, found: {heads}"
+    
+    # Test empty graph
+    empty_graph = {}
+    assert len(find_head_nodes(empty_graph)) == 0, "Empty graph should have no head nodes"
+
+def test_tail_graph():
+    """
+    Test that graphs have exactly one tail node (node with no outgoing edges).
+    Tests include:
+    1. Valid graphs with single tail node (graph1, graph2, graph3)
+    2. Invalid graph with no tail nodes (cycle)
+    3. Invalid graph with multiple tail nodes
+    4. Invalid graph with no nodes
+    """
+    # Test valid graphs (should have exactly one tail node)
+    assert find_tail_nodes(graph1) == {'D'}, "graph1 should have exactly one tail node 'D'"
+    assert find_tail_nodes(graph2) == {'D'}, "graph2 should have exactly one tail node 'D'"
+    assert find_tail_nodes(graph3) == {'D'}, "graph3 should have exactly one tail node 'D'"
+    
+    # Test graph with no tail nodes (cycle)
+    cycle_graph = {
+        'X': {'next': ['Y']},
+        'Y': {'next': ['Z']},
+        'Z': {'next': ['X']}
+    }
+    assert len(find_tail_nodes(cycle_graph)) == 0, "Cycle graph should have no tail nodes"
+    
+    # Test graph with multiple tail nodes
+    multi_tail_graph = {
+        'A': {'next': []},
+        'B': {'next': []},
+        'C': {'next': ['A', 'B']}
+    }
+    tails = find_tail_nodes(multi_tail_graph)
+    assert len(tails) > 1, f"Multi-tail graph should have multiple tail nodes, found: {tails}"
+    
+    # Test empty graph
+    empty_graph = {}
+    assert len(find_tail_nodes(empty_graph)) == 0, "Empty graph should have no tail nodes"
+    
+    # Test graph with subgraph tail nodes
+    subgraph_tail_graph = {
+        'A': {'next': ['B']},
+        'B': {
+            'next': [],
+            'subgraph': {
+                'X': {'next': ['Y']},
+                'Y': {'next': []},
+            }
+        }
+    }
+    assert find_tail_nodes(subgraph_tail_graph) == {'Y'}, "Should find tail node in subgraph"
 
 def test_print_format():
     """
@@ -363,3 +448,77 @@ def test_cross_graph_references():
     is_valid, violations = validate_graph_references(valid_nested)
     assert is_valid, "Valid nested subgraphs should be valid"
     assert len(violations) == 0, "Valid nested subgraphs should have no reference violations"
+
+def test_validate_graph():
+    """
+    Test comprehensive graph validation.
+    Tests include:
+    1. Valid graphs (graph1, graph2, graph3)
+    2. Graph with cycles
+    3. Graph with cross-graph reference violations
+    4. Graph with no head node
+    5. Graph with multiple head nodes
+    6. Graph with no tail node
+    7. Graph with multiple tail nodes
+    """
+    # Test valid graphs
+    validate_graph(graph1, "graph1")  # Should pass
+    validate_graph(graph2, "graph2")  # Should pass
+    validate_graph(graph3, "graph3")  # Should pass
+    
+    # Test graph with cycles
+    cycle_graph = {
+        'X': {'next': ['Y']},
+        'Y': {'next': ['Z']},
+        'Z': {'next': ['X']}
+    }
+    with pytest.raises(ValueError, match="contains cycles"):
+        validate_graph(cycle_graph, "cycle_graph")
+    
+    # Test graph with cross-graph reference violations
+    invalid_ref_graph = {
+        'A': {'next': ['B']},
+        'B': {
+            'next': ['C'],
+            'subgraph': {
+                'X': {'next': ['C']}  # Invalid: subgraph node references main graph node
+            }
+        },
+        'C': {'next': []}
+    }
+    with pytest.raises(ValueError, match="invalid cross-graph references"):
+        validate_graph(invalid_ref_graph, "invalid_ref_graph")
+    
+    # Test graph with no head node (all nodes have incoming edges)
+    no_head_graph = {
+        'A': {'next': ['B']},
+        'B': {'next': ['A']}  # Cycle creates no head nodes
+    }
+    with pytest.raises(ValueError, match="no head nodes"):
+        validate_graph(no_head_graph, "no_head_graph")
+    
+    # Test graph with multiple head nodes
+    multi_head_graph = {
+        'A': {'next': ['C']},
+        'B': {'next': ['C']},
+        'C': {'next': []}
+    }
+    with pytest.raises(ValueError, match="multiple head nodes"):
+        validate_graph(multi_head_graph, "multi_head_graph")
+    
+    # Test graph with no tail node (all nodes have outgoing edges)
+    no_tail_graph = {
+        'A': {'next': ['B']},
+        'B': {'next': ['A']}  # Cycle creates no tail nodes
+    }
+    with pytest.raises(ValueError, match="no tail nodes"):
+        validate_graph(no_tail_graph, "no_tail_graph")
+    
+    # Test graph with multiple tail nodes
+    multi_tail_graph = {
+        'A': {'next': []},
+        'B': {'next': []},
+        'C': {'next': ['A', 'B']}
+    }
+    with pytest.raises(ValueError, match="multiple tail nodes"):
+        validate_graph(multi_tail_graph, "multi_tail_graph")
