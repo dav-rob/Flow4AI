@@ -19,3 +19,6 @@ JobChain allows users to execute AI and IO Jobs connected in dependent job graph
 - structure code into functions and classes for modularity and reusability.
 - never delete any of the TODOs or comments that I have put in the code as explainers, unless the code logic or variable names have changed.
 
+## Logging
+- use `import jc_logging as logging` for logging, not the standard logging module.
+
