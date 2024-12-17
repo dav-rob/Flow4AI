@@ -103,7 +103,7 @@ class JobABC(ABC, metaclass=JobMeta):
     # class variable to keep track of instance counts for each class
     _instance_counts: Dict[Type, int] = {}
 
-    def __init__(self, name: Optional[str] = None):
+    def __init__(self, name: Optional[str] = None, properties: Dict[str, Any] = {}):
         """
         Initialize an JobABC instance.
 
@@ -119,6 +119,7 @@ class JobABC(ABC, metaclass=JobMeta):
             in job execution and dependency management.
         """
         self.name:str = self._getUniqueName() if name is None else name
+        self.properties:Dict[str, Any] = properties
         self.next_jobs:list[JobABC] = []   # next_jobs is the outgoing edges in the
                                 #  graph definition, 
                                 #  it is the jobs to execute after executing this job.
@@ -167,7 +168,7 @@ class JobABC(ABC, metaclass=JobMeta):
         # If we expect multiple inputs, wait for them
         if self.expected_inputs:
             if self.execution_started:
-                # If execution already started, just return
+                # If execution already started by another parent job, just return
                 return None
             
             self.execution_started = True
