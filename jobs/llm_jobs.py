@@ -32,7 +32,6 @@ class OpenAIClient:
 
 class OpenAIJob(JobABC):
 
-    limiter = AsyncLimiter(max_rate=5000, time_period=60)
     client = OpenAIClient.get_client()
     # Shared AsyncLimiter for all jobs, default to 5,000 requests per minute
     default_rate_limit = {"max_rate": 5000, "time_period": 60}
