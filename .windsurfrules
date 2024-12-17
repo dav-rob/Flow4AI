@@ -1,0 +1,21 @@
+# JobChain - scalable AI job scheduling and execution platform
+
+Every time you choose to apply a rule(s), explicitly state the rule(s) in the output. You can abbreviate the rule description to a single word or phrase.
+
+## Project Context
+JobChain allows users to execute AI and IO Jobs connected in dependent job graphs in parallel.
+
+## Tests
+- execute unit tests in the root directory using pytest using the command `python -m pytest` as the root of your test commands.
+- use pytest's --isolated flag to run isolated opentelemetry tests.
+- use pytest's --full-suite flag to run all tests, including performance tests.
+
+## Code Style and Structure
+- write clean, efficient, and well-documented Python code.
+- test code for correctness and performance. 
+- prioritize readability,simplicity, and performance.
+- use type hints and annotations where possible.
+- use appropriate error handling and input validation.
+- structure code into functions and classes for modularity and reusability.
+- never delete any of the TODOs or comments that I have put in the code as explainers, unless the code logic or variable names have changed.
+
