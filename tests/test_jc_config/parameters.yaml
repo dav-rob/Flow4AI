@@ -1,17 +1,17 @@
-four_stage_graph: 
+four_stage_parameterized: 
     params1:
-        job_1:
+        ask_llm:
           - model: "gpt-4o"
-        job_2:
+        read_file:
           - filepath: "./file1.txt"
-        job_3:
+        save_to_db:
           - database_url: "postgres://user1:pass1@db1/mydb"
             table_name: "table_a"
     params2:
-        job_1:
+        ask_llm:
           - model: "gpt-4o-mini"
-        job_2:
+        read_file:
           - filepath: "./file2.txt"
-        job_3:
+        save_to_db:
           - database_url: "sqlite://user2:pass2@db2/mydb"
             table_name: "table_b"

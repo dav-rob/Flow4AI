@@ -1,4 +1,4 @@
-four_stage_graph:
+four_stage_parameterized:
     read_file:
       next:
         - ask_llm
@@ -13,7 +13,7 @@ four_stage_graph:
     summarize:
       next: []
 
-three_stage_graph:
+three_stage:
     ask_llm_mini:
       next:
         - save_to_db2

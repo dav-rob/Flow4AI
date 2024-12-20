@@ -270,7 +270,7 @@ class JobFactory:
         else:
             raise ValueError(f"Unsupported job type: {load_type}")
 
-def create_job_graph(graph_definition: dict[str, dict], job_classes: dict[str, JobABC]) -> JobABC:
+def create_job_graph(graph_definition: dict[str, dict], job_instances: dict[str, JobABC]) -> JobABC:
     """
     graph definition defines the job graph and looks like this:
 
@@ -295,7 +295,7 @@ def create_job_graph(graph_definition: dict[str, dict], job_classes: dict[str, J
     nodes:dict[str, JobABC] = {} # nodes holds Jobs which will be hydrated with next_jobs 
                                 # and expected_inputs fields from the graph_definition.
     for job_name in graph_definition:
-        job_obj = job_classes[job_name]
+        job_obj = job_instances[job_name]
         nodes[job_name] = job_obj
 
     # determine the incoming edges i.e the Jobs that each Job depends on

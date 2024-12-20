@@ -31,10 +31,17 @@ class OpenAIClient:
         return cls._client
 
 class OpenAIJob(JobABC):
-
+    # class variables
     client = OpenAIClient.get_client()
-    # Shared AsyncLimiter for all jobs, default to 5,000 requests per minute
-    default_rate_limit = {"max_rate": 5000, "time_period": 60}
+    default_rate_limit = {"max_rate": 500, "time_period": 60}
+    default_properties = {
+            "model": "gpt-4o",
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "You are a helpful assistant."}
+            ],
+            "temperature": 0.7,
+        }
 
     def __init__(self, name: Optional[str] = None, properties: Dict[str, Any] = {}):
         super().__init__(name, properties)
@@ -50,17 +57,9 @@ class OpenAIJob(JobABC):
         """
         Perform an OpenAI API call while adhering to rate limits.
         """
-        default_properties = {
-            "model": "gpt-4o",
-            "messages": [
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": task.get("prompt", "You are a helpful assistant.")}
-            ],
-            "temperature": 0.7,
-        }
 
         # Merge default API properties with those specified in the properties
-        request_properties = {**default_properties, **self.api_properties}
+        request_properties = {**self.default_properties, **self.api_properties}
 
         # Acquire the rate limiter before making the request
         async with self.limiter:

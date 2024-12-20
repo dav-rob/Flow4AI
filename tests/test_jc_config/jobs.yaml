@@ -7,17 +7,21 @@ ask_llm:
     rate_limit:
       max_rate: 1
       time_period: 4
+
 read_file:
-  type: FileReadJob
+  type: MockFileReadJob
   properties:
     filepath: "$filepath"
+
 save_to_db:
-  type: DatabaseWriteJob
+  type: MockDatabaseWriteJob
   properties:
     database_url: "$database_url"
     table_name: "$table_name"
+
 summarize:
   type: DummyJob
+
 ask_llm_mini:
   type: OpenAIJob
   properties:
@@ -27,8 +31,9 @@ ask_llm_mini:
     rate_limit:
       max_rate: 1
       time_period: 4
+
 save_to_db2:
-  type: DatabaseWriteJob
+  type: MockDatabaseWriteJob
   properties:
     database_url: "sqlite://user2:pass2@db2/mydb"
     table_name: "table_b"
