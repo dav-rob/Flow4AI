@@ -4,11 +4,11 @@ import os
 import sys
 from glob import glob
 from pathlib import Path
-from typing import Any, Dict, Type
+from typing import Any, Dict, List, Type
 
 import anyconfig
 
-from job import JobABC
+from job import JobABC, create_job_graph
 
 
 class JobValidationError(Exception):
@@ -117,23 +117,125 @@ class JobFactory:
         cls._job_types[type_name] = job_class
 
 class ConfigLoader:
+    directories = [
+            "./local/config",
+            "./tests/test_jc_config",
+            "/etc/myapp/config"
+        ]
+    _cached_configs: Dict[str, dict] = None
+    
     @classmethod
-    def load_config(cls, base_name: str) -> dict:
-        # Find all files matching the pattern
-        matches = glob(f"{base_name}.*")
-        if not matches:
-            raise FileNotFoundError(f"No configuration file found matching {base_name}.*")
-        # Use the first match
-        return anyconfig.load(matches[0])
+    def load_configs_from_dirs(
+        cls,
+        directories: List[str] = ["./tests/test_jc_config","./config", "/etc/myapp/config"],
+        config_bases: List[str] = ['graphs', 'jobs', 'parameters', 'jobchain_all'],
+        allowed_extensions: tuple = ('.yaml', '.yml', '.json')
+    ) -> Dict[str, dict]:
+        """
+        Load configuration files from multiple directories.
+        
+        Args:
+            directories: List of directory paths to search
+            config_bases: List of configuration file base names to look for
+            allowed_extensions: Tuple of allowed file extensions
+        
+        Returns:
+            Dictionary with config_base as key and loaded config as value
+        """
+        configs: Dict[str, dict] = {}
+        
+        # Convert directories to Path objects
+        dir_paths = [Path(d) for d in directories]
+        
+        # For each config file we want to find
+        for config_base in config_bases:
+            # Search through directories in order
+            for dir_path in dir_paths:
+                if not dir_path.exists():
+                    continue
+                    
+                # Look for matching files
+                matches = [f for f in dir_path.glob(f"{config_base}.*") 
+                        if f.suffix.lower() in allowed_extensions]
+                
+                # If we found a match, load it and break the directory loop
+                if matches:
+                    try:
+                        configs[config_base] = anyconfig.load(str(matches[0]))
+                        break  # Stop searching other directories for this config
+                    except Exception as e:
+                        print(f"Error loading {matches[0]}: {e}")
+                        continue
+        
+        return configs
+    
+    @classmethod
+    def load_all_configs(cls) -> Dict[str, dict]:
+        if cls._cached_configs is None:
+            cls._cached_configs = cls.load_configs_from_dirs(cls.directories)
+        return cls._cached_configs
 
     @classmethod
+    def reload_configs(cls) -> Dict[str, dict]:
+        """Force a reload of all configurations."""
+        cls._cached_configs = None
+        return cls.load_all_configs()
+    
+    @classmethod
     def get_graphs_config(cls) -> dict:
-        return cls.load_config("graphs")
+        """
+        Get graphs configuration from either dedicated graphs file or jobchain_all.
+        Returns empty dict if no configuration is found.
+        """
+        configs = cls.load_all_configs()
+        
+        # Try to get from dedicated graphs file first
+        if 'graphs' in configs:
+            return configs['graphs']
+            
+        # If not found, try to get from jobchain_all
+        if 'jobchain_all' in configs and isinstance(configs['jobchain_all'], dict):
+            return configs['jobchain_all'].get('graphs', {})
+            
+        # If nothing found, return empty dict
+        return {}
 
     @classmethod
     def get_jobs_config(cls) -> dict:
-        return cls.load_config("jobs")
+        """
+        Get jobs configuration from either dedicated jobs file or jobchain_all.
+        Returns empty dict if no configuration is found.
+        """
+        configs = cls.load_all_configs()
+        
+        # Try to get from dedicated jobs file first
+        if 'jobs' in configs:
+            return configs['jobs']
+            
+        # If not found, try to get from jobchain_all
+        if 'jobchain_all' in configs and isinstance(configs['jobchain_all'], dict):
+            return configs['jobchain_all'].get('jobs', {})
+            
+        # If nothing found, return empty dict
+        return {}
+
 
     @classmethod
     def get_parameters_config(cls) -> dict:
-        return cls.load_config("parameters")
+        """
+        Get parameters configuration from either dedicated parameters file or jobchain_all.
+        Returns empty dict if no configuration is found.
+        """
+        configs = cls.load_all_configs()
+        
+        # Try to get from dedicated parameters file first
+        if 'parameters' in configs:
+            return configs['parameters']
+            
+        # If not found, try to get from jobchain_all
+        if 'jobchain_all' in configs and isinstance(configs['jobchain_all'], dict):
+            return configs['jobchain_all'].get('parameters', {})
+            
+        # If nothing found, return empty dict
+        return {}
+
