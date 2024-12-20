@@ -1,0 +1,17 @@
+four_stage_graph: 
+    p_one:
+        job_1:
+          - llm_model: "gpt-4o"
+        job_2:
+          - filepath: "./file1.txt"
+        job_3:
+          - database_url: "postgres://user1:pass1@db1/mydb"
+            table_name: "table_a"
+    p_two:
+        job_1:
+          - llm_model: "gpt-4o-mini"
+        job_2:
+          - filepath: "./file2.txt"
+        job_3:
+          - database_url: "sqlite://user2:pass2@db2/mydb"
+            table_name: "table_b"

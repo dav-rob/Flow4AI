@@ -1,0 +1,25 @@
+four_stage_graph:
+    job_1:
+      next:
+        - job_2
+        - job_3
+    job_2:
+      next:
+        - job_3
+        - job_4
+    job_3:
+      next:
+        - job_4
+    job_4:
+      next: []
+
+three_stage_graph:
+    job_1:
+      next:
+        - job_2
+        - job_3
+    job_2:
+      next:
+        - job_3
+    job_3:
+      next:[]

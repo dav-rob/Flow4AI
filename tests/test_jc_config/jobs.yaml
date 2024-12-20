@@ -1,0 +1,20 @@
+job_1:
+  type: OpenAIJob
+  properties:
+    api:
+      model: "$llm_model"
+      temperature: 0.7
+    rate_limit:
+      max_rate: 1
+      time_period: 4
+job_2:
+  type: FileReadJob
+  properties:
+    filepath: "$filepath"
+job_3:
+  type: DatabaseWriteJob
+  properties:
+    database_url: "$database_url"
+    table_name: "$table_name"
+job_4:
+  type: DummyJob
