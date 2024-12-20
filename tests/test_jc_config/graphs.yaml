@@ -1,25 +1,25 @@
 four_stage_graph:
-    job_1:
+    read_file:
       next:
-        - job_2
-        - job_3
-    job_2:
+        - ask_llm
+        - save_to_db
+    ask_llm:
       next:
-        - job_3
-        - job_4
-    job_3:
+        - save_to_db
+        - summarize
+    save_to_db:
       next:
-        - job_4
-    job_4:
+        - summarize
+    summarize:
       next: []
 
 three_stage_graph:
-    job_1:
+    ask_llm_mini:
       next:
-        - job_2
-        - job_3
-    job_2:
+        - save_to_db2
+        - summarize
+    save_to_db:
       next:
-        - job_3
-    job_3:
+        - summarize
+    summarize:
       next:[]
