@@ -1,0 +1,19 @@
+save_to_db:
+  type: MockDatabaseWriteJob
+  properties:
+    connection_string: "mock://localhost:1234"
+
+save_to_db2:
+  type: MockDatabaseWriteJob
+  properties:
+    connection_string: "mock://localhost:5678"
+
+read_file:
+  type: MockFileReadJob
+  properties:
+    file_path: "/path/to/file"
+
+summarize:
+  type: MockJob
+  properties:
+    test_param: "test_value"

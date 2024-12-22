@@ -176,11 +176,63 @@ class ConfigLoader:
         return configs
     
     @classmethod
+    def _extract_config_section(cls, configs: Dict[str, dict], section_name: str) -> dict:
+        """
+        Extract a configuration section from either a dedicated file or jobchain_all.
+        
+        Args:
+            configs: Dictionary containing all configurations
+            section_name: Name of the section to extract (e.g., 'graphs', 'jobs', 'parameters')
+            
+        Returns:
+            Dictionary containing the configuration section, or empty dict if not found
+        """
+        # Try to get from dedicated file first
+        if section_name in configs:
+            return configs[section_name]
+            
+        # If not found, try to get from jobchain_all
+        if 'jobchain_all' in configs and isinstance(configs['jobchain_all'], dict):
+            return configs['jobchain_all'].get(section_name, {})
+            
+        # If nothing found, return empty dict
+        return {}
+
+    @classmethod
+    def validate_configs(cls, configs: Dict[str, dict]) -> None:
+        """
+        Validate that all jobs referenced in graphs configuration exist in jobs configuration.
+        
+        Args:
+            configs: Dictionary containing all configurations
+            
+        Raises:
+            ValueError: If a job referenced in graphs is not defined in jobs
+        """
+        graphs_config = cls._extract_config_section(configs, 'graphs')
+        jobs_config = cls._extract_config_section(configs, 'jobs')
+        
+        if not graphs_config or not jobs_config:
+            return
+            
+        defined_jobs = set(jobs_config.keys())
+        
+        for graph_name, graph_def in graphs_config.items():
+            for job_name, job_def in graph_def.items():
+                if job_name not in defined_jobs:
+                    raise ValueError(f"Job '{job_name}' referenced in graph '{graph_name}' is not defined in jobs configuration")
+                
+                # Check jobs in 'next' field
+                next_jobs = job_def.get('next', [])
+                for next_job in next_jobs:
+                    if next_job not in defined_jobs:
+                        raise ValueError(f"Job '{next_job}' referenced in 'next' field of job '{job_name}' in graph '{graph_name}' is not defined in jobs configuration")
+
+    @classmethod
     def load_all_configs(cls) -> Dict[str, dict]:
-        if cls._cached_configs is None:
-            logging.info(f"Loading all configs from directories: {cls.directories}")
-            cls._cached_configs = cls.load_configs_from_dirs(cls.directories)
-            logging.info(f"Loaded configs: {cls._cached_configs}")
+        """Load all configurations and validate them"""
+        cls._cached_configs = cls.load_configs_from_dirs(cls.directories)
+        cls.validate_configs(cls._cached_configs)
         return cls._cached_configs
 
     @classmethod
@@ -197,21 +249,7 @@ class ConfigLoader:
         Returns empty dict if no configuration is found.
         """
         configs = cls.load_all_configs()
-        logging.info(f"Getting graphs config from: {configs}")
-        
-        # Try to get from dedicated graphs file first
-        if 'graphs' in configs:
-            logging.info(f"Found graphs config: {configs['graphs']}")
-            return configs['graphs']
-            
-        # If not found, try to get from jobchain_all
-        if 'jobchain_all' in configs and isinstance(configs['jobchain_all'], dict):
-            logging.info(f"Found graphs config in jobchain_all: {configs['jobchain_all'].get('graphs', {})}")
-            return configs['jobchain_all'].get('graphs', {})
-            
-        # If nothing found, return empty dict
-        logging.info("No graphs config found")
-        return {}
+        return cls._extract_config_section(configs, 'graphs')
 
     @classmethod
     def get_jobs_config(cls) -> dict:
@@ -220,17 +258,7 @@ class ConfigLoader:
         Returns empty dict if no configuration is found.
         """
         configs = cls.load_all_configs()
-        
-        # Try to get from dedicated jobs file first
-        if 'jobs' in configs:
-            return configs['jobs']
-            
-        # If not found, try to get from jobchain_all
-        if 'jobchain_all' in configs and isinstance(configs['jobchain_all'], dict):
-            return configs['jobchain_all'].get('jobs', {})
-            
-        # If nothing found, return empty dict
-        return {}
+        return cls._extract_config_section(configs, 'jobs')
 
     @classmethod
     def get_parameters_config(cls) -> dict:
@@ -239,14 +267,4 @@ class ConfigLoader:
         Returns empty dict if no configuration is found.
         """
         configs = cls.load_all_configs()
-        
-        # Try to get from dedicated parameters file first
-        if 'parameters' in configs:
-            return configs['parameters']
-            
-        # If not found, try to get from jobchain_all
-        if 'jobchain_all' in configs and isinstance(configs['jobchain_all'], dict):
-            return configs['jobchain_all'].get('parameters', {})
-            
-        # If nothing found, return empty dict
-        return {}
+        return cls._extract_config_section(configs, 'parameters')

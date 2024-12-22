@@ -170,3 +170,22 @@ def test_config_loader_all():
     # Validate each graph separately
     for graph_name, graph in graphs_config.items():
         validate_graph(graph, graph_name)
+
+def test_validate_all_jobs_in_graph():
+    """Test that validation catches jobs referenced in graphs but not defined in jobs"""
+    # Test with invalid configuration
+    invalid_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config_invalid"))
+    ConfigLoader.directories = [invalid_config_dir]
+    
+    with pytest.raises(ValueError) as exc_info:
+        ConfigLoader.load_all_configs()
+    assert "Job 'nonexistent_job' referenced in 'next' field of job 'read_file' in graph 'four_stage_parameterized'" in str(exc_info.value)
+    
+    # Test with valid configuration
+    valid_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config"))
+    ConfigLoader.directories = [valid_config_dir]
+    
+    try:
+        ConfigLoader.load_all_configs()
+    except ValueError as e:
+        pytest.fail(f"Validation failed for valid configuration: {str(e)}")

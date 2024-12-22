@@ -1,0 +1,20 @@
+four_stage_parameterized:
+    read_file:
+      next:
+        - nonexistent_job  # This job doesn't exist in jobs.yaml
+        - save_to_db
+    save_to_db:
+      next:
+        - another_missing_job  # This job doesn't exist either
+    summarize:
+      next: []
+
+three_stage:
+    ask_llm_mini:
+      next:
+        - undefined_job  # Another missing job
+    save_to_db2:
+      next:
+        - summarize
+    summarize:
+      next: []
