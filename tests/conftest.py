@@ -1,5 +1,10 @@
 import pytest
 
+from utils.otel_wrapper import TracerFactory
+
+# set the TracerFactory up with the TestTracerProvider so the TracerProvider
+#  can be overridden by code which normally isn't possible.
+TracerFactory.set_test_mode(True)
 
 def pytest_configure(config):
     config.addinivalue_line(
@@ -22,22 +27,22 @@ def pytest_addoption(parser):
 
 def pytest_collection_modifyitems(config, items):
     # Handle isolated tests
-    if config.getoption("--isolated"):
-        selected = []
-        deselected = []
-        for item in items:
-            if item.get_closest_marker("isolated"):
-                selected.append(item)
-            else:
-                deselected.append(item)
-        config.hook.pytest_deselected(items=deselected)
-        items[:] = selected
-        return
-    else:
-        # Skip isolated tests when not running with --isolated
-        for item in items:
-            if item.get_closest_marker("isolated"):
-                item.add_marker(pytest.mark.skip(reason="Isolated test - use --isolated to run"))
+    # if config.getoption("--isolated"):
+    #     selected = []
+    #     deselected = []
+    #     for item in items:
+    #         if item.get_closest_marker("isolated"):
+    #             selected.append(item)
+    #         else:
+    #             deselected.append(item)
+    #     config.hook.pytest_deselected(items=deselected)
+    #     items[:] = selected
+    #     return
+    # else:
+    #     # Skip isolated tests when not running with --isolated
+    #     for item in items:
+    #         if item.get_closest_marker("isolated"):
+    #             item.add_marker(pytest.mark.skip(reason="Isolated test - use --isolated to run"))
 
     # Handle full suite option
     if not config.getoption("--full-suite"):

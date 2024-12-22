@@ -18,8 +18,6 @@ pytestmark = pytest.mark.isolated
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-TracerFactory.set_test_mode(True)
-
 @pytest.fixture
 def trace_file():
     """Fixture to provide a temporary trace file path and clean up after tests."""

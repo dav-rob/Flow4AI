@@ -40,24 +40,7 @@ python3 -m pytest tests/test_job_loader.py::test_load_job -v
 ## Test Categories
 
 ### Regular Tests
-These tests run by default and are designed to be quick and focused on core functionality:
-- test_async_functionality.py
-- test_error_conditions.py
-- test_job_loader.py
-- test_job_tracing.py
-- test_logging.py
-- test_parallel_execution.py
-- test_queue_stress.py
-- test_result_processing.py
-
-### Isolated Tests
-Some tests need to run in an isolated environment due to their specific requirements:
-- test_opentelemetry.py - Requires isolation to enable file tracing tests
-
-To run isolated tests:
-```bash
-python -m pytest --isolated
-```
+All the test modules run by default except test_parallel_load.py which takes a little more time than the other tests.
 
 ### Performance Tests (Requires --full-suite)
 These tests are skipped by default as they are time and resource-intensive:
