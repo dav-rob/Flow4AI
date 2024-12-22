@@ -189,3 +189,25 @@ def test_validate_all_jobs_in_graph():
         ConfigLoader.load_all_configs()
     except ValueError as e:
         pytest.fail(f"Validation failed for valid configuration: {str(e)}")
+
+def test_validate_all_parameters_filled():
+    """Test that validation catches missing or invalid parameter configurations"""
+    # Test with invalid parameter configuration
+    invalid_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config_invalid_parameters"))
+    ConfigLoader.directories = [invalid_config_dir]
+    
+    with pytest.raises(ValueError) as exc_info:
+        ConfigLoader.load_all_configs()
+    
+    error_msg = str(exc_info.value)
+    # Should catch missing parameters for read_file in params1
+    assert "Job 'read_file' in graph 'four_stage_parameterized' requires parameters {'filepath'} but has no entry in parameter group 'params1'" in error_msg
+    
+    # Test with valid configuration
+    valid_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config"))
+    ConfigLoader.directories = [valid_config_dir]
+    
+    try:
+        ConfigLoader.load_all_configs()
+    except ValueError as e:
+        pytest.fail(f"Validation failed for valid configuration: {str(e)}")

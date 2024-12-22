@@ -1,0 +1,40 @@
+ask_llm:
+  type: OpenAIJob
+  properties:
+    api:
+      model: "$model"
+      temperature: 0.7
+    rate_limit:
+      max_rate: 1
+      time_period: 4
+
+read_file:
+  type: MockFileReadJob
+  properties:
+    filepath: "$filepath"
+
+save_to_db:
+  type: MockDatabaseWriteJob
+  properties:
+    database_url: "$database_url"
+    table_name: "$table_name"
+
+summarize:
+  type: DummyJob
+  properties: {}
+
+ask_llm_mini:
+  type: OpenAIJob
+  properties:
+    api:
+      model: "$model"  # This job is parameterized but its graph has no parameters entry
+      temperature: 0.7
+    rate_limit:
+      max_rate: 1
+      time_period: 4
+
+save_to_db2:
+  type: MockDatabaseWriteJob
+  properties:
+    database_url: "$database_url"  # This job is parameterized but its graph has no parameters entry
+    table_name: "$table_name"

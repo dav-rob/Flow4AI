@@ -1,22 +1,13 @@
-four_stage_parameterized: 
-    params1:
+four_stage_parameterized:  # Missing parameters for some jobs
+    params1:  # Missing read_file parameters
         ask_llm:
           - model: "gpt-4o"
-        read_file:
-          - filepath: "./file1.txt"
         save_to_db:
           - database_url: "postgres://user1:pass1@db1/mydb"
             table_name: "table_a"
     params2:
         ask_llm:
           - model: "gpt-4o-mini"
-        read_file:
-          - filepath: "./file2.txt"
         save_to_db:
           - database_url: "sqlite://user2:pass2@db2/mydb"
             table_name: "table_b"
-
-three_stage:
-    params1:
-        ask_llm_mini:
-          - model: "gpt-4o-mini"

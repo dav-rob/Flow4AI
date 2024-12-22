@@ -199,22 +199,50 @@ class ConfigLoader:
         return {}
 
     @classmethod
+    def _find_parameterized_fields(cls, job_config: dict) -> set:
+        """
+        Find all parameterized fields in a job configuration.
+        A field is parameterized if its value starts with '$'.
+        
+        Args:
+            job_config: Job configuration dictionary
+            
+        Returns:
+            Set of parameterized field names
+        """
+        params = set()
+        
+        def search_dict(d):
+            for k, v in d.items():
+                if isinstance(v, dict):
+                    search_dict(v)
+                elif isinstance(v, str) and v.startswith('$'):
+                    params.add(v[1:])  # Remove the '$' prefix
+        
+        search_dict(job_config.get('properties', {}))
+        return params
+
+    @classmethod
     def validate_configs(cls, configs: Dict[str, dict]) -> None:
         """
-        Validate that all jobs referenced in graphs configuration exist in jobs configuration.
+        Validate that:
+        1. All jobs referenced in graphs exist in jobs configuration
+        2. All parameterized jobs have corresponding parameter values
         
         Args:
             configs: Dictionary containing all configurations
             
         Raises:
-            ValueError: If a job referenced in graphs is not defined in jobs
+            ValueError: If validation fails
         """
         graphs_config = cls._extract_config_section(configs, 'graphs')
         jobs_config = cls._extract_config_section(configs, 'jobs')
+        parameters_config = cls._extract_config_section(configs, 'parameters')
         
         if not graphs_config or not jobs_config:
             return
             
+        # First validate that all jobs in graphs exist
         defined_jobs = set(jobs_config.keys())
         
         for graph_name, graph_def in graphs_config.items():
@@ -227,6 +255,49 @@ class ConfigLoader:
                 for next_job in next_jobs:
                     if next_job not in defined_jobs:
                         raise ValueError(f"Job '{next_job}' referenced in 'next' field of job '{job_name}' in graph '{graph_name}' is not defined in jobs configuration")
+        
+        # Now validate parameters
+        for graph_name, graph_def in graphs_config.items():
+            # Find all parameterized jobs in this graph
+            graph_parameterized_jobs = {}
+            for job_name in graph_def.keys():
+                job_config = jobs_config[job_name]
+                params = cls._find_parameterized_fields(job_config)
+                if params:
+                    graph_parameterized_jobs[job_name] = params
+            
+            # If graph has parameterized jobs, it must have parameters
+            if graph_parameterized_jobs:
+                if graph_name not in parameters_config:
+                    raise ValueError(f"Graph '{graph_name}' contains parameterized jobs {list(graph_parameterized_jobs.keys())} but has no entry in parameters configuration")
+                
+                graph_params = parameters_config[graph_name]
+                
+                # Validate parameter groups
+                for group_name in graph_params.keys():
+                    if not group_name.startswith('params'):
+                        raise ValueError(f"Invalid parameter group name '{group_name}' in graph '{graph_name}'. Parameter groups must start with 'params'")
+                
+                # Validate that all parameters are filled for each group
+                for group_name, group_params in graph_params.items():
+                    for job_name, required_params in graph_parameterized_jobs.items():
+                        if job_name not in group_params:
+                            raise ValueError(f"Job '{job_name}' in graph '{graph_name}' requires parameters {required_params} but has no entry in parameter group '{group_name}'")
+                        
+                        # Each job should have a list of parameter sets
+                        job_param_sets = group_params[job_name]
+                        if not isinstance(job_param_sets, list):
+                            raise ValueError(f"Parameters for job '{job_name}' in graph '{graph_name}', group '{group_name}' should be a list of parameter sets")
+                        
+                        # Check each parameter set
+                        for param_set in job_param_sets:
+                            missing_params = required_params - set(param_set.keys())
+                            if missing_params:
+                                raise ValueError(f"Parameter set for job '{job_name}' in graph '{graph_name}', group '{group_name}' is missing required parameters: {missing_params}")
+            
+            # If graph has no parameterized jobs, it should not have parameters
+            elif graph_name in parameters_config:
+                raise ValueError(f"Graph '{graph_name}' has no parameterized jobs but has an entry in parameters configuration")
 
     @classmethod
     def load_all_configs(cls) -> Dict[str, dict]:
