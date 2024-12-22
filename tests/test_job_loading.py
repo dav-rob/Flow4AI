@@ -1,7 +1,7 @@
+import logging
 import os
 import sys
 from pathlib import Path
-import logging
 
 import pytest
 import yaml
@@ -9,9 +9,9 @@ import yaml
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from job_loader import JobFactory, ConfigLoader
-from jobs.llm_jobs import OpenAIJob
 from jc_graph import validate_graph
+from job_loader import ConfigLoader, JobFactory
+from jobs.llm_jobs import OpenAIJob
 
 # Test configuration
 TEST_JOBS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config/jobs"))
@@ -134,7 +134,7 @@ def test_config_loader_separate():
 def test_config_loader_all():
     """Test loading configurations from a single combined file"""
     # Get absolute paths
-    test_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config2"))
+    test_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config_all"))
     logging.info(f"\nTest config dir: {test_config_dir}")
     logging.info(f"Directory exists: {os.path.exists(test_config_dir)}")
     logging.info(f"Directory contents: {os.listdir(test_config_dir)}")
