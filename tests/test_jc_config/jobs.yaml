@@ -21,12 +21,13 @@ save_to_db:
 
 summarize:
   type: DummyJob
+  properties: {}
 
 ask_llm_mini:
   type: OpenAIJob
   properties:
     api:
-      model: "gpt-4o-mini"
+      model: "$model"
       temperature: 0.7
     rate_limit:
       max_rate: 1

@@ -1,0 +1,87 @@
+graphs:
+  four_stage_parameterized:
+    read_file:
+      next:
+        - ask_llm
+        - save_to_db
+    ask_llm:
+      next:
+        - save_to_db
+        - summarize
+    save_to_db:
+      next:
+        - summarize
+    summarize:
+      next: []
+
+  three_stage:
+    ask_llm_mini:
+      next:
+        - save_to_db2
+        - summarize
+    save_to_db2:
+      next:
+        - summarize
+    summarize:
+      next: []
+
+jobs:
+  ask_llm:
+    type: OpenAIJob
+    properties:
+      api:
+        model: "$model"
+        temperature: 0.7
+      rate_limit:
+        max_rate: 1
+        time_period: 4
+
+  read_file:
+    type: MockFileReadJob
+    properties:
+      filepath: "$filepath"
+
+  save_to_db:
+    type: MockDatabaseWriteJob
+    properties:
+      database_url: "$database_url"
+      table_name: "$table_name"
+
+  summarize:
+    type: DummyJob
+    properties: {}
+
+  ask_llm_mini:
+    type: OpenAIJob
+    properties:
+      api:
+        model: "$model"
+        temperature: 0.7
+      rate_limit:
+        max_rate: 1
+        time_period: 4
+
+  save_to_db2:
+    type: MockDatabaseWriteJob
+    properties:
+      database_url: "sqlite://user2:pass2@db2/mydb"
+      table_name: "table_b"
+
+parameters:
+  four_stage_parameterized: 
+    params1:
+        ask_llm:
+          - model: "gpt-4o"
+        read_file:
+          - filepath: "./file1.txt"
+        save_to_db:
+          - database_url: "postgres://user1:pass1@db1/mydb"
+            table_name: "table_a"
+    params2:
+        ask_llm:
+          - model: "gpt-4o-mini"
+        read_file:
+          - filepath: "./file2.txt"
+        save_to_db:
+          - database_url: "sqlite://user2:pass2@db2/mydb"
+            table_name: "table_b"

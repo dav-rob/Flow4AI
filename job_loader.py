@@ -119,7 +119,6 @@ class JobFactory:
 class ConfigLoader:
     directories = [
             "./local/config",
-            "./tests/test_jc_config",
             "/etc/myapp/config"
         ]
     _cached_configs: Dict[str, dict] = None
@@ -127,7 +126,7 @@ class ConfigLoader:
     @classmethod
     def load_configs_from_dirs(
         cls,
-        directories: List[str] = ["./tests/test_jc_config","./config", "/etc/myapp/config"],
+        directories: List[str] = ["./config", "/etc/myapp/config"],
         config_bases: List[str] = ['graphs', 'jobs', 'parameters', 'jobchain_all'],
         allowed_extensions: tuple = ('.yaml', '.yml', '.json')
     ) -> Dict[str, dict]:
@@ -145,39 +144,48 @@ class ConfigLoader:
         configs: Dict[str, dict] = {}
         
         # Convert directories to Path objects
-        dir_paths = [Path(d) for d in directories]
+        dir_paths = [Path(str(d)) for d in directories]  # Handle both string and Path objects
+        print(f"Looking for config files in directories: {dir_paths}")
         
         # For each config file we want to find
         for config_base in config_bases:
+            print(f"Looking for {config_base} config file...")
             # Search through directories in order
             for dir_path in dir_paths:
                 if not dir_path.exists():
+                    print(f"Directory {dir_path} does not exist")
                     continue
                     
                 # Look for matching files
                 matches = [f for f in dir_path.glob(f"{config_base}.*") 
                         if f.suffix.lower() in allowed_extensions]
+                print(f"Found matches in {dir_path}: {matches}")
                 
                 # If we found a match, load it and break the directory loop
                 if matches:
                     try:
-                        configs[config_base] = anyconfig.load(str(matches[0]))
+                        configs[config_base] = anyconfig.load(str(matches[0]))  # Convert Path to string for anyconfig
+                        print(f"Loaded {matches[0]} with content: {configs[config_base]}")  # Debug print
                         break  # Stop searching other directories for this config
                     except Exception as e:
                         print(f"Error loading {matches[0]}: {e}")
                         continue
         
+        print(f"Final configs: {configs}")
         return configs
     
     @classmethod
     def load_all_configs(cls) -> Dict[str, dict]:
         if cls._cached_configs is None:
+            print(f"Loading all configs from directories: {cls.directories}")
             cls._cached_configs = cls.load_configs_from_dirs(cls.directories)
+            print(f"Loaded configs: {cls._cached_configs}")
         return cls._cached_configs
 
     @classmethod
     def reload_configs(cls) -> Dict[str, dict]:
         """Force a reload of all configurations."""
+        print("Reloading configs...")
         cls._cached_configs = None
         return cls.load_all_configs()
     
@@ -188,16 +196,20 @@ class ConfigLoader:
         Returns empty dict if no configuration is found.
         """
         configs = cls.load_all_configs()
+        print(f"Getting graphs config from: {configs}")
         
         # Try to get from dedicated graphs file first
         if 'graphs' in configs:
+            print(f"Found graphs config: {configs['graphs']}")
             return configs['graphs']
             
         # If not found, try to get from jobchain_all
         if 'jobchain_all' in configs and isinstance(configs['jobchain_all'], dict):
+            print(f"Found graphs config in jobchain_all: {configs['jobchain_all'].get('graphs', {})}")
             return configs['jobchain_all'].get('graphs', {})
             
         # If nothing found, return empty dict
+        print("No graphs config found")
         return {}
 
     @classmethod
@@ -219,7 +231,6 @@ class ConfigLoader:
         # If nothing found, return empty dict
         return {}
 
-
     @classmethod
     def get_parameters_config(cls) -> dict:
         """
@@ -238,4 +249,3 @@ class ConfigLoader:
             
         # If nothing found, return empty dict
         return {}
-

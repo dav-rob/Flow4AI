@@ -18,8 +18,8 @@ three_stage:
       next:
         - save_to_db2
         - summarize
-    save_to_db:
+    save_to_db2:
       next:
         - summarize
     summarize:
-      next:[]
+      next: []
