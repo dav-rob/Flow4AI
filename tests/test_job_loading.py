@@ -1,7 +1,8 @@
 import os
-import pytest
-from pathlib import Path
 import sys
+from pathlib import Path
+
+import pytest
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -16,8 +17,9 @@ TEST_JOBS_DIR = os.path.join(os.path.dirname(__file__), "test_jc_config/jobs")
 def job_factory():
     factory = JobFactory()
     # Load both the test jobs and the real jobs
+    #  the real jobs are always loaded by the factory
     factory.load_custom_jobs_directory(TEST_JOBS_DIR)
-    factory.load_custom_jobs_directory(os.path.join(os.path.dirname(os.path.dirname(__file__)), "jobs"))
+    #factory.load_custom_jobs_directory(os.path.join(os.path.dirname(os.path.dirname(__file__)), "jobs"))
     return factory
 
 def test_job_type_registration(job_factory):
