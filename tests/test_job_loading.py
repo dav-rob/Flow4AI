@@ -1,6 +1,7 @@
 import os
 import sys
 from pathlib import Path
+import logging
 
 import pytest
 import yaml
@@ -94,22 +95,22 @@ def test_config_loader_separate():
     """Test loading configurations from separate files"""
     # Get absolute paths
     test_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config"))
-    print(f"\nTest config dir: {test_config_dir}")
-    print(f"Directory exists: {os.path.exists(test_config_dir)}")
-    print(f"Directory contents: {os.listdir(test_config_dir)}")
+    logging.info(f"\nTest config dir: {test_config_dir}")
+    logging.info(f"Directory exists: {os.path.exists(test_config_dir)}")
+    logging.info(f"Directory contents: {os.listdir(test_config_dir)}")
     
     # Reset ConfigLoader state and set directories
     ConfigLoader._cached_configs = None  # Reset cached configs
     ConfigLoader.directories = [str(test_config_dir)]  # Convert to string for anyconfig
-    print(f"ConfigLoader directories: {ConfigLoader.directories}")
+    logging.info(f"ConfigLoader directories: {ConfigLoader.directories}")
     
     # Test graphs config
     graphs_config = ConfigLoader.get_graphs_config()
-    print(f"Graphs config: {graphs_config}")
+    logging.info(f"Graphs config: {graphs_config}")
     assert graphs_config is not None
     with open(os.path.join(test_config_dir, "graphs.yaml"), 'r') as f:
         expected_graphs = yaml.safe_load(f)
-    print(f"Expected graphs: {expected_graphs}")
+    logging.info(f"Expected graphs: {expected_graphs}")
     assert graphs_config == expected_graphs
     
     # Test jobs config
@@ -134,36 +135,35 @@ def test_config_loader_all():
     """Test loading configurations from a single combined file"""
     # Get absolute paths
     test_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config2"))
-    print(f"\nTest config dir: {test_config_dir}")
-    print(f"Directory exists: {os.path.exists(test_config_dir)}")
-    print(f"Directory contents: {os.listdir(test_config_dir)}")
+    logging.info(f"\nTest config dir: {test_config_dir}")
+    logging.info(f"Directory exists: {os.path.exists(test_config_dir)}")
+    logging.info(f"Directory contents: {os.listdir(test_config_dir)}")
     
-    # Reset ConfigLoader state before setting directories
+    # Reset ConfigLoader state and set directories
     ConfigLoader._cached_configs = None  # Reset cached configs
-    ConfigLoader.reload_configs()
     ConfigLoader.directories = [str(test_config_dir)]  # Convert to string for anyconfig
-    print(f"ConfigLoader directories: {ConfigLoader.directories}")
+    logging.info(f"ConfigLoader directories: {ConfigLoader.directories}")
     
     # Load the combined config file for comparison
     with open(os.path.join(test_config_dir, "jobchain_all.yaml"), 'r') as f:
         all_config = yaml.safe_load(f)
-    print(f"All config: {all_config}")
+    logging.info(f"All config: {all_config}")
     
     # Test graphs config
     graphs_config = ConfigLoader.get_graphs_config()
-    print(f"Graphs config: {graphs_config}")
+    logging.info(f"Graphs config: {graphs_config}")
     assert graphs_config is not None
     assert graphs_config == all_config.get('graphs', {})
     
     # Test jobs config
     jobs_config = ConfigLoader.get_jobs_config()
-    print(f"Jobs config: {jobs_config}")
+    logging.info(f"Jobs config: {jobs_config}")
     assert jobs_config is not None
     assert jobs_config == all_config.get('jobs', {})
     
     # Test parameters config
     params_config = ConfigLoader.get_parameters_config()
-    print(f"Parameters config: {params_config}")
+    logging.info(f"Parameters config: {params_config}")
     assert params_config is not None
     assert params_config == all_config.get('parameters', {})
     
