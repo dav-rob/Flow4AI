@@ -281,9 +281,9 @@ def create_job_graph(graph_definition: dict[str, dict], job_instances: dict[str,
         "D": {"next": []},
     }
 
-    job classes are a dictionary of job classes in the job graph and looks like this:
+    job instances are a dictionary of job instances in the job graph and looks like this:
 
-    job_classes: dict[str, JobABC] = {
+    job_instances: dict[str, JobABC] = {
         "A": SimpleJob("A"),
         "B": SimpleJob("B"),
         "C": SimpleJob("C"),
