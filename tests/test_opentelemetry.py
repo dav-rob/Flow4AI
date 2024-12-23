@@ -11,10 +11,6 @@ import jc_logging as logging
 from job import JobABC, Task
 from utils.otel_wrapper import TracerFactory, trace_function
 
-# This marks all tests in this module as isolated
-# Run with "python -m pytest --isolated"
-pytestmark = pytest.mark.isolated
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
