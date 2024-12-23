@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import time
 
@@ -8,6 +7,7 @@ import yaml
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
 
+import jc_logging as logging
 from job import JobABC, Task
 from utils.otel_wrapper import TracerFactory, trace_function
 

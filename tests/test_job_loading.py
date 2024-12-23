@@ -1,10 +1,11 @@
-import logging
 import os
 import sys
 from pathlib import Path
 
 import pytest
 import yaml
+
+import jc_logging as logging
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
