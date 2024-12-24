@@ -172,6 +172,58 @@ def test_config_loader_all():
     for graph_name, graph in graphs_config.items():
         validate_graph(graph, graph_name)
 
+def test_create_head_jobs_from_config(job_factory):
+    """Test that create_head_jobs_from_config creates the correct number of graphs with correct structure"""
+    # Set up test config directory
+    test_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config"))
+    logging.info(f"\nTest config dir: {test_config_dir}")
+    logging.info(f"Directory exists: {os.path.exists(test_config_dir)}")
+    logging.info(f"Directory contents: {os.listdir(test_config_dir)}")
+    
+    # Reset ConfigLoader state and set directories
+    ConfigLoader._cached_configs = None  # Reset cached configs
+    ConfigLoader.directories = [str(test_config_dir)]  # Convert to string for anyconfig
+
+    # Create head jobs
+    head_jobs = JobFactory.create_head_jobs_from_config()
+    
+    # Should create 4 graphs:
+    # - 2 from four_stage_parameterized (params1 and params2)
+    # - 1 from three_stage (params1)
+    # - 1 from three_stage_reasoning (no params)
+    assert len(head_jobs) == 4, f"Expected 4 head jobs, got {len(head_jobs)}"
+    
+    # Get graph definitions for validation
+    graphs_config = ConfigLoader.get_graphs_config()
+    
+    # Validate each head job's structure matches its graph definition
+    for head_job in head_jobs:
+        # Extract graph name and param group from job name
+        job_parts = head_job.name.split("_")
+        if len(job_parts) >= 3 and job_parts[0] in graphs_config:
+            graph_name = job_parts[0]
+            param_group = job_parts[1] if job_parts[1].startswith("params") else None
+            
+            # Get graph definition
+            graph_def = graphs_config[graph_name]
+            
+            # Validate job structure matches graph definition
+            def validate_job_structure(job, graph_def):
+                # Get job's base name (without graph and param prefixes)
+                base_job_name = "_".join(job.name.split("_")[2:]) if param_group else "_".join(job.name.split("_")[1:])
+                
+                # Check that next_jobs match graph definition
+                expected_next = set(graph_def[base_job_name].get("next", []))
+                actual_next = {next_job.name.split("_")[-1] for next_job in job.next_jobs}
+                assert expected_next == actual_next, \
+                    f"Mismatch in next_jobs for {job.name}. Expected: {expected_next}, Got: {actual_next}"
+                
+                # Recursively validate next jobs
+                for next_job in job.next_jobs:
+                    validate_job_structure(next_job, graph_def)
+            
+            validate_job_structure(head_job, graph_def)
+
 def test_validate_all_jobs_in_graph():
     """Test that validation catches jobs referenced in graphs but not defined in jobs"""
     # Test with invalid configuration
