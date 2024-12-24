@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sys
 from pathlib import Path
@@ -6,6 +7,7 @@ import pytest
 import yaml
 
 import jc_logging as logging
+from job import Task
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -17,6 +19,7 @@ from jobs.llm_jobs import OpenAIJob
 
 # Test configuration
 TEST_JOBS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config/jobs"))
+TEST_CONFIG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config"))
 
 @pytest.fixture
 def job_factory():
@@ -280,6 +283,44 @@ def test_validate_all_parameters_filled():
         ConfigLoader.load_all_configs()
     except ValueError as e:
         pytest.fail(f"Validation failed for valid configuration: {str(e)}")
+
+import io
+import logging
+
+
+@pytest.mark.asyncio
+async def test_job_execution_chain(caplog):
+    """Test that all jobs in a graph are executed when _execute is called on the head job."""
+    caplog.set_level('DEBUG')  # Set the logging level
+    # Load custom job types
+    JobFactory.load_custom_jobs_directory(TEST_JOBS_DIR)
+
+    # Set config directory for test
+    ConfigLoader.directories = [os.path.join(os.path.dirname(__file__), "test_jc_config")]
+    ConfigLoader.reload_configs()
+
+    # Get head jobs from config
+    head_jobs = JobFactory.create_head_jobs_from_config()
+
+    # Get the first head job from four_stage_parameterized_params1
+    head_job = [job for job in head_jobs if 'four_stage_parameterized_params1_read_file' in job.name][0]
+
+    # Execute the head job
+    await asyncio.create_task(head_job._execute(Task({"task": "Test task"})))
+
+    # Expected job names in the graph
+    expected_jobs = {
+        'four_stage_parameterized_params1_read_file',
+        'four_stage_parameterized_params1_ask_llm',
+        'four_stage_parameterized_params1_save_to_db',
+        'four_stage_parameterized_params1_summarize'
+    }
+
+    # Check that all jobs were executed by verifying their presence in the log output
+    for job_name in expected_jobs:
+        assert f"{job_name} finished running" in caplog.text, f"Job {job_name} was not executed"
+
+   
 
 @pytest.mark.asyncio
 @pytest.mark.skip(reason="Test is currently broken")
