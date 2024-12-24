@@ -33,6 +33,16 @@ ask_llm_mini:
       max_rate: 1
       time_period: 4
 
+ask_llm_reasoning:
+  type: OpenAIJob
+  properties:
+    api:
+      model: "o1-mini"
+      temperature: 0.7
+    rate_limit:
+      max_rate: 1
+      time_period: 4
+
 save_to_db2:
   type: MockDatabaseWriteJob
   properties:

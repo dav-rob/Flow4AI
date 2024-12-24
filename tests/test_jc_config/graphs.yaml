@@ -23,3 +23,14 @@ three_stage:
         - summarize
     summarize:
       next: []
+
+three_stage_reasoning:
+    ask_llm_reasoning:
+      next:
+        - save_to_db2
+        - summarize
+    save_to_db2:
+      next:
+        - summarize
+    summarize:
+      next: []
