@@ -198,7 +198,22 @@ def test_create_head_jobs_from_config(job_factory):
     graphs_config = ConfigLoader.get_graphs_config()
     
     # Validate each head job's structure matches its graph definition
-    for head_job in head_jobs:
+    for i, head_job in enumerate(head_jobs):
+        print(f"\nJob Graph {i + 1}:")
+        
+        # Print all jobs in this graph using DFS
+        visited = set()
+        def print_job_graph(job):
+            if job in visited:
+                return
+            visited.add(job)
+            print(str(job))
+            for child in job.next_jobs:
+                print_job_graph(child)
+        
+        print_job_graph(head_job)
+        print("----------------------")
+        
         # Extract graph name and param group from job name
         job_parts = head_job.name.split("_")
         if len(job_parts) >= 3 and job_parts[0] in graphs_config:
