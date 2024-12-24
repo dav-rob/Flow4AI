@@ -146,7 +146,12 @@ class JobABC(ABC, metaclass=JobMeta):
         return f"{cls.__name__}_{cls._instance_counts[cls]}"
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} name={self.name}>"
+        next_jobs_str = [job.name for job in self.next_jobs]
+        expected_inputs_str = [input_name for input_name in self.expected_inputs]
+        return (f"name: {self.name}\n"
+                f"next_jobs: {next_jobs_str}\n"
+                f"expected_inputs: {expected_inputs_str}\n"
+                f"properties: {self.properties}")
 
     async def _execute(self, task: Union[Task, None]) -> Dict[str, Any]:
         """
