@@ -17,7 +17,7 @@ class JobValidationError(Exception):
     pass
 
 
-class CustomJobLoader:
+class JobLoader:
 
     @staticmethod
     def validate_job_class(job_class: Type) -> bool:
@@ -43,21 +43,21 @@ class CustomJobLoader:
         return True
 
     @classmethod
-    def load_custom_jobs(cls, custom_jobs_dir: str) -> Dict[str, Type[JobABC]]:
+    def load_jobs(cls, jobs_dir: str) -> Dict[str, Type[JobABC]]:
         """
         Load all custom job classes from the specified directory
         """
-        custom_jobs = {}
-        custom_jobs_path = Path(custom_jobs_dir)
+        jobs = {}
+        jobs_path = Path(jobs_dir)
 
-        if not custom_jobs_path.exists():
-            raise FileNotFoundError(f"Custom jobs directory not found: {custom_jobs_dir}")
+        if not jobs_path.exists():
+            raise FileNotFoundError(f"Custom jobs directory not found: {jobs_dir}")
 
         # Add the custom jobs directory to Python path
-        sys.path.append(str(custom_jobs_path))
+        sys.path.append(str(jobs_path))
 
         # Scan for Python files
-        for file_path in custom_jobs_path.glob("**/*.py"):
+        for file_path in jobs_path.glob("**/*.py"):
             if file_path.name.startswith("__"):
                 continue
 
@@ -76,7 +76,7 @@ class CustomJobLoader:
                     if inspect.isclass(obj) and obj.__module__ == module.__name__:
                         try:
                             if cls.validate_job_class(obj):
-                                custom_jobs[name] = obj
+                                jobs[name] = obj
                         except Exception as e:
                             raise JobValidationError(
                                 f"Error validating job class {name} in {file_path}: {str(e)}"
@@ -87,7 +87,7 @@ class CustomJobLoader:
                     f"Error loading custom job from {file_path}: {str(e)}"
                 )
 
-        return custom_jobs
+        return jobs
 
 
 class JobFactory:
@@ -95,15 +95,15 @@ class JobFactory:
     _default_jobs_dir: str = os.path.join(os.path.dirname(__file__), "jobs")
 
     @classmethod
-    def load_custom_jobs_directory(cls, custom_jobs_dir: str):
+    def load_jobs_into_registry(cls, custom_jobs_dir: str = None):
         """
         Load and register all custom jobs from a directory
         """
-        loader = CustomJobLoader()
+        loader = JobLoader()
         # Create an iterable of directories, including the default and any custom directory.
         jobs_dirs = [cls._default_jobs_dir] + ([custom_jobs_dir] if custom_jobs_dir else [])
         for jobs_dir in jobs_dirs:
-            custom_jobs = loader.load_custom_jobs(jobs_dir)
+            custom_jobs = loader.load_jobs(jobs_dir)
             # Register all valid custom jobs
             for job_name, job_class in custom_jobs.items():
                 cls.register_job_type(job_name, job_class)

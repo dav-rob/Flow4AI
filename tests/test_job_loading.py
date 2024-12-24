@@ -26,7 +26,7 @@ def job_factory():
     factory = JobFactory()
     # Load both the test jobs and the real jobs
     #  the real jobs are always loaded by the factory
-    factory.load_custom_jobs_directory(TEST_JOBS_DIR)
+    factory.load_jobs_into_registry(TEST_JOBS_DIR)
     #factory.load_custom_jobs_directory(os.path.join(os.path.dirname(os.path.dirname(__file__)), "jobs"))
     return factory
 
@@ -293,7 +293,7 @@ async def test_job_execution_chain(caplog):
     """Test that all jobs in a graph are executed when _execute is called on the head job."""
     caplog.set_level('DEBUG')  # Set the logging level
     # Load custom job types
-    JobFactory.load_custom_jobs_directory(TEST_JOBS_DIR)
+    JobFactory.load_jobs_into_registry(TEST_JOBS_DIR)
 
     # Set config directory for test
     ConfigLoader.directories = [os.path.join(os.path.dirname(__file__), "test_jc_config")]
