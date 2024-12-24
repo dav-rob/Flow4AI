@@ -13,6 +13,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from jc_graph import validate_graph
 from job_loader import ConfigLoader, JobFactory
 from jobs.llm_jobs import OpenAIJob
+from job_chain import JobChain  # Import JobChain
 
 # Test configuration
 TEST_JOBS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config/jobs"))
@@ -264,3 +265,40 @@ def test_validate_all_parameters_filled():
         ConfigLoader.load_all_configs()
     except ValueError as e:
         pytest.fail(f"Validation failed for valid configuration: {str(e)}")
+
+@pytest.mark.asyncio
+async def test_head_jobs_in_jobchain(job_factory):
+    """Test that head jobs from config can be executed in JobChain"""
+    # Set config directory for test
+    ConfigLoader.directories = [os.path.join(os.path.dirname(__file__), "test_jc_config")]
+    ConfigLoader.reload_configs()
+
+    # Get head jobs from config
+    head_jobs = JobFactory.create_head_jobs_from_config()
+
+    # List to store results
+    results = []
+    
+    def result_processor(result):
+        results.append(result)
+        logging.info(f"Processed result: {result}")
+    
+    # Create JobChain with all head jobs and result processor
+    job_chain = JobChain(head_jobs, result_processor, serial_processing=True)
+    
+    # Submit tasks for each job
+    for job in head_jobs:
+        job_chain.submit_task({"task": "Test task"}, job.name)
+    
+    # Mark input as completed and wait for all tasks to finish
+    job_chain.mark_input_completed()
+    
+    # Verify results
+    # We expect one result per head job
+    assert len(results) == len(head_jobs), f"Expected {len(head_jobs)} results, got {len(results)}"
+    
+    # Each result should be a dictionary with job results
+    for result in results:
+        assert isinstance(result, dict), f"Expected dict result, got {type(result)}"
+        # The result should contain outputs from all jobs in the graph
+        assert len(result) > 0, "Expected non-empty result"
