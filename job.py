@@ -320,10 +320,11 @@ def create_job_graph(graph_definition: dict[str, dict], job_instances: dict[str,
     for job_name, config in graph_definition.items():
         nodes[job_name].next_jobs = [nodes[next_name] for next_name in config['next']]
 
-    # 3) Set expected_inputs for each node
+    # 3) Set expected_inputs for each node using fully qualified names
     for job_name, input_job_names_set in incoming_edges.items():
         if input_job_names_set:  # if node has incoming edges
-            nodes[job_name].expected_inputs = input_job_names_set
+            # Transform short names to fully qualified names using the job_instances dictionary
+            nodes[job_name].expected_inputs = {job_instances[input_name].name for input_name in input_job_names_set}
 
     # 4) Set reference to final node in head node -- not needed!
     # Find node with no next jobs
