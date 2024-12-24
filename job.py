@@ -190,6 +190,7 @@ class JobABC(ABC, metaclass=JobMeta):
         #  call run with the inputs provided by predecessor jobs
         #  or the Task provided on the head Job in the Job Graph.
         result = await self.run(self.inputs)
+        self.logger.debug(f"Job {self.name} finished running")
 
         # Clear state for potential reuse
         self.inputs.clear()
