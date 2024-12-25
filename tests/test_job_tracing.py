@@ -106,16 +106,16 @@ def test_decorator_preserves_method_signature():
 
 def test_job_factory_returns_untraced_jobs():
     """Test that JobFactory returns properly untraced Job instances"""
-    from job import JobFactory
+    from job import SimpleJobFactory
 
     # Test file-based job loading
-    file_job = JobFactory.load_job({"type": "file", "params": {}})
+    file_job = SimpleJobFactory.load_job({"type": "file", "params": {}})
     assert isinstance(file_job, JobABC)
     assert not _has_own_traced_execute(file_job.__class__), "Factory-created jobs should not have their own traced _execute"
     assert hasattr(file_job, 'executeNoTrace')
     
     # Test datastore-based job loading
-    datastore_job = JobFactory.load_job({"type": "datastore", "params": {}})
+    datastore_job = SimpleJobFactory.load_job({"type": "datastore", "params": {}})
     assert isinstance(datastore_job, JobABC)
     assert not _has_own_traced_execute(datastore_job.__class__), "Factory-created jobs should not have their own traced _execute"
     assert hasattr(datastore_job, 'executeNoTrace')
@@ -197,16 +197,16 @@ def test_decorator_preserves_method_signature():
 
 def test_job_factory_returns_untraced_jobs():
     """Test that JobFactory returns properly untraced Job instances"""
-    from job import JobFactory
+    from job import SimpleJobFactory
 
     # Test file-based job loading
-    file_job = JobFactory.load_job({"type": "file", "params": {}})
+    file_job = SimpleJobFactory.load_job({"type": "file", "params": {}})
     assert isinstance(file_job, JobABC)
     assert not _has_own_traced_execute(file_job.__class__), "Factory-created jobs should not have their own traced _execute"
     assert hasattr(file_job, 'executeNoTrace')
     
     # Test datastore-based job loading
-    datastore_job = JobFactory.load_job({"type": "datastore", "params": {}})
+    datastore_job = SimpleJobFactory.load_job({"type": "datastore", "params": {}})
     assert isinstance(datastore_job, JobABC)
     assert not _has_own_traced_execute(datastore_job.__class__), "Factory-created jobs should not have their own traced _execute"
     assert hasattr(datastore_job, 'executeNoTrace')

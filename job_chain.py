@@ -7,7 +7,7 @@ from collections import OrderedDict
 from typing import Any, Callable, Collection, Dict, Optional, Union
 
 import jc_logging as logging
-from job import JobABC, JobFactory, Task
+from job import JobABC, SimpleJobFactory, Task
 from utils.print_utils import printh
 
 # Initialize logging configuration
@@ -61,7 +61,7 @@ class JobChain:
         
         if isinstance(job, Dict):
             job_context: Dict[str, Any] = job.get("job_context") or {}
-            loaded_job = JobFactory.load_job(job_context)
+            loaded_job = SimpleJobFactory.load_job(job_context)
             if isinstance(loaded_job, JobABC):
                 self.job_map[loaded_job.name] = loaded_job
         elif isinstance(job, JobABC):

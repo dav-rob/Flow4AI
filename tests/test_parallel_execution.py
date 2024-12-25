@@ -14,7 +14,7 @@ import time
 import yaml
 
 import jc_logging as logging
-from job import JobABC, JobFactory
+from job import JobABC, SimpleJobFactory
 from job_chain import JobChain
 from utils.otel_wrapper import TracerFactory
 
@@ -40,15 +40,15 @@ def create_delayed_job(params: dict) -> JobABC:
     return DelayedJob("Test Job", time_delay)
 
 # Store original load_from_file function
-original_load_from_file = JobFactory._load_from_file
+original_load_from_file = SimpleJobFactory._load_from_file
 
 def setup_module(module):
     """Set up test environment"""
-    JobFactory._load_from_file = create_delayed_job
+    SimpleJobFactory._load_from_file = create_delayed_job
 
 def teardown_module(module):
     """Restore original implementation"""
-    JobFactory._load_from_file = original_load_from_file
+    SimpleJobFactory._load_from_file = original_load_from_file
 
 def dummy_result_processor(result):
     """Dummy function for processing results in tests"""

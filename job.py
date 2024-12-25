@@ -243,10 +243,10 @@ class SimpleJob(JobABC):
         """Run a simple job that logs and returns the task."""
         self.logger.info(f"Async JOB for {task}")
         await asyncio.sleep(1)  # Simulate network delay
-        return {"task": task._data, "status": "complete"}
+        return {"task": task, "status": "complete"}
 
 
-class JobFactory:
+class SimpleJobFactory:
     """Factory class for creating Job instances with proper tracing."""
     
     @staticmethod
@@ -270,9 +270,9 @@ class JobFactory:
         params = job_context.get("params", {})
 
         if load_type == "file":
-            return JobFactory._load_from_file(params)
+            return SimpleJobFactory._load_from_file(params)
         elif load_type == "datastore":
-            return JobFactory._load_from_datastore(params)
+            return SimpleJobFactory._load_from_datastore(params)
         else:
             raise ValueError(f"Unsupported job type: {load_type}")
 
