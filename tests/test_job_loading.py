@@ -353,7 +353,7 @@ async def test_head_jobs_in_jobchain(job_factory):
     for result in results:
         assert isinstance(result, dict), f"Expected dict result, got {type(result)}"
         # The result should contain outputs from all jobs in the graph
-        assert len(result) > 0, "Expected non-empty result"
+        assert len(result) == 4, "Expected 4 results one for each Job in the graph"
 
 @pytest.mark.asyncio
 @pytest.mark.skip(reason="Test is currently broken")
