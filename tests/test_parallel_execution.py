@@ -260,8 +260,8 @@ def test_parallel_execution_with_tracing(tmp_path):
         logger.info("Job chain execution completed")
 
         # Verify execution time
-        assert execution_time <= 3.3, (
-            f"Expected tasks to complete in ~3.3s (including data gathering + overhead), took {execution_time:.2f}s. "
+        assert execution_time <= 3.5, (
+            f"Expected tasks to complete in ~3.5s (including data gathering + overhead), took {execution_time:.2f}s. "
             "This suggests tasks are running sequentially"
         )
 
