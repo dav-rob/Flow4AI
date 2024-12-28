@@ -96,13 +96,21 @@ class JobFactory:
     _cached_job_graphs: List[JobABC] = None
 
     @classmethod
-    def load_jobs_into_registry(cls, custom_jobs_dir: str = None):
+    def load_jobs_into_registry(cls, custom_jobs_dirs: list[str] = None):
         """
-        Load and register all custom jobs from a directory
+        Load and register all custom jobs from specified config directories.
+        Will look for jobs in the 'jobs' subdirectory of each config directory.
+
+        Args:
+            custom_jobs_dirs: List of config directory paths. Jobs will be loaded from the 'jobs' subdirectory
+                            of each config directory.
         """
         loader = JobLoader()
-        # Create an iterable of directories, including the default and any custom directory.
-        jobs_dirs = [cls._default_jobs_dir] + ([custom_jobs_dir] if custom_jobs_dir else [])
+        # Create an iterable of job directories, including the default and any custom directories
+        jobs_dirs = [cls._default_jobs_dir]
+        if custom_jobs_dirs:
+            jobs_dirs.extend([os.path.join(config_dir, "jobs") for config_dir in custom_jobs_dirs])
+            
         for jobs_dir in jobs_dirs:
             custom_jobs = loader.load_jobs(jobs_dir)
             # Register all valid custom jobs
@@ -178,7 +186,7 @@ class JobFactory:
 
 
 class ConfigLoader:
-    directories = [
+    directories: List[str] = [
         "./local/config",
         "/etc/myapp/config"
     ]

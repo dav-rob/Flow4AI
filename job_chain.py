@@ -8,6 +8,7 @@ from typing import Any, Callable, Collection, Dict, Optional, Union
 
 import jc_logging as logging
 from job import JobABC, SimpleJobFactory, Task
+from job_loader import ConfigLoader, JobFactory
 from utils.print_utils import printh
 
 # Initialize logging configuration
@@ -168,7 +169,7 @@ class JobChain:
         self.logger.debug("Starting job executor process")
         self.job_executor_process = mp.Process(
             target=self._async_worker,
-            args=(self.job_map, self._task_queue, self._result_queue, self._job_name_map, self._jobs_loaded),
+            args=(self.job_map, self._task_queue, self._result_queue, self._job_name_map, self._jobs_loaded, ConfigLoader.directories),
             name="JobExecutorProcess"
         )
         self.job_executor_process.start()
@@ -335,7 +336,8 @@ class JobChain:
     # Instance methods can't be pickled properly for multiprocessing
     @staticmethod
     def _async_worker(job_map: Dict[str, JobABC], task_queue: 'mp.Queue', result_queue: 'mp.Queue', 
-                     job_name_map: 'mp.managers.DictProxy', jobs_loaded: 'mp.Event'):
+                     job_name_map: 'mp.managers.DictProxy', jobs_loaded: 'mp.Event', 
+                     directories: list[str] = []):
         """Process that handles making workflow calls using asyncio."""
         # Get logger for AsyncWorker
         logger = logging.getLogger('AsyncWorker')
@@ -343,9 +345,15 @@ class JobChain:
 
         # If job_map is empty, create it from SimpleJobLoader
         if not job_map:
-            logger.info("Creating job map from SimpleJobLoader")
-            job = SimpleJobFactory.load_job({"type": "file", "params": {}})
-            job_map = {job.name: job}
+            # logger.info("Creating job map from SimpleJobLoader")
+            # job = SimpleJobFactory.load_job({"type": "file", "params": {}})
+            # job_map = {job.name: job}
+            logger.info("Creating job map from JobLoader")
+            JobFactory.load_jobs_into_registry(TEST_JOBS_DIR)
+            ConfigLoader._set_directories(directories)
+            ConfigLoader.reload_configs()
+            head_jobs = JobFactory.get_head_jobs_from_config()
+            job_map = {job.name: job for job in head_jobs}
             # Update the shared job_name_map
             job_name_map.clear()
             job_name_map.update({name: name for name in job_map.keys()})
@@ -441,3 +449,19 @@ class JobChain:
         finally:
             logger.info("Closing event loop")
             loop.close()
+
+    def get_job_names(self) -> list[str]:
+        """
+        Returns a list of job names after ensuring the job_name_map is loaded.
+
+        Returns:
+            list[str]: List of job names from the job_name_map
+
+        Raises:
+            TimeoutError: If waiting for jobs to be loaded exceeds timeout
+        """
+        self.logger.debug("Waiting for jobs to be loaded before returning job names")
+        if not self._jobs_loaded.wait(timeout=5):
+            raise TimeoutError("Timed out waiting for jobs to be loaded")
+        
+        return list(self._job_name_map.keys())
