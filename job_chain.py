@@ -59,6 +59,19 @@ class JobChain:
         # associated with it, if there is more than one job in the job_map
         self.job_map: OrderedDict[str, JobABC] = OrderedDict()
         
+        # Create a manager for sharing objects between processes
+        self._manager = mp.Manager()
+        # Create a shared dictionary for job name mapping
+        self._job_name_map = self._manager.dict()
+        # Create an event to signal when jobs are loaded
+        self._jobs_loaded = mp.Event()
+
+        if job:
+            self.create_job_map(job)
+        
+        self._start()
+
+    def create_job_map(self, job):
         if isinstance(job, Dict):
             job_context: Dict[str, Any] = job.get("job_context") or {}
             loaded_job = SimpleJobFactory.load_job(job_context)
@@ -80,8 +93,9 @@ class JobChain:
                     raise TypeError("Items in job collection must be JobABC instances")
         else:
             raise TypeError("job must be either Dict[str, Any], JobABC instance, or Collection[JobABC]")
-        
-        self._start()
+
+        self._job_name_map.clear()
+        self._job_name_map.update({name: name for name in self.job_map.keys()})
 
     # We will not to use context manager as it makes semantics of JobChain use less flexible
     # def __enter__(self):
@@ -154,7 +168,7 @@ class JobChain:
         self.logger.debug("Starting job executor process")
         self.job_executor_process = mp.Process(
             target=self._async_worker,
-            args=(self.job_map, self._task_queue, self._result_queue),
+            args=(self.job_map, self._task_queue, self._result_queue, self._job_name_map, self._jobs_loaded),
             name="JobExecutorProcess"
         )
         self.job_executor_process.start()
@@ -186,6 +200,10 @@ class JobChain:
             TypeError: If the task is not a dictionary or string.
         """
         try:
+            # Wait for jobs to be loaded
+            if not self._jobs_loaded.wait(timeout=5):
+                raise TimeoutError("Timed out waiting for jobs to be loaded")
+
             if task is None:
                 self.logger.warning("Received None task, skipping")
                 return
@@ -200,27 +218,27 @@ class JobChain:
 
             # If job_name parameter is provided, it takes precedence
             if job_name is not None:
-                if job_name not in self.job_map:
+                if job_name not in self._job_name_map:
                     raise ValueError(
-                        f"Job '{job_name}' not found. Available jobs: {list(self.job_map.keys())}"
+                        f"Job '{job_name}' not found. Available jobs: {list(self._job_name_map.keys())}"
                     )
                 task_dict['job_name'] = job_name
             
             # If there's more than one job, we need a valid job name
-            if len(self.job_map) > 1:
+            if len(self._job_name_map) > 1:
                 if 'job_name' not in task_dict or not isinstance(task_dict['job_name'], str) or not task_dict['job_name']:
                     raise ValueError(
                         "When multiple jobs are present, you must either:\n"
                         "1) Provide the job_name parameter in submit_task() OR\n"
                         "2) Include a non-empty string 'job_name' in the task dictionary"
                     )
-                if task_dict['job_name'] not in self.job_map:
+                if task_dict['job_name'] not in self._job_name_map:
                     raise ValueError(
-                        f"Job '{task_dict['job_name']}' not found. Available jobs: {list(self.job_map.keys())}"
+                        f"Job '{task_dict['job_name']}' not found. Available jobs: {list(self._job_name_map.keys())}"
                     )
-            elif len(self.job_map) == 1:
+            elif len(self._job_name_map) == 1:
                 # If there's only one job, use its name
-                task_dict['job_name'] = next(iter(self.job_map.keys()))
+                task_dict['job_name'] = next(iter(self._job_name_map.keys()))
             else:
                 raise ValueError("No jobs available in JobChain")
 
@@ -316,11 +334,25 @@ class JobChain:
     # Must be static because it's passed as a target to multiprocessing.Process
     # Instance methods can't be pickled properly for multiprocessing
     @staticmethod
-    def _async_worker(job_map: Dict[str, JobABC], task_queue: 'mp.Queue', result_queue: 'mp.Queue'):
+    def _async_worker(job_map: Dict[str, JobABC], task_queue: 'mp.Queue', result_queue: 'mp.Queue', 
+                     job_name_map: 'mp.managers.DictProxy', jobs_loaded: 'mp.Event'):
         """Process that handles making workflow calls using asyncio."""
         # Get logger for AsyncWorker
         logger = logging.getLogger('AsyncWorker')
         logger.debug("Starting async worker")
+
+        # If job_map is empty, create it from SimpleJobLoader
+        if not job_map:
+            logger.info("Creating job map from SimpleJobLoader")
+            job = SimpleJobFactory.load_job({"type": "file", "params": {}})
+            job_map = {job.name: job}
+            # Update the shared job_name_map
+            job_name_map.clear()
+            job_name_map.update({name: name for name in job_map.keys()})
+            logger.info(f"Created job map with jobs: {list(job_name_map.keys())}")
+
+        # Signal that jobs are loaded
+        jobs_loaded.set()
 
         async def process_task(task: Task):
             """Process a single task and return its result"""
