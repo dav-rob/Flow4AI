@@ -20,7 +20,8 @@ class JobChain:
     Optionally passes results to a pre-existing result processing function after task completion.
 
     Args:
-        job (Union[Dict[str, Any], JobABC, Collection[JobABC]]): Either a dictionary containing job configuration,
+        job (Union[Dict[str, Any], JobABC, Collection[JobABC]]): If missing, jobs will be loaded from config file.
+            Otherwise either a dictionary containing job configuration,
             a single JobABC instance, or a collection of JobABC instances.
 
         result_processing_function (Optional[Callable[[Any], None]]): Code to handle results after the Job executes its task.
@@ -34,8 +35,7 @@ class JobChain:
             However, in most cases changing result_processing_function to be picklable is straightforward and should be the default.
             Defaults to False.
     """
-    def __init__(self, job: Union[Dict[str, Any], JobABC, Collection[JobABC]], 
-                 result_processing_function: Optional[Callable[[Any], None]] = None, 
+    def __init__(self, job: Optional[Any], result_processing_function: Optional[Callable[[Any], None]] = None, 
                  serial_processing: bool = False):
         # Get logger for JobChain
         self.logger = logging.getLogger('JobChain')
