@@ -349,7 +349,7 @@ class JobChain:
             # job = SimpleJobFactory.load_job({"type": "file", "params": {}})
             # job_map = {job.name: job}
             logger.info("Creating job map from JobLoader")
-            JobFactory.load_jobs_into_registry(TEST_JOBS_DIR)
+            JobFactory.load_jobs_into_registry(directories)
             ConfigLoader._set_directories(directories)
             ConfigLoader.reload_configs()
             head_jobs = JobFactory.get_head_jobs_from_config()

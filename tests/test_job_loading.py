@@ -319,7 +319,7 @@ async def test_job_execution_chain(caplog):
    
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Test is currently broken")
+#@pytest.mark.skip(reason="Test is currently broken")
 async def test_head_jobs_in_jobchain(job_factory):
     """Test that head jobs from config can be executed in JobChain"""
     # Set config directory for test
