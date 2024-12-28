@@ -93,6 +93,7 @@ class JobLoader:
 class JobFactory:
     _job_types: Dict[str, Type[JobABC]] = {}
     _default_jobs_dir: str = os.path.join(os.path.dirname(__file__), "jobs")
+    _cached_job_graphs: List[JobABC] = None
 
     @classmethod
     def load_jobs_into_registry(cls, custom_jobs_dir: str = None):
@@ -120,24 +121,27 @@ class JobFactory:
         cls._job_types[type_name] = job_class
 
     @classmethod
-    def create_head_jobs_from_config(cls) -> Collection[JobABC]:
-        job_graphs: list[JobABC] = []
-        graphs_config = ConfigLoader.get_graphs_config()
-        graph_names = list(graphs_config.keys())
-        for graph_name in graph_names:
-            graph_def = graphs_config[graph_name]
-            job_names_in_graph = list(graph_def.keys())
-            param_groups_for_graph_name = ConfigLoader.get_parameters_config().get(graph_name, {})
-            if param_groups_for_graph_name:
-                param_jobs_graphs: List[JobABC] = cls.create_job_graph_using_parameters(graph_def, graph_name,
-                                                                                        param_groups_for_graph_name,
-                                                                                        job_names_in_graph)
-                job_graphs += param_jobs_graphs
-            else:
-                job_graph_no_params: JobABC = cls.create_job_graph_no_params(graph_def, graph_name,
-                                                                                     job_names_in_graph)
-                job_graphs.append(job_graph_no_params)
-        return job_graphs
+    def get_head_jobs_from_config(cls) -> Collection[JobABC]:
+        """Create job graphs from configuration, using cache if available"""
+        if cls._cached_job_graphs is None:
+            job_graphs: list[JobABC] = []
+            graphs_config = ConfigLoader.get_graphs_config()
+            graph_names = list(graphs_config.keys())
+            for graph_name in graph_names:
+                graph_def = graphs_config[graph_name]
+                job_names_in_graph = list(graph_def.keys())
+                param_groups_for_graph_name = ConfigLoader.get_parameters_config().get(graph_name, {})
+                if param_groups_for_graph_name:
+                    param_jobs_graphs: List[JobABC] = cls.create_job_graph_using_parameters(graph_def, graph_name,
+                                                                                            param_groups_for_graph_name,
+                                                                                            job_names_in_graph)
+                    job_graphs += param_jobs_graphs
+                else:
+                    job_graph_no_params: JobABC = cls.create_job_graph_no_params(graph_def, graph_name,
+                                                                                 job_names_in_graph)
+                    job_graphs.append(job_graph_no_params)
+            cls._cached_job_graphs = job_graphs
+        return cls._cached_job_graphs
 
     @classmethod
     def create_job_graph_using_parameters(cls, graph_def, graph_name, param_groups_for_graph_name,
@@ -179,6 +183,19 @@ class ConfigLoader:
         "/etc/myapp/config"
     ]
     _cached_configs: Dict[str, dict] = None
+
+    @classmethod
+    def _set_directories(cls, directories):
+        """Set the directories and clear the cache"""
+        cls.directories = directories
+        cls._cached_configs = None
+
+    @classmethod
+    def __setattr__(cls, name, value):
+        """Clear cache when directories are changed"""
+        super().__setattr__(name, value)
+        if name == 'directories':
+            cls._cached_configs = None
 
     @classmethod
     def load_configs_from_dirs(
@@ -314,7 +331,7 @@ class ConfigLoader:
                     if next_job not in defined_jobs:
                         raise ValueError(
                             f"Job '{next_job}' referenced in 'next' field of job '{job_name}' in graph '{graph_name}' is not defined in jobs configuration")
-                    
+
             # After verifying all jobs exist, validate graph structure
             from jc_graph import validate_graph
             validate_graph(graph_def, graph_name)
@@ -371,8 +388,9 @@ class ConfigLoader:
     @classmethod
     def load_all_configs(cls) -> Dict[str, dict]:
         """Load all configurations and validate them"""
-        cls._cached_configs = cls.load_configs_from_dirs(cls.directories)
-        cls.validate_configs(cls._cached_configs)
+        if cls._cached_configs is None:
+            cls._cached_configs = cls.load_configs_from_dirs(cls.directories)
+            cls.validate_configs(cls._cached_configs)
         return cls._cached_configs
 
     @classmethod

@@ -106,7 +106,7 @@ def test_config_loader_separate():
     
     # Reset ConfigLoader state and set directories
     ConfigLoader._cached_configs = None  # Reset cached configs
-    ConfigLoader.directories = [str(test_config_dir)]  # Convert to string for anyconfig
+    ConfigLoader._set_directories([str(test_config_dir)])  # Convert to string for anyconfig
     logging.info(f"ConfigLoader directories: {ConfigLoader.directories}")
     
     # Test graphs config
@@ -146,7 +146,7 @@ def test_config_loader_all():
     
     # Reset ConfigLoader state and set directories
     ConfigLoader._cached_configs = None  # Reset cached configs
-    ConfigLoader.directories = [str(test_config_dir)]  # Convert to string for anyconfig
+    ConfigLoader._set_directories([str(test_config_dir)])  # Convert to string for anyconfig
     logging.info(f"ConfigLoader directories: {ConfigLoader.directories}")
     
     # Load the combined config file for comparison
@@ -186,10 +186,10 @@ def test_create_head_jobs_from_config(job_factory):
     
     # Reset ConfigLoader state and set directories
     ConfigLoader._cached_configs = None  # Reset cached configs
-    ConfigLoader.directories = [str(test_config_dir)]  # Convert to string for anyconfig
+    ConfigLoader._set_directories([str(test_config_dir)])  # Convert to string for anyconfig
 
     # Create head jobs
-    head_jobs = JobFactory.create_head_jobs_from_config()
+    head_jobs = JobFactory.get_head_jobs_from_config()
     
     # Should create 4 graphs:
     # - 2 from four_stage_parameterized (params1 and params2)
@@ -247,7 +247,7 @@ def test_validate_all_jobs_in_graph():
     """Test that validation catches jobs referenced in graphs but not defined in jobs"""
     # Test with invalid configuration
     invalid_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config_invalid"))
-    ConfigLoader.directories = [invalid_config_dir]
+    ConfigLoader._set_directories([invalid_config_dir])
     
     with pytest.raises(ValueError) as exc_info:
         ConfigLoader.load_all_configs()
@@ -255,7 +255,7 @@ def test_validate_all_jobs_in_graph():
     
     # Test with valid configuration
     valid_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config"))
-    ConfigLoader.directories = [valid_config_dir]
+    ConfigLoader._set_directories([valid_config_dir])
     
     try:
         ConfigLoader.load_all_configs()
@@ -266,7 +266,7 @@ def test_validate_all_parameters_filled():
     """Test that validation catches missing or invalid parameter configurations"""
     # Test with invalid parameter configuration
     invalid_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config_invalid_parameters"))
-    ConfigLoader.directories = [invalid_config_dir]
+    ConfigLoader._set_directories([invalid_config_dir])
     
     with pytest.raises(ValueError) as exc_info:
         ConfigLoader.load_all_configs()
@@ -277,7 +277,7 @@ def test_validate_all_parameters_filled():
     
     # Test with valid configuration
     valid_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config"))
-    ConfigLoader.directories = [valid_config_dir]
+    ConfigLoader._set_directories([valid_config_dir])
     
     try:
         ConfigLoader.load_all_configs()
@@ -296,11 +296,11 @@ async def test_job_execution_chain(caplog):
     JobFactory.load_jobs_into_registry(TEST_JOBS_DIR)
 
     # Set config directory for test
-    ConfigLoader.directories = [os.path.join(os.path.dirname(__file__), "test_jc_config")]
+    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_jc_config")])
     ConfigLoader.reload_configs()
 
     # Get head jobs from config
-    head_jobs = JobFactory.create_head_jobs_from_config()
+    head_jobs = JobFactory.get_head_jobs_from_config()
 
     # Get the first head job from four_stage_parameterized_params1
     head_job = [job for job in head_jobs if 'four_stage_parameterized_params1_read_file' in job.name][0]
@@ -323,15 +323,12 @@ async def test_job_execution_chain(caplog):
    
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Test is currently broken")
+#@pytest.mark.skip(reason="Test is currently broken")
 async def test_head_jobs_in_jobchain(job_factory):
     """Test that head jobs from config can be executed in JobChain"""
     # Set config directory for test
-    ConfigLoader.directories = [os.path.join(os.path.dirname(__file__), "test_jc_config")]
+    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_jc_config")])
     ConfigLoader.reload_configs()
-
-    # Get head jobs from config
-    head_jobs = JobFactory.create_head_jobs_from_config()
 
     # List to store results
     results = []
@@ -340,8 +337,11 @@ async def test_head_jobs_in_jobchain(job_factory):
         results.append(result)
         logging.info(f"Processed result: {result}")
     
-    # Create JobChain with all head jobs and result processor
-    job_chain = JobChain(head_jobs, result_processor, serial_processing=True)
+    # Create JobChain without jobs and let worker process load them
+    job_chain = JobChain(job=None, result_processing_function=result_processor, serial_processing=True)
+    
+    # Get head jobs from config to know their names
+    head_jobs = JobFactory.get_head_jobs_from_config()
     
     # Submit tasks for each job
     for job in head_jobs:
