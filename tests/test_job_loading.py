@@ -3,6 +3,7 @@ import os
 import sys
 from pathlib import Path
 
+import multiprocess as mp
 import pytest
 import yaml
 
@@ -321,20 +322,20 @@ async def test_job_execution_chain(caplog):
    
 
 @pytest.mark.asyncio
-#@pytest.mark.skip(reason="Test is currently broken")
-async def test_head_jobs_in_jobchain(job_factory):
-    """Test that head jobs from config can be executed in JobChain with correct parameter substitution"""
+async def test_head_jobs_in_jobchain_serial():
+    """Test that head jobs from config can be executed in JobChain with serial processing"""
     # Set config directory for test
     ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_jc_config")])
 
-    # List to store results
-    results = []
+    # Create a shared list for results using multiprocessing.Manager
+    manager = mp.Manager()
+    results = manager.list()
     
     def result_processor(result):
         results.append(result)
         logging.info(f"Processed result: {result}")
     
-    # Create JobChain without jobs and let worker process load them
+    # Create JobChain with serial processing to ensure deterministic results
     job_chain = JobChain(job=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
@@ -347,12 +348,18 @@ async def test_head_jobs_in_jobchain(job_factory):
     # Mark input as completed and wait for all tasks to finish
     job_chain.mark_input_completed()
     
+    # Convert shared list to regular list for sorting
+    results_list = list(results)
+    
     # Verify results
     # We expect one result per head job
-    assert len(results) == len(head_jobs), f"Expected {len(head_jobs)} results, got {len(results)}"
+    assert len(results_list) == len(head_jobs), f"Expected {len(head_jobs)} results, got {len(results_list)}"
+    
+    # Sort results by job name to ensure deterministic ordering
+    results_list.sort(key=lambda x: next(iter(x.keys())))
     
     # Each result should be a dictionary with job results
-    for result in results:
+    for result in results_list:
         assert isinstance(result, dict), f"Expected dict result, got {type(result)}"
         
         # Verify parameter substitution for each graph type
@@ -369,3 +376,75 @@ async def test_head_jobs_in_jobchain(job_factory):
             # Verify save_to_db2 parameters are from the job definition
             assert 'sqlite://user2:pass2@db2/mydb' in result_str, "Database URL not correctly set"
             assert 'table_b' in result_str, "Table name not correctly set"
+
+
+def process_result(result):
+    """Process a result by appending it to the global results list and logging to file"""
+    print(f"Got result: {result}")
+    with open("count_parallel_results", "a") as f:
+        f.write(f"{str(result)}\n")
+
+
+@pytest.mark.asyncio
+async def test_head_jobs_in_jobchain_parallel():
+    """Test that head jobs from config can be executed in JobChain with parallel processing"""
+    # Clean up any existing results file
+    if os.path.exists("count_parallel_results"):
+        os.remove("count_parallel_results")
+        
+    # Set config directory for test
+    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_jc_config")])
+    
+    # Create JobChain with parallel processing (default)
+    job_chain = JobChain(job=None, result_processing_function=process_result)
+    
+    # Get head jobs from config to know their names
+    head_jobs = job_chain.get_job_names()
+    
+    # Submit tasks for each job
+    for job in head_jobs:
+        job_chain.submit_task({"task": "Test task"}, job_name=job)
+    
+    # Mark input as completed and wait for all processing to finish
+    job_chain.mark_input_completed()
+    
+    # Read results file and verify contents
+    with open("count_parallel_results", "r") as f:
+        results_list = [eval(line.strip()) for line in f.readlines()]
+        assert len(results_list) == 4, f"Expected 4 results but got {len(results_list)}"
+        
+        # Each result should be a dictionary with job results
+        for result in results_list:
+            assert isinstance(result, dict), f"Expected dict result, got {type(result)}"
+            
+            # Verify parameter substitution for each graph type
+            if 'four_stage_parameterized_params1_summarize' in result:
+                result_str = str(result['four_stage_parameterized_params1_summarize'])
+                # Verify save_to_db parameters
+                assert 'postgres://user1:pass1@db1/mydb' in result_str, "Database URL not correctly substituted"
+                assert 'table_a' in result_str, "Table name not correctly substituted"
+                # Verify read_file parameters
+                assert './file1.txt' in result_str, "Filepath not correctly substituted"
+                
+            elif 'four_stage_parameterized_params2_summarize' in result:
+                result_str = str(result['four_stage_parameterized_params2_summarize'])
+                # Verify save_to_db parameters
+                assert 'sqlite://user2:pass2@db2/mydb' in result_str, "Database URL not correctly substituted"
+                assert 'table_b' in result_str, "Table name not correctly substituted"
+                # Verify read_file parameters
+                assert './file2.txt' in result_str, "Filepath not correctly substituted"
+                
+            elif 'three_stage_params1_summarize' in result:
+                result_str = str(result['three_stage_params1_summarize'])
+                # Verify save_to_db2 parameters are from the job definition
+                assert 'sqlite://user2:pass2@db2/mydb' in result_str, "Database URL not correctly set"
+                assert 'table_b' in result_str, "Table name not correctly set"
+                
+            elif 'three_stage_reasoning__summarize' in result:
+                result_str = str(result['three_stage_reasoning__summarize'])
+                # Verify save_to_db2 parameters are from the job definition
+                assert 'sqlite://user2:pass2@db2/mydb' in result_str, "Database URL not correctly set"
+                assert 'table_b' in result_str, "Table name not correctly set"
+    
+    # Clean up results file
+    os.remove("count_parallel_results")
