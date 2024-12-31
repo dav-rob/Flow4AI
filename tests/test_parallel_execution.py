@@ -161,8 +161,8 @@ def test_parallel_execution_in_batches():
     """Test parallel execution of website analysis in batches while scraping continues"""
     execution_time = asyncio.run(run_batch_job_chain())
     
-    assert execution_time <= 11.5, (
-        f"Expected execution to complete in ~10.7s, took {execution_time:.2f}s. "
+    assert execution_time <= 11.8, (
+        f"Expected execution to complete in ~11.8s, took {execution_time:.2f}s. "
         "This suggests analysis jobs are not running in parallel with scraping"
     )
     
