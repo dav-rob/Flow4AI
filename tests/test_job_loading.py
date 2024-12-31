@@ -3,7 +3,6 @@ import os
 import sys
 from pathlib import Path
 
-import multiprocess as mp
 import pytest
 import yaml
 
@@ -327,9 +326,9 @@ async def test_head_jobs_in_jobchain_serial():
     # Set config directory for test
     ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_jc_config")])
 
-    # Create a shared list for results using multiprocessing.Manager
-    manager = mp.Manager()
-    results = manager.list()
+   
+    results = []
+    
     
     def result_processor(result):
         results.append(result)
