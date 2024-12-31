@@ -1,7 +1,9 @@
 import asyncio
+# In theory it makes sense to use dill with the multiprocess package
+# instead of pickle but in practice it leads to performance and stability
+# issues.
 import multiprocessing as mp
 import pickle
-# TODO: use dil instead of pickle in multiprocessor
 import queue
 from collections import OrderedDict
 from typing import Any, Callable, Collection, Dict, Optional, Union
@@ -11,9 +13,6 @@ from job import JobABC, SimpleJobFactory, Task
 from job_loader import ConfigLoader, JobFactory
 from utils.print_utils import printh
 
-# Initialize logging configuration
-# TODO: test whether this works just for JobChain module or all code
-# logging.setup_logging()
 
 class JobChain:
     """
@@ -185,7 +184,6 @@ class JobChain:
             self.result_processor_process.start()
             self.logger.info(f"Result processor process started with PID {self.result_processor_process.pid}")
     # TODO: add ability to submit a task or an iterable: Iterable
-    # TODO: throw error, or just skip, if submitted task is None because this is a reserved value.
     # TODO: add resource usage monitoring which returns False if resource use is too high.
     def submit_task(self, task: Union[Dict[str, Any], str], job_name: Optional[str] = None):
         """
@@ -193,6 +191,7 @@ class JobChain:
 
         Args:
             task: Either a dictionary containing task data or a string that will be converted to a task.
+                    if this is None then the task will be skipped.
             job_name: The name of the job to execute this task. Required if there is more than one job in the job_map,
                      unless the task is a dictionary that includes a 'job_name' key.
 
