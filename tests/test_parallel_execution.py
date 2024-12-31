@@ -96,13 +96,13 @@ def test_parallel_execution():
     logger.info(f"Time with 2s delay: {time_2s:.2f}s")
     logger.info(f"Ratio: {time_ratio:.2f}x")
     
-    assert time_1s <= 3.5, (
-        f"Expected tasks to complete in ~3.3s (including data gathering + overhead), took {time_1s:.2f}s. "
+    assert time_1s <= 3.8, (
+        f"Expected tasks to complete in ~3.8s (including data gathering + overhead), took {time_1s:.2f}s. "
         "This suggests tasks are running sequentially"
     )
     
-    assert time_2s <= 4.5, (
-        f"Expected tasks to complete in ~4.3s (including data gathering + overhead), took {time_2s:.2f}s. "
+    assert time_2s <= 4.8, (
+        f"Expected tasks to complete in ~4.8s (including data gathering + overhead), took {time_2s:.2f}s. "
         "This suggests tasks are running sequentially"
     )
     

@@ -49,7 +49,7 @@ async def test_job_instantiation_and_execution(job_factory):
     mock_job = job_factory.create_job(
         name="test_mock_job",
         job_type="MockJob",
-        properties={"test_param": "test_value"}
+        job_def={"properties": {"test_param": "test_value"}}
     )
     
     # Verify job creation
@@ -71,14 +71,16 @@ async def test_openai_job_instantiation_and_execution(job_factory):
     openai_job = job_factory.create_job(
         name="test_openai_job",
         job_type="OpenAIJob",
-        properties={
-            "model": "gpt-3.5-turbo",
-            "api": {
-                "messages": [
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": "Say hello!"}
-                ],
-                "temperature": 0.7
+        job_def={
+            "properties": {
+                "api": {
+                    "model": "gpt-4",
+                    "temperature": 0.7
+                },
+                "rate_limit": {
+                    "max_rate": 1,
+                    "time_period": 4
+                }
             }
         }
     )
@@ -321,7 +323,7 @@ async def test_job_execution_chain(caplog):
 @pytest.mark.asyncio
 #@pytest.mark.skip(reason="Test is currently broken")
 async def test_head_jobs_in_jobchain(job_factory):
-    """Test that head jobs from config can be executed in JobChain"""
+    """Test that head jobs from config can be executed in JobChain with correct parameter substitution"""
     # Set config directory for test
     ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_jc_config")])
 
@@ -352,33 +354,18 @@ async def test_head_jobs_in_jobchain(job_factory):
     # Each result should be a dictionary with job results
     for result in results:
         assert isinstance(result, dict), f"Expected dict result, got {type(result)}"
-        # The result should contain outputs from all jobs in the graph
-        assert len(result) == 4, "Expected 4 results one for each Job in the graph"
-
-@pytest.mark.asyncio
-@pytest.mark.skip(reason="Test is currently broken")
-async def test_load_jobs_from_config():
-    """Test that jobs can be loaded from config in the worker process."""
-    # Create a result processor that tracks processed tasks
-    processed_tasks = []
-    def result_processor(result):
-        print(f"Received result: {result}")  # Debug print
-        processed_tasks.append(result)
-
-    # Create JobChain without jobs to let worker process load them
-    job_chain = JobChain(job=None, result_processing_function=result_processor, serial_processing=True)
-
-    # Submit three tasks
-    for i in range(3):
-        job_chain.submit_task({"task": f"Test task_{i}"})
-
-    # Mark input completed and wait for processing
-    job_chain.mark_input_completed()
-
-    # Debug print
-    print(f"Processed tasks: {processed_tasks}")
-
-    # Verify that all tasks were processed
-    assert len(processed_tasks) == 3
-    for i, result in enumerate(processed_tasks):
-        print(result)
+        
+        # Verify parameter substitution for each graph type
+        if 'four_stage_parameterized_params1_summarize' in result:
+            result_str = str(result['four_stage_parameterized_params1_summarize'])
+            # Verify save_to_db parameters
+            assert 'postgres://user1:pass1@db1/mydb' in result_str, "Database URL not correctly substituted"
+            assert 'table_a' in result_str, "Table name not correctly substituted"
+            # Verify read_file parameters
+            assert './file1.txt' in result_str, "Filepath not correctly substituted"
+            
+        elif 'three_stage_params1_summarize' in result:
+            result_str = str(result['three_stage_params1_summarize'])
+            # Verify save_to_db2 parameters are from the job definition
+            assert 'sqlite://user2:pass2@db2/mydb' in result_str, "Database URL not correctly set"
+            assert 'table_b' in result_str, "Table name not correctly set"

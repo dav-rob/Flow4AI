@@ -119,9 +119,14 @@ class JobFactory:
                 print(f"Registered custom job: {job_name}")
 
     @classmethod
-    def create_job(cls, name: str, job_type: str, properties: Dict[str, Any]) -> JobABC:
+    def create_job(cls, name: str, job_type: str, job_def: Dict[str, Any]) -> JobABC:
         if job_type not in cls._job_types:
             raise ValueError(f"Unknown job type: {job_type}")
+        
+        properties = job_def.get('properties', {})
+        if not properties:
+            logging.info(f"No properties specified for job {name} of type {job_type}")
+            
         return cls._job_types[job_type](name, properties)
 
     @classmethod
