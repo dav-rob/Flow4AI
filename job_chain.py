@@ -1,7 +1,7 @@
 import asyncio
-# In theory it makes sense to use dill with the multiprocess package
-# instead of pickle but in practice it leads to performance and stability
-# issues.
+# In theory it makes sense to use dill with the "multiprocess" package
+# instead of pickle with "multiprocessing", but in practice it leads to 
+# performance and stability issues.
 import multiprocessing as mp
 import pickle
 import queue
