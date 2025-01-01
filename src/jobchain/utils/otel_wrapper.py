@@ -19,14 +19,6 @@ from opentelemetry.sdk.trace.export import (BatchSpanProcessor,
 __all__ = ['TracerFactory', 'trace_function', 'AsyncFileExporter']
 DEFAULT_OTEL_CONFIG = "otel_config.yaml"
 
-def get_config_path():
-    """Get the path to the config file using importlib.resources."""
-    try:
-        with resources.path('jobchain.resources', DEFAULT_OTEL_CONFIG) as config_path:
-            return str(config_path)
-    except Exception as e:
-        raise RuntimeError(f"Could not find {DEFAULT_OTEL_CONFIG} in package resources: {e}")
-
 class AsyncFileExporter(SpanExporter):
     """Asynchronous file exporter for OpenTelemetry spans with log rotation support."""
     
@@ -261,7 +253,20 @@ class TracerFactory:
     @classmethod
     def get_config(cls, yaml_file=None):
         """Get the configuration from the YAML file."""
-        config_path = yaml_file or get_config_path()
+        # First try yaml_file parameter
+        config_path = yaml_file
+        if not config_path:
+            # Then try environment variable
+            config_path = os.environ.get('JOBCHAIN_OT_CONFIG', "")
+            
+        if not config_path:
+            # Finally use default path from package resources
+            try:
+                with resources.path('jobchain.resources', DEFAULT_OTEL_CONFIG) as path:
+                    config_path = str(path)
+            except Exception as e:
+                raise RuntimeError(f"Could not find {DEFAULT_OTEL_CONFIG} in package resources: {e}")
+
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)
         cls._config = config
