@@ -1,10 +1,10 @@
 import asyncio
 import uuid
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Any, Dict, Optional, Set, Type, Union
+from typing import Any, Dict, Optional, Type, Union
 
-import jc_logging as logging
-from utils.otel_wrapper import trace_function
+from . import jc_logging as logging
+from .utils.otel_wrapper import TracerFactory, trace_function
 
 
 def _is_traced(method):

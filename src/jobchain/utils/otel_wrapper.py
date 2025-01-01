@@ -1,9 +1,11 @@
 import inspect
 import json
 import os
+import yaml
 from functools import wraps
 from threading import Lock
 from typing import Sequence, Optional, Dict, Any
+from importlib import resources
 
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import \
@@ -15,6 +17,15 @@ from opentelemetry.sdk.trace.export import (BatchSpanProcessor,
 
 # Explicitly define exports
 __all__ = ['TracerFactory', 'trace_function', 'AsyncFileExporter']
+DEFAULT_OTEL_CONFIG = "otel_config.yaml"
+
+def get_config_path():
+    """Get the path to the config file using importlib.resources."""
+    try:
+        with resources.path('jobchain.resources', DEFAULT_OTEL_CONFIG) as config_path:
+            return str(config_path)
+    except Exception as e:
+        raise RuntimeError(f"Could not find {DEFAULT_OTEL_CONFIG} in package resources: {e}")
 
 class AsyncFileExporter(SpanExporter):
     """Asynchronous file exporter for OpenTelemetry spans with log rotation support."""
@@ -244,14 +255,18 @@ class TracerFactory:
             dict: Configuration dictionary
         """
         if cls._config is None:
-            import yaml
-
-            # Get config path from environment variable or use default
-            config_path = yaml_file or os.environ.get('JOBCHAIN_OT_CONFIG', "resources/otel_config.yaml")
-            with open(config_path, 'r') as file:
-                cls._config = yaml.safe_load(file)
+            cls.get_config(yaml_file)
         return cls._config
-    
+
+    @classmethod
+    def get_config(cls, yaml_file=None):
+        """Get the configuration from the YAML file."""
+        config_path = yaml_file or get_config_path()
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+        cls._config = config
+        return config
+
     @classmethod
     def get_tracer(cls, config=None):
         """Get or create the tracer instance.
@@ -264,23 +279,26 @@ class TracerFactory:
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
-                    # Use provided config or load from file
-                    cfg = config if config is not None else cls._load_config()
-                    
                     # Use TestTracerProvider in test mode
-                    provider = TestTracerProvider() if cls._is_test_mode else TracerProvider()
-                    
-                    # Configure main exporter
-                    main_exporter = cls._configure_exporter(cfg['exporter'])
-                    batch_processor = BatchSpanProcessor(
-                        main_exporter,
-                        max_queue_size=cfg['batch_processor']['max_queue_size'],
-                        schedule_delay_millis=cfg['batch_processor']['schedule_delay_millis']
-                    )
-                    provider.add_span_processor(batch_processor)
-                    
-                    trace.set_tracer_provider(provider)
-                    cls._instance = trace.get_tracer(cfg["service_name"])
+                    if cls._is_test_mode:
+                        provider = TestTracerProvider()
+                        trace.set_tracer_provider(provider)
+                        cls._instance = trace.get_tracer("test_tracer")
+                    else:
+                        cfg = config if config is not None else cls._load_config()
+                        provider = TracerProvider()
+                        
+                        # Configure main exporter
+                        main_exporter = cls._configure_exporter(cfg['exporter'])
+                        batch_processor = BatchSpanProcessor(
+                            main_exporter,
+                            max_queue_size=cfg['batch_processor']['max_queue_size'],
+                            schedule_delay_millis=cfg['batch_processor']['schedule_delay_millis']
+                        )
+                        provider.add_span_processor(batch_processor)
+                        
+                        trace.set_tracer_provider(provider)
+                        cls._instance = trace.get_tracer(cfg["service_name"])
         return cls._instance
 
     @staticmethod

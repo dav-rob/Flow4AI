@@ -12,8 +12,9 @@ import asyncio
 
 import pytest
 
-from job import JobABC
-from job_chain import JobChain
+from jobchain.job import JobABC
+from jobchain.job_chain import JobChain
+from jobchain.utils.otel_wrapper import TracerFactory
 
 
 class AsyncTestJob(JobABC):

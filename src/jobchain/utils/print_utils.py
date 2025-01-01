@@ -1,4 +1,4 @@
-import jc_logging as logging
+from .. import jc_logging as logging
 
 
 def printh(text):

@@ -1,6 +1,6 @@
 import pytest
 
-from utils.otel_wrapper import TracerFactory
+from jobchain.utils.otel_wrapper import TracerFactory
 
 # set the TracerFactory up with the TestTracerProvider so the TracerProvider
 #  can be overridden by code which normally isn't possible.

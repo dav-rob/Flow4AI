@@ -8,10 +8,10 @@ import queue
 from collections import OrderedDict
 from typing import Any, Callable, Collection, Dict, Optional, Union
 
-import jc_logging as logging
-from job import JobABC, SimpleJobFactory, Task
-from job_loader import ConfigLoader, JobFactory
-from utils.print_utils import printh
+from . import jc_logging as logging
+from .job import JobABC, SimpleJobFactory, Task
+from .job_loader import ConfigLoader, JobFactory
+from .utils.print_utils import printh
 
 
 class JobChain:

@@ -5,7 +5,7 @@ Provides functionality for graph traversal, cycle detection, and validation.
 
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-import jc_logging as logging
+from . import jc_logging as logging
 
 
 def has_cycle(graph: Dict[str, Dict[str, Any]], node: str, 

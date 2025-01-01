@@ -18,6 +18,7 @@ api.env
 # Distribution / Packaging
 dist/
 build/
+jobchain.egg-info/
 
 
 # IDE-specific files
