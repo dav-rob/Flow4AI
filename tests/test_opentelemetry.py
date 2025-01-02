@@ -1,9 +1,12 @@
 import asyncio
+import json
 import os
 import time
-import pytest
-from typing import Dict, Any
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Dict
+
+import pytest
+import yaml
 
 from jobchain import jc_logging as logging
 from jobchain.job import JobABC, Task
@@ -54,7 +57,7 @@ def setup_file_exporter(trace_file):
     with open(config_path, 'w') as f:
         yaml.dump(config, f)
     
-    # Reset TracerFactory state
+    # Reset TracerFactory state and set config path
     TracerFactory._instance = None
     TracerFactory._config = None
     

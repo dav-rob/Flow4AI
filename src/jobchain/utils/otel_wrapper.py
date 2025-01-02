@@ -1,12 +1,12 @@
 import inspect
 import json
 import os
-import yaml
 from functools import wraps
-from threading import Lock
-from typing import Sequence, Optional, Dict, Any
 from importlib import resources
+from threading import Lock
+from typing import Any, Dict, Optional, Sequence
 
+import yaml
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import \
     OTLPSpanExporter
@@ -246,19 +246,12 @@ class TracerFactory:
         Returns:
             dict: Configuration dictionary
         """
-        if cls._config is None:
-            cls.get_config(yaml_file)
-        return cls._config
-
-    @classmethod
-    def get_config(cls, yaml_file=None):
-        """Get the configuration from the YAML file."""
-        # First try yaml_file parameter
+       # First try yaml_file parameter
         config_path = yaml_file
         if not config_path:
             # Then try environment variable
             config_path = os.environ.get('JOBCHAIN_OT_CONFIG', "")
-            
+        
         if not config_path:
             # Finally use default path from package resources
             try:
@@ -266,12 +259,11 @@ class TracerFactory:
                     config_path = str(path)
             except Exception as e:
                 raise RuntimeError(f"Could not find {DEFAULT_OTEL_CONFIG} in package resources: {e}")
-
-        with open(config_path, 'r') as f:
-            config = yaml.safe_load(f)
-        cls._config = config
-        return config
-
+        
+        with open(config_path, 'r') as file:
+                cls._config = yaml.safe_load(file)
+        return cls._config
+    
     @classmethod
     def get_tracer(cls, config=None):
         """Get or create the tracer instance.
@@ -284,26 +276,23 @@ class TracerFactory:
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
+                    # Use provided config or load from file
+                    cfg = config if config is not None else cls._load_config()
+                    
                     # Use TestTracerProvider in test mode
-                    if cls._is_test_mode:
-                        provider = TestTracerProvider()
-                        trace.set_tracer_provider(provider)
-                        cls._instance = trace.get_tracer("test_tracer")
-                    else:
-                        cfg = config if config is not None else cls._load_config()
-                        provider = TracerProvider()
-                        
-                        # Configure main exporter
-                        main_exporter = cls._configure_exporter(cfg['exporter'])
-                        batch_processor = BatchSpanProcessor(
-                            main_exporter,
-                            max_queue_size=cfg['batch_processor']['max_queue_size'],
-                            schedule_delay_millis=cfg['batch_processor']['schedule_delay_millis']
-                        )
-                        provider.add_span_processor(batch_processor)
-                        
-                        trace.set_tracer_provider(provider)
-                        cls._instance = trace.get_tracer(cfg["service_name"])
+                    provider = TestTracerProvider() if cls._is_test_mode else TracerProvider()
+                    
+                    # Configure main exporter
+                    main_exporter = cls._configure_exporter(cfg['exporter'])
+                    batch_processor = BatchSpanProcessor(
+                        main_exporter,
+                        max_queue_size=cfg['batch_processor']['max_queue_size'],
+                        schedule_delay_millis=cfg['batch_processor']['schedule_delay_millis']
+                    )
+                    provider.add_span_processor(batch_processor)
+                    
+                    trace.set_tracer_provider(provider)
+                    cls._instance = trace.get_tracer(cfg["service_name"])
         return cls._instance
 
     @staticmethod
