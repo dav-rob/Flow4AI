@@ -1,17 +1,12 @@
 import asyncio
 import os
-import sys
 
 import pytest
 import yaml
 
 import jobchain.jc_logging as logging
-from jobchain.job import Task
-
-# Add parent directory to path for imports
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-
 from jobchain.jc_graph import validate_graph
+from jobchain.job import Task
 from jobchain.job_chain import JobChain  # Import JobChain
 from jobchain.job_loader import ConfigLoader, JobFactory
 from jobchain.jobs.llm_jobs import OpenAIJob
