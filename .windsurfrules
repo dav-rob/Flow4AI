@@ -19,5 +19,8 @@ JobChain allows users to execute AI and IO Job graphs in parallel.
 - never delete any of the TODOs or comments that I have put in the code as explainers, unless the code logic or variable names have changed.
 
 ## Logging
-- use `import jc_logging as logging` for logging, not the standard logging module.
+For logging, use the jobchain.jc_logging module, not the standard logging module.
+- for external files, examples and tests use
+`import jobchain.jc_logging as logging` 
+- for internal files under /src use the relative path import of jc_logging
 
