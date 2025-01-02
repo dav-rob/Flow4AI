@@ -2,8 +2,6 @@ import asyncio
 import time
 from typing import Any, Dict
 
-import pytest
-
 from jobchain.job import JobABC, Task, create_job_graph
 from jobchain.job_chain import JobChain
 
