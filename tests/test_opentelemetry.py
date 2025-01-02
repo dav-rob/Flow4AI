@@ -1,12 +1,11 @@
-import asyncio
 import json
 import os
 import time
-from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict
 
 import pytest
 import yaml
+from opentelemetry import trace
+from opentelemetry.trace import Status, StatusCode
 
 from jobchain import jc_logging as logging
 from jobchain.job import JobABC, Task
