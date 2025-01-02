@@ -5,8 +5,8 @@ from aiolimiter import AsyncLimiter
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 
-import ..jc_logging as logging
-from ..job import JobABC
+from jobchain import jc_logging as logging
+from jobchain.job import JobABC
 
 
 class OpenAIClient:

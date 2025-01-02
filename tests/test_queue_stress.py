@@ -7,14 +7,16 @@ Tests for stress testing queues:
         - Tests CPU-intensive workloads
         - Tests mixed workload scenarios
 """
+import asyncio
 import os
 import time
-
-import psutil
 import pytest
+from typing import Dict, Any
+from concurrent.futures import ThreadPoolExecutor
 
-from job import JobABC
-from job_chain import JobChain
+from jobchain import jc_logging as logging
+from jobchain.job import JobABC
+from jobchain.job_chain import JobChain
 
 
 class StressTestJob(JobABC):

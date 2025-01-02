@@ -7,16 +7,16 @@
         - test_parallel_execution_in_batches: runs batches in parallel
 """
 import asyncio
-import json
 import os
 import time
+import pytest
+from typing import Dict, Any
+from concurrent.futures import ThreadPoolExecutor
 
-import yaml
-
-import jc_logging as logging
-from job import JobABC, SimpleJobFactory
-from job_chain import JobChain
-from utils.otel_wrapper import TracerFactory
+from jobchain import jc_logging as logging
+from jobchain.job import JobABC, SimpleJobFactory
+from jobchain.job_chain import JobChain
+from jobchain.utils.otel_wrapper import TracerFactory
 
 # Configure logging
 logging.basicConfig(level=logging.INFO,

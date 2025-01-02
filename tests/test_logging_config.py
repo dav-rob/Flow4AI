@@ -1,17 +1,17 @@
 import os
 import pytest
-import jc_logging as logging
+from jobchain import jc_logging as logging
 import asyncio
-from job import JobABC, Task
-from job_chain import JobChain
+from jobchain import job as job
+from jobchain import job_chain as job_chain
 
-class DebugDelayedJob(JobABC):
+class DebugDelayedJob(job.JobABC):
     def __init__(self, name: str, delay: float):
         super().__init__(name)
         self.delay = delay
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    async def run(self, task: Task) -> dict:
+    async def run(self, task: job.Task) -> dict:
         """Execute a delayed job with both debug and info logging."""
         task_str = task.get('task', str(task))  # Get task string or full dict
         self.logger.debug(f"Starting task {task_str} with delay {self.delay}")
@@ -112,7 +112,7 @@ def test_debug_logging_in_job_chain(clear_log_file):
 
     # Create and run job chain with debug-enabled job
     job = DebugDelayedJob("Debug Test Job", 0.1)
-    job_chain = JobChain(job)
+    job_chain = job_chain.JobChain(job)
 
     # Submit tasks
     for i in range(3):
@@ -157,7 +157,7 @@ def test_info_logging_in_job_chain(clear_log_file):
 
     # Create and run job chain with debug-enabled job
     job = DebugDelayedJob("Info Test Job", 0.1)
-    job_chain = JobChain(job)
+    job_chain = job_chain.JobChain(job)
 
     # Submit tasks
     for i in range(3):

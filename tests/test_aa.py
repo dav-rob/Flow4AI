@@ -1,5 +1,5 @@
-from job import JobABC, SimpleJob
-from job_chain import JobChain
+from jobchain.job import JobABC, SimpleJob
+from jobchain.job_chain import JobChain
 
 
 class AsyncTestJob(JobABC):

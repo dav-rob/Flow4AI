@@ -4,8 +4,8 @@ from typing import Any, Dict
 
 import pytest
 
-from job import JobABC, Task, create_job_graph
-from job_chain import JobChain
+from jobchain.job import JobABC, Task, create_job_graph
+from jobchain.job_chain import JobChain
 
 
 class MockJob(JobABC):

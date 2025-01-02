@@ -1,4 +1,4 @@
-from jc_graph import (add_edge_anywhere, check_graph_for_cycles, print_graph,
+from jobchain.jc_graph import (add_edge_anywhere, check_graph_for_cycles, print_graph,
                       validate_graph_references, find_head_nodes, find_tail_nodes,
                       validate_graph)
 import pytest

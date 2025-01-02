@@ -6,10 +6,13 @@
 import asyncio
 import os
 import time
-from time import sleep
+import pytest
+from typing import Dict, Any
+from concurrent.futures import ThreadPoolExecutor
 
-from job import JobABC
-from job_chain import JobChain
+from jobchain import jc_logging as logging
+from jobchain.job import JobABC
+from jobchain.job_chain import JobChain
 
 
 class ResultTimingJob(JobABC):
@@ -68,7 +71,7 @@ def parallel_mode():
         # Submit some tasks
         for i in range(3):
             job_chain.submit_task(f"Task {i}")
-            sleep(0.1)
+            time.sleep(0.1)
         
         job_chain.mark_input_completed()
         assert False, "Expected parallel mode to fail with unpicklable processor"
@@ -100,13 +103,13 @@ def serial_mode():
         expected_tasks = {f"Task {i}" for i in range(3)}
         for task in expected_tasks:
             job_chain.submit_task({job.name: {'task': task}}, job_name=job.name)
-            sleep(0.1)
+            time.sleep(0.1)
         
         # Process tasks and wait for completion
         job_chain.mark_input_completed()  # Not awaited since it's synchronous
         
         # Give a small delay to ensure all results are processed
-        sleep(0.5)
+        time.sleep(0.5)
         
         # Verify results were written to file
         with open('temp.log', 'r') as f:

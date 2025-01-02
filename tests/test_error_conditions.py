@@ -15,8 +15,8 @@ import asyncio
 
 import pytest
 
-from job import JobABC
-from job_chain import JobChain
+from jobchain.job import JobABC
+from jobchain.job_chain import JobChain
 
 
 class ErrorTestJob(JobABC):

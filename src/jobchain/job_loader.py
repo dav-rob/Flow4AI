@@ -4,8 +4,8 @@ import os
 import sys
 from abc import ABC, abstractmethod
 from collections import OrderedDict
-from importlib import import_module
 from glob import glob
+from importlib import import_module
 from pathlib import Path
 from typing import Any, Collection, Dict, List, Optional, Type
 
@@ -349,7 +349,7 @@ class ConfigLoader:
                             f"Job '{next_job}' referenced in 'next' field of job '{job_name}' in graph '{graph_name}' is not defined in jobs configuration")
 
             # After verifying all jobs exist, validate graph structure
-            from jc_graph import validate_graph
+            from jobchain.jc_graph import validate_graph
             validate_graph(graph_def, graph_name)
 
         # Now validate parameters

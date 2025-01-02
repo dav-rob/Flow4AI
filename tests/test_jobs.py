@@ -1,10 +1,9 @@
 import asyncio
-from typing import List
-
 import pytest
-import jc_logging as logging
+from typing import Dict, Any
 
-from jobs.llm_jobs import OpenAIJob
+from jobchain import jc_logging as logging
+from jobchain.jobs import OpenAIJob
 
 
 @pytest.mark.asyncio
@@ -30,7 +29,7 @@ async def test_openai_job_async_calls():
     logging.info("Starting async OpenAI calls")
     
     # Create and gather all tasks
-    async_tasks: List[asyncio.Task] = []
+    async_tasks: Dict[str, Any] = []
     for task in tasks:
         async_tasks.append(asyncio.create_task(job.run(task)))
     
@@ -76,7 +75,7 @@ async def test_rate_limiting():
     start_time = asyncio.get_event_loop().time()
     
     # Create and gather all tasks
-    async_tasks: List[asyncio.Task] = []
+    async_tasks: Dict[str, Any] = []
     for task in tasks:
         async_tasks.append(asyncio.create_task(job.run(task)))
     

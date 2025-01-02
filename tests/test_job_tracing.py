@@ -1,7 +1,8 @@
-import inspect
+import pytest
+import asyncio
 from typing import Any, Dict
 
-from job import JobABC, _has_own_traced_execute, _is_traced
+from jobchain.job import JobABC, _has_own_traced_execute, _is_traced
 
 
 class Level1Job(JobABC):
@@ -106,7 +107,7 @@ def test_decorator_preserves_method_signature():
 
 def test_job_factory_returns_untraced_jobs():
     """Test that JobFactory returns properly untraced Job instances"""
-    from job import SimpleJobFactory
+    from jobchain.job import SimpleJobFactory
 
     # Test file-based job loading
     file_job = SimpleJobFactory.load_job({"type": "file", "params": {}})
@@ -197,7 +198,7 @@ def test_decorator_preserves_method_signature():
 
 def test_job_factory_returns_untraced_jobs():
     """Test that JobFactory returns properly untraced Job instances"""
-    from job import SimpleJobFactory
+    from jobchain.job import SimpleJobFactory
 
     # Test file-based job loading
     file_job = SimpleJobFactory.load_job({"type": "file", "params": {}})

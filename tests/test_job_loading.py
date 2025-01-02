@@ -6,16 +6,16 @@ from pathlib import Path
 import pytest
 import yaml
 
-import jc_logging as logging
-from job import Task
+import jobchain.jc_logging as logging
+from jobchain.job import Task
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from jc_graph import validate_graph
-from job_chain import JobChain  # Import JobChain
-from job_loader import ConfigLoader, JobFactory
-from jobs.llm_jobs import OpenAIJob
+from jobchain.jc_graph import validate_graph
+from jobchain.job_chain import JobChain  # Import JobChain
+from jobchain.job_loader import ConfigLoader, JobFactory
+from jobchain.jobs.llm_jobs import OpenAIJob
 
 # Test configuration
 TEST_CONFIG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config"))

@@ -1,15 +1,14 @@
 import asyncio
-import json
 import os
 import time
-
 import pytest
-import yaml
+from typing import Dict, Any
+from concurrent.futures import ThreadPoolExecutor
 
-import jc_logging as logging
-from job import JobABC, SimpleJobFactory
-from job_chain import JobChain
-from utils.otel_wrapper import TracerFactory
+from jobchain import jc_logging as logging
+from jobchain.job import JobABC, SimpleJobFactory
+from jobchain.job_chain import JobChain
+from jobchain.utils.otel_wrapper import TracerFactory
 
 # Configure logging
 logging.basicConfig(level=logging.INFO,

@@ -1,6 +1,6 @@
 from typing import Any, Dict
 
-from job import JobABC
+from jobchain.job import JobABC
 
 
 class MockFileReadJob(JobABC):

@@ -1,15 +1,13 @@
-import json
+import asyncio
 import os
 import time
-
 import pytest
-import yaml
-from opentelemetry import trace
-from opentelemetry.trace import Status, StatusCode
+from typing import Dict, Any
+from concurrent.futures import ThreadPoolExecutor
 
-import jc_logging as logging
-from job import JobABC, Task
-from utils.otel_wrapper import TracerFactory, trace_function
+from jobchain import jc_logging as logging
+from jobchain.job import JobABC, Task
+from jobchain.utils.otel_wrapper import TracerFactory, trace_function
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
