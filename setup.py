@@ -9,12 +9,13 @@ setup(
       "jobchain": ["resources/*"]
     },
     install_requires=[
-        'pytest>=7.0.0',
-        'pytest-asyncio>=0.21.0',
-        'importlib-resources>=5.0.0',
-        'opentelemetry-api>=1.0.0',
-        'pyyaml>=6.0.0'
+        'python-dotenv>=1.0.1',
+        'openai>=1.58.0',
+        'opentelemetry-sdk>=1.28.1' ,
+        'opentelemetry-exporter-otlp-proto-grpc>=1.28.1',
+        'anyconfig>=0.14.0',
+        'pyyaml>=6.0.2'
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.8.5',
     # other options can be added here
 )
