@@ -1,5 +1,4 @@
-import pytest
-import asyncio
+import inspect
 from typing import Any, Dict
 
 from jobchain.job import JobABC, _has_own_traced_execute, _is_traced
