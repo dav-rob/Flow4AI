@@ -464,3 +464,19 @@ class JobChain:
             raise TimeoutError("Timed out waiting for jobs to be loaded")
         
         return list(self._job_name_map.keys())
+
+class JobChainFactory:
+    _instance = None
+    _job_chain = None
+
+    def __init__(self, *args, **kwargs):
+        if not JobChainFactory._instance:
+            self._job_chain = JobChain(*args, **kwargs)
+            JobChainFactory._instance = self
+
+    @classmethod
+    def get_instance(cls):
+        if not cls._instance:
+            raise RuntimeError("JobChainFactory not initialized")
+        return cls._instance._job_chain
+
