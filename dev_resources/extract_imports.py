@@ -39,33 +39,80 @@ def is_stdlib_module(module_name: str) -> bool:
 
 def _get_package_name(project_root: Path) -> str:
     """Detect the main package name by looking at src directory structure."""
+    # First check src directory
     src_dir = project_root / 'src'
     if src_dir.exists():
         # Look for the first directory in src that contains an __init__.py
         for item in src_dir.iterdir():
             if item.is_dir() and (item / '__init__.py').exists():
                 return item.name
+    
+    # If no src directory, check root directory for __init__.py files
+    for item in project_root.iterdir():
+        if item.is_dir() and (item / '__init__.py').exists():
+            # Also check if this directory name matches any of the imports
+            # in its own __init__.py file
+            try:
+                with open(item / '__init__.py', 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    tree = ast.parse(content)
+                    for node in ast.walk(tree):
+                        if isinstance(node, ast.Import):
+                            for name in node.names:
+                                if name.name == item.name:
+                                    return item.name
+                        elif isinstance(node, ast.ImportFrom):
+                            if node.module and node.module.startswith(item.name):
+                                return item.name
+            except:
+                pass
+            return item.name
+    
     return ''
 
 def is_local_module(module_name: str, project_root: Path) -> bool:
     """Check if a module is local to the project."""
+    # Get the project's package name
     package_name = _get_package_name(project_root)
     if package_name:
-        # Check if it's part of our own package
-        if module_name.startswith(f"{package_name}.") or module_name == package_name:
+        # Check if the module is part of our package namespace
+        module_root = module_name.split('.')[0]
+        if module_root == package_name or module_name.startswith(f"{package_name}."):
             return True
         
-    # Check src directory specifically for project modules
-    src_dir = project_root / 'src'
-    if src_dir.exists() and package_name:
+        # For imports within the package that don't use the full package name
         module_parts = module_name.split('.')
-        possible_src_paths = [
-            src_dir / package_name / '/'.join(module_parts) / "__init__.py",
-            src_dir / package_name / '/'.join(module_parts[:-1]) / (module_parts[-1] + ".py") if module_parts else src_dir / (module_name + ".py"),
-            src_dir / package_name / module_parts[0]
-        ]
-        if any(path.exists() for path in possible_src_paths):
-            return True
+        src_dir = project_root / 'src'
+        possible_paths = []
+        
+        # Check in src directory
+        if src_dir.exists():
+            pkg_dir = src_dir / package_name
+            if pkg_dir.exists():
+                possible_paths.extend([
+                    pkg_dir / '/'.join(module_parts) / "__init__.py",
+                    pkg_dir / '/'.join(module_parts[:-1]) / f"{module_parts[-1]}.py" if module_parts else pkg_dir / f"{module_name}.py"
+                ])
+                
+                # Also check for submodules
+                for subdir in pkg_dir.iterdir():
+                    if subdir.is_dir() and subdir.name == module_root:
+                        return True
+        
+        # Check in package directory in root
+        package_dir = project_root / package_name
+        if package_dir.exists():
+            possible_paths.extend([
+                package_dir / '/'.join(module_parts) / "__init__.py",
+                package_dir / '/'.join(module_parts[:-1]) / f"{module_parts[-1]}.py" if module_parts else package_dir / f"{module_name}.py"
+            ])
+            
+            # Also check for submodules
+            for subdir in package_dir.iterdir():
+                if subdir.is_dir() and subdir.name == module_root:
+                    return True
+        
+        return any(path.exists() for path in possible_paths)
     
     return False
 
@@ -91,6 +138,20 @@ def extract_imports_from_file(file_path: str, project_root: Path) -> Dict[str, I
     
     rel_path = os.path.relpath(file_path, project_root)
     
+    # Determine the package name from the file path
+    path_parts = Path(file_path).parts
+    if 'src' in path_parts:
+        src_idx = path_parts.index('src')
+        if len(path_parts) > src_idx + 1:
+            current_package = path_parts[src_idx + 1]
+            package_path = str(Path(*path_parts[:src_idx+2]))  # path up to src/package_name
+        else:
+            current_package = ''
+            package_path = str(Path(*path_parts[:src_idx+1]))  # path up to src
+    else:
+        current_package = path_parts[-2] if len(path_parts) > 1 else ''
+        package_path = str(Path(*path_parts[:-1]))  # path up to parent directory
+    
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             content = file.read()
@@ -100,9 +161,15 @@ def extract_imports_from_file(file_path: str, project_root: Path) -> Dict[str, I
                     if isinstance(node, ast.Import):
                         for name in node.names:
                             if not name.name.startswith('.'):
-                                module_name = name.name
+                                module_name = name.name.split('.')[0]  # Get root module name
                                 if not is_stdlib_module(module_name):
-                                    if not is_local_module(module_name, project_root):
+                                    # Skip if it's the current package or a submodule
+                                    module_exists = any([
+                                        os.path.exists(os.path.join(package_path, module_name)),
+                                        os.path.exists(os.path.join(package_path, module_name + '.py')),
+                                        os.path.exists(os.path.join(package_path, module_name, '__init__.py'))
+                                    ])
+                                    if module_name != current_package and not module_exists:
                                         package = normalize_package_name(module_name)
                                         imports[package] = ImportInfo(
                                             rel_path,
@@ -111,9 +178,15 @@ def extract_imports_from_file(file_path: str, project_root: Path) -> Dict[str, I
                                         )
                     elif isinstance(node, ast.ImportFrom):
                         if node.module and not node.module.startswith('.'):
-                            module_name = node.module
+                            module_name = node.module.split('.')[0]  # Get root module name
                             if not is_stdlib_module(module_name):
-                                if not is_local_module(module_name, project_root):
+                                # Skip if it's the current package or a submodule
+                                module_exists = any([
+                                    os.path.exists(os.path.join(package_path, module_name)),
+                                    os.path.exists(os.path.join(package_path, module_name + '.py')),
+                                    os.path.exists(os.path.join(package_path, module_name, '__init__.py'))
+                                ])
+                                if module_name != current_package and not module_exists:
                                     package = normalize_package_name(module_name)
                                     names = ', '.join(n.name for n in node.names)
                                     imports[package] = ImportInfo(
@@ -172,7 +245,7 @@ Examples:
         '--dirs',
         nargs='*',
         help='Directories to search for Python files. If not specified, defaults to: '
-             '[project_root, project_root/util, project_root/linkedIn_App]'
+             '[project_root, project_root/util]'
     )
     
     return parser.parse_args()
