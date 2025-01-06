@@ -9,6 +9,7 @@ setup(
       "jobchain": ["resources/*"]
     },
     install_requires=[
+        'aiolimiter>=1.2.1',
         'python-dotenv>=1.0.1',
         'openai>=1.58.0',
         'opentelemetry-sdk>=1.28.1' ,
@@ -16,6 +17,15 @@ setup(
         'anyconfig>=0.14.0',
         'pyyaml>=6.0.2'
     ],
+    extras_require={
+        'test': [
+            'pytest>=8.3.4',
+            'psutil>=6.1.1',
+            'pytest-asyncio>=0.25.1',
+        ],
+        'dev': [
+        ],
+    },
     python_requires='>=3.8.5',
     # other options can be added here
 )

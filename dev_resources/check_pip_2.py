@@ -1,7 +1,7 @@
 import importlib.metadata
 
 # For installed packages show the package and version
-packages = ["aiolimiter", "python-dotenv", "openai", "opentelemetry-sdk", "opentelemetry-exporter-otlp-proto-grpc", "anyconfig", "pyyaml"]
+packages = ["pytest", "psutil","pytest-asyncio"]
 
 for package in packages:
     try:
