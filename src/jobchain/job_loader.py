@@ -2,14 +2,10 @@ import importlib.util
 import inspect
 import os
 import sys
-from abc import ABC, abstractmethod
-from collections import OrderedDict
-from glob import glob
-from importlib import import_module
 from pathlib import Path
-from typing import Any, Collection, Dict, List, Optional, Type
+from typing import Any, Collection, Dict, List, Type
 
-import anyconfig
+import yaml
 
 from . import jc_logging as logging
 from .job import JobABC, create_job_graph
@@ -54,21 +50,27 @@ class JobLoader:
         jobs_path = Path(jobs_dir)
 
         if not jobs_path.exists():
-            raise FileNotFoundError(f"Custom jobs directory not found: {jobs_dir}")
+            logging.info(f"Jobs directory not found: {jobs_dir}")
+            return jobs
 
         # Add the custom jobs directory to Python path
+        logging.debug(f"Python path before: {sys.path}")
         sys.path.append(str(jobs_path))
+        logging.info(f"Added {jobs_path} to Python path")
+        logging.debug(f"Python path after: {sys.path}")
 
         # Scan for Python files
         for file_path in jobs_path.glob("**/*.py"):
             if file_path.name.startswith("__"):
                 continue
 
+            logging.info(f"Loading jobs from {file_path}")
             try:
                 # Load the module
                 module_name = file_path.stem
                 spec = importlib.util.spec_from_file_location(module_name, str(file_path))
                 if spec is None or spec.loader is None:
+                    logging.warning(f"Could not create module spec for {file_path}")
                     continue
 
                 module = importlib.util.module_from_spec(spec)
@@ -79,13 +81,16 @@ class JobLoader:
                     if inspect.isclass(obj) and obj.__module__ == module.__name__:
                         try:
                             if cls.validate_job_class(obj):
+                                logging.info(f"Found valid job class: {name}")
                                 jobs[name] = obj
                         except Exception as e:
+                            logging.error(f"Error validating job class {name} in {file_path}: {str(e)}")
                             raise JobValidationError(
                                 f"Error validating job class {name} in {file_path}: {str(e)}"
                             )
 
             except Exception as e:
+                logging.error(f"Error loading custom job from {file_path}: {str(e)}")
                 raise ImportError(
                     f"Error loading custom job from {file_path}: {str(e)}"
                 )
@@ -95,7 +100,8 @@ class JobLoader:
 
 class JobFactory:
     _job_types: Dict[str, Type[JobABC]] = {}
-    _default_jobs_dir: str = os.path.join(os.path.dirname(__file__), "jobs")
+    # Default jobs directory is always checked first
+    _default_jobs_dir: str = os.path.join(os.path.dirname(__file__), "jobs") # site-package directory when this is a package
     _cached_job_graphs: List[JobABC] = None
 
     @classmethod
@@ -103,6 +109,7 @@ class JobFactory:
         """
         Load and register all custom jobs from specified config directories.
         Will look for jobs in the 'jobs' subdirectory of each config directory.
+        Loads jobs from all directories.
 
         Args:
             custom_jobs_dirs: List of config directory paths. Jobs will be loaded from the 'jobs' subdirectory
@@ -112,14 +119,25 @@ class JobFactory:
         # Create an iterable of job directories, including the default and any custom directories
         jobs_dirs = [cls._default_jobs_dir]
         if custom_jobs_dirs:
-            jobs_dirs.extend([os.path.join(config_dir, "jobs") for config_dir in custom_jobs_dirs])
+            # Add local jobs directories from each config directory
+            for config_dir in custom_jobs_dirs:
+                jobs_dir = os.path.join(config_dir, "jobs")
+                if os.path.exists(jobs_dir):
+                    jobs_dirs.append(jobs_dir)
             
+        found_valid_jobs = False
         for jobs_dir in jobs_dirs:
             custom_jobs = loader.load_jobs(jobs_dir)
-            # Register all valid custom jobs
-            for job_name, job_class in custom_jobs.items():
-                cls.register_job_type(job_name, job_class)
-                print(f"Registered custom job: {job_name}")
+            if custom_jobs:
+                found_valid_jobs = True
+                # Register all valid custom jobs
+                for job_name, job_class in custom_jobs.items():
+                    cls.register_job_type(job_name, job_class)
+                    print(f"Registered custom job: {job_name}")
+        
+        if not found_valid_jobs:
+            # This is a critical error as we need at least one valid job directory
+            raise FileNotFoundError(f"No valid jobs found in any of the directories: {jobs_dirs}")
 
     @classmethod
     def create_job(cls, name: str, job_type: str, job_def: Dict[str, Any]) -> JobABC:
@@ -194,9 +212,14 @@ class JobFactory:
 
 
 class ConfigLoader:
+    # Directories are searched in order. If a valid jobchain directory is found,
+    # the search stops and uses that directory.
+    # TODO: Nice to have - Add support for merging configurations from multiple directories
+    #       if required in the future.
     directories: List[str] = [
-        "./jobchain",
-        "/etc/jobchain"
+        os.path.join(os.getcwd(), "jobchain"),  # jobchain directory in current working directory
+        os.path.join(os.path.expanduser("~"), "jobchain"),  # ~/jobchain
+        "/etc/jobchain"  
     ]
     _cached_configs: Dict[str, dict] = None
 
@@ -221,7 +244,8 @@ class ConfigLoader:
             allowed_extensions: tuple = ('.yaml', '.yml', '.json')
     ) -> Dict[str, dict]:
         """
-        Load configuration files from multiple directories.
+        Load configuration files from directories. Will search directories in order and stop
+        at the first valid jobchain directory found.
         
         Args:
             directories: List of directory paths to search
@@ -230,38 +254,47 @@ class ConfigLoader:
         
         Returns:
             Dictionary with config_base as key and loaded config as value
+            
+        Raises:
+            FileNotFoundError: If no valid jobchain directory is found in any of the directories
         """
         configs: Dict[str, dict] = {}
 
         # Convert directories to Path objects
-        dir_paths = [Path(str(d)) for d in directories]  # Handle both string and Path objects
+        dir_paths = [Path(str(d)) for d in directories]
         logging.info(f"Looking for config files in directories: {dir_paths}")
 
-        # For each config file we want to find
-        for config_base in config_bases:
-            logging.info(f"Looking for {config_base} config file...")
-            # Search through directories in order
-            for dir_path in dir_paths:
-                if not dir_path.exists():
-                    logging.info(f"Directory {dir_path} does not exist")
-                    continue
+        found_valid_dir = False
+        for dir_path in dir_paths:
+            if not dir_path.exists():
+                logging.info(f"Directory not found, skipping: {dir_path}")
+                continue
 
-                # Look for matching files
-                matches = [f for f in dir_path.glob(f"{config_base}.*")
-                           if f.suffix.lower() in allowed_extensions]
-                logging.info(f"Found matches in {dir_path}: {matches}")
+            # Check if any config files exist in this directory
+            has_configs = False
+            for config_base in config_bases:
+                for ext in allowed_extensions:
+                    if (dir_path / f"{config_base}{ext}").exists():
+                        has_configs = True
+                        break
+                if has_configs:
+                    break
 
-                # If we found a match, load it and break the directory loop
-                if matches:
-                    try:
-                        configs[config_base] = anyconfig.load(str(matches[0]))  # Convert Path to string for anyconfig
-                        logging.info(f"Loaded {matches[0]} with content: {configs[config_base]}")  # Debug print
-                        break  # Stop searching other directories for this config
-                    except Exception as e:
-                        logging.error(f"Error loading {matches[0]}: {e}")
-                        continue
+            if has_configs:
+                found_valid_dir = True
+                logging.info(f"Found valid jobchain directory: {dir_path}")
+                # Load configs from this directory only
+                for config_base in config_bases:
+                    for ext in allowed_extensions:
+                        config_path = dir_path / f"{config_base}{ext}"
+                        if config_path.exists():
+                            with open(config_path) as f:
+                                configs[config_base] = yaml.safe_load(f)
+                break  # Stop searching after finding first valid directory
 
-        logging.info(f"Final configs: {configs}")
+        if not found_valid_dir:
+            raise FileNotFoundError(f"No valid jobchain directory found in search paths: {dir_paths}")
+
         return configs
 
     @classmethod
