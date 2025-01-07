@@ -35,7 +35,7 @@ class JobChain:
             However, in most cases changing result_processing_function to be picklable is straightforward and should be the default.
             Defaults to False.
     """
-    def __init__(self, job: Optional[Any], result_processing_function: Optional[Callable[[Any], None]] = None, 
+    def __init__(self, job: Optional[Any] = None, result_processing_function: Optional[Callable[[Any], None]] = None, 
                  serial_processing: bool = False):
         # Get logger for JobChain
         self.logger = logging.getLogger('JobChain')
@@ -475,8 +475,7 @@ class JobChainFactory:
             JobChainFactory._instance = self
 
     @classmethod
-    def get_instance(cls):
+    def get_instance(cls)->JobChain:
         if not cls._instance:
             raise RuntimeError("JobChainFactory not initialized")
         return cls._instance._job_chain
-

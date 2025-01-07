@@ -15,6 +15,7 @@ import pytest
 import jobchain.jc_logging as logging
 from jobchain.job import JobABC
 from jobchain.job_chain import JobChainFactory
+from jobchain.job_loader import ConfigLoader
 
 # Global results list for picklable result processing
 RESULTS: List[dict] = []
@@ -105,6 +106,28 @@ def reset_factory():
     # Clean up after test
     if os.path.exists('temp.log'):
         os.remove('temp.log')
+
+
+def test_empty_initialization():
+    """Test that JobChainFactory is initialized correctly"""
+    # Set config directory for test
+    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_jc_config")])
+    
+    # Create JobChain with serial processing to ensure deterministic results
+    JobChainFactory()
+    
+    # Get head jobs from config to know their names
+    head_jobs = sorted(JobChainFactory.get_instance().get_job_names())
+    
+    # Verify head jobs are loaded - these are the entry point jobs from all graphs and parameter sets
+    expected_jobs = sorted([
+        'four_stage_parameterized_params1_read_file',
+        'four_stage_parameterized_params2_read_file',
+        'three_stage_params1_ask_llm_mini',
+        'three_stage_reasoning__ask_llm_reasoning'
+    ])
+    
+    assert head_jobs == expected_jobs, "JobChain config not loaded correctly"
 
 
 @pytest.mark.asyncio
