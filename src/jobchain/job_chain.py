@@ -6,6 +6,7 @@ import multiprocessing as mp
 import pickle
 import queue
 from collections import OrderedDict
+from multiprocessing import freeze_support, set_start_method
 from typing import Any, Callable, Collection, Dict, Optional, Union
 
 from . import jc_logging as logging
@@ -475,7 +476,26 @@ class JobChainFactory:
             JobChainFactory._instance = self
 
     @classmethod
-    def get_instance(cls)->JobChain:
-        if not cls._instance:
+    def init(cls, start_method="spawn", *args, **kwargs):
+      """
+      Initializes the JobChainFactory using the given start method.
+      args and kwargs are passed down to the JobChain constructor.
+
+      Args:
+        start_method: The start method of multiprocessing. Defaults to "spawn".
+        args: The parameters to be passed to the JobChain's constructor
+        kwargs: The keyword parameters to be passed to the JobChain's constructor
+        
+      """
+      freeze_support()
+      set_start_method(start_method)
+      if not cls._instance:
+        cls._instance = cls(*args, **kwargs)
+      return cls._instance
+
+    @staticmethod
+    def get_instance()->JobChain:
+        if not JobChainFactory._instance:
             raise RuntimeError("JobChainFactory not initialized")
-        return cls._instance._job_chain
+        return JobChainFactory._instance._job_chain
+
