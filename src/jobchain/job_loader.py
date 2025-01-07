@@ -195,8 +195,8 @@ class JobFactory:
 
 class ConfigLoader:
     directories: List[str] = [
-        "./local/config",
-        "/etc/myapp/config"
+        "./jobchain",
+        "/etc/jobchain"
     ]
     _cached_configs: Dict[str, dict] = None
 
@@ -216,7 +216,7 @@ class ConfigLoader:
     @classmethod
     def load_configs_from_dirs(
             cls,
-            directories: List[str] = ["./config", "/etc/myapp/config"],
+            directories: List[str] = [],
             config_bases: List[str] = ['graphs', 'jobs', 'parameters', 'jobchain_all'],
             allowed_extensions: tuple = ('.yaml', '.yml', '.json')
     ) -> Dict[str, dict]:
