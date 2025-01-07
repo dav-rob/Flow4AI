@@ -9,7 +9,7 @@ JobChain allows users to execute AI and IO Job graphs in parallel.
 - execute unit tests in the root directory using pytest using the command `python -m pytest` as the root of your test commands.
 - use pytest's --full-suite flag to run all tests, including performance tests.
 
-## Thinking Disciplines
+## Code Change Disciplines
 - NEVER jump to conclusions, always confirm for yourself what the facts are, even if I have told you what my understanding is, confirm for yourself your assumptions with direct observations from logging or prints, before making changes.
 - add logging or prints freely to help you confirm what the facts are before making changes.
 - Base decisions on the evidence you see in command outputs and results or tests.
