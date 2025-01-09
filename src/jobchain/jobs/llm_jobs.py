@@ -16,23 +16,27 @@ class OpenAIClient:
     _client = None
 
     @classmethod
-    def get_client(cls, api_key: str = None):
+    def get_client(cls, params: Dict[str, Any] = None):
         if cls._client is None:
             # Load environment variables from api.env file
             load_dotenv("api.env")
 
+            # Initialize params if None
+            params = params or {}
+
             # Determine the API key
-            api_key = api_key or os.getenv('OPENAI_API_KEY')
+            api_key = os.getenv(params.get("api_key")) if params.get("api_key") else os.getenv('OPENAI_API_KEY')
 
             # Optional: Check if the API key is not set and raise an error 
             if not api_key:
                 raise ValueError("API key is not set. Please provide an API key.")
-            cls._client = AsyncOpenAI(api_key=api_key)
+            
+            # Create client with all params
+            cls._client = AsyncOpenAI(api_key=api_key, **params)
         return cls._client
 
 class OpenAIJob(JobABC):
 
-    client = OpenAIClient.get_client()
     # Shared AsyncLimiter for all jobs, default to 5,000 requests per minute
     default_rate_limit = {"max_rate": 5000, "time_period": 60}
 
@@ -97,6 +101,9 @@ class OpenAIJob(JobABC):
         }
         """
         super().__init__(name, properties)
+        
+        # Initialize OpenAI client with properties
+        self.client = OpenAIClient.get_client(self.properties.get("client", {}))
         
         # Rate limiter configuration
         rate_limit_config = self.properties.get("rate_limit", self.default_rate_limit)
