@@ -37,6 +37,65 @@ class OpenAIJob(JobABC):
     default_rate_limit = {"max_rate": 5000, "time_period": 60}
 
     def __init__(self, name: Optional[str] = None, properties: Dict[str, Any] = {}):
+        """
+        Initialize an OpenAIJob instance, with properties dict, with three top-level keys, client, api, and rate_limit.
+        Example properties:
+        {
+            client: {
+                api_key: str | None = None,
+                organization: str | None = None,
+                project: str | None = None,
+                base_url: str | URL | None = None,
+                websocket_base_url: str | URL | None = None,
+                timeout: float | Timeout | NotGiven | None = NOT_GIVEN,
+                max_retries: int = DEFAULT_MAX_RETRIES,
+                default_headers: Mapping[str, str] | None = None,
+                default_query: Mapping[str, object] | None = None,
+                http_client: AsyncClient | None = None,
+                _strict_response_validation: bool = False
+            },
+            api: {
+                messages: Iterable[ChatCompletionMessageParam],
+                model: ChatModel | str,
+                audio: ChatCompletionAudioParam | NotGiven | None = NOT_GIVEN,
+                frequency_penalty: float | NotGiven | None = NOT_GIVEN,
+                function_call: FunctionCall | NotGiven = NOT_GIVEN,
+                functions: Iterable[Function] | NotGiven = NOT_GIVEN,
+                logit_bias: Dict[str, int] | NotGiven | None = NOT_GIVEN,
+                logprobs: bool | NotGiven | None = NOT_GIVEN,
+                max_completion_tokens: int | NotGiven | None = NOT_GIVEN,
+                max_tokens: int | NotGiven | None = NOT_GIVEN,
+                metadata: Dict[str, str] | NotGiven | None = NOT_GIVEN,
+                modalities: List[ChatCompletionModality] | NotGiven | None = NOT_GIVEN,
+                n: int | NotGiven | None = NOT_GIVEN,
+                parallel_tool_calls: bool | NotGiven = NOT_GIVEN,
+                prediction: ChatCompletionPredictionContentParam | NotGiven | None = NOT_GIVEN,
+                presence_penalty: float | NotGiven | None = NOT_GIVEN,
+                reasoning_effort: ChatCompletionReasoningEffort | NotGiven = NOT_GIVEN,
+                response_format: ResponseFormat | NotGiven = NOT_GIVEN,
+                seed: int | NotGiven | None = NOT_GIVEN,
+                service_tier: NotGiven | Literal['auto', 'default'] | None = NOT_GIVEN,
+                stop: str | List[str] | NotGiven | None = NOT_GIVEN,
+                store: bool | NotGiven | None = NOT_GIVEN,
+                stream: NotGiven | Literal[False] | None = NOT_GIVEN,
+                stream_options: ChatCompletionStreamOptionsParam | NotGiven | None = NOT_GIVEN,
+                temperature: float | NotGiven | None = NOT_GIVEN,
+                tool_choice: ChatCompletionToolChoiceOptionParam | NotGiven = NOT_GIVEN,
+                tools: Iterable[ChatCompletionToolParam] | NotGiven = NOT_GIVEN,
+                top_logprobs: int | NotGiven | None = NOT_GIVEN,
+                top_p: float | NotGiven | None = NOT_GIVEN,
+                user: str | NotGiven = NOT_GIVEN,
+                extra_headers: Headers | None = None,
+                extra_query: Query | None = None,
+                extra_body: Body | None = None,
+                timeout: float | Timeout | NotGiven | None = NOT_GIVEN
+            },
+            rate_limit: {
+                max_rate: Allow up to max_rate / time_period acquisitions before blocking.
+                time_period: duration of the time period in which to limit the rate. Note that up to max_rate acquisitions are allowed within this time period in a burst
+            }
+        }
+        """
         super().__init__(name, properties)
         
         # Rate limiter configuration
