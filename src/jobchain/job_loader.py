@@ -350,6 +350,57 @@ class ConfigLoader:
         return params
 
     @classmethod
+    def _validate_graph_structure(cls, graph_def: dict, defined_jobs: set, graph_name: str) -> None:
+        """
+        Validate the structure of a job graph.
+        - Checks for cycles
+        - Ensures all referenced jobs exist
+        - Validates head/tail nodes
+        
+        Args:
+            graph_def: Graph definition from configuration
+            defined_jobs: Set of all defined job names
+            graph_name: Name of the graph being validated
+            
+        Raises:
+            ValueError: If validation fails
+        """
+        # First validate all jobs exist and are properly connected
+        for job, job_def in graph_def.items():
+            if job not in defined_jobs:
+                raise ValueError(f"Job '{job}' in graph '{graph_name}' is not defined")
+            for next_job in job_def.get('next', []):
+                if next_job not in defined_jobs:
+                    raise ValueError(f"Job '{next_job}' referenced in 'next' field of job '{job}' in graph '{graph_name}' is not defined in jobs configuration")
+                    
+        # Build adjacency list after validating jobs
+        adjacency = {job: job_def.get('next', []) for job, job_def in graph_def.items()}
+        
+        # Check for cycles using DFS
+        visited = set()
+        rec_stack = set()
+        
+        def has_cycle(node):
+            visited.add(node)
+            rec_stack.add(node)
+            
+            for neighbor in adjacency[node]:
+                if neighbor not in visited:
+                    if has_cycle(neighbor):
+                        return True
+                elif neighbor in rec_stack:
+                    return True
+                    
+            rec_stack.remove(node)
+            return False
+            
+        # Run cycle detection from each unvisited node
+        for job in adjacency:
+            if job not in visited:
+                if has_cycle(job):
+                    raise ValueError(f"Cycle detected in graph '{graph_name}'")
+                    
+    @classmethod
     def validate_configs(cls, configs: Dict[str, dict]) -> None:
         """
         Validate that:
@@ -361,7 +412,8 @@ class ConfigLoader:
             configs: Dictionary containing all configurations
             
         Raises:
-            ConfigurationError: If validation fails or configuration is malformed
+            ValueError: If validation fails
+            ConfigurationError: If configuration is malformed (e.g. wrong types, missing required fields)
         """
         try:
             graphs_config = cls._extract_config_section(configs, 'graphs')
@@ -375,12 +427,56 @@ class ConfigLoader:
             defined_jobs = set(jobs_config.keys())
 
             for graph_name, graph_def in graphs_config.items():
+                # Validate graph structure (no cycles, etc)
                 print(f"\nChecking {graph_name} for cycles...")
                 cls._validate_graph_structure(graph_def, defined_jobs, graph_name)
                 print("No cycles detected")
-                print(f"{cls.logger.info(f'Graph {graph_name} passed all validations')}")
 
-        except AttributeError as e:
+                # Find all parameterized jobs in this graph
+                graph_parameterized_jobs = {}
+                for job_name in graph_def.keys():
+                    job_config = jobs_config[job_name]
+                    params = cls._find_parameterized_fields(job_config)
+                    if params:
+                        graph_parameterized_jobs[job_name] = params
+
+                # If graph has parameterized jobs, it must have parameters
+                if graph_parameterized_jobs:
+                    if graph_name not in parameters_config:
+                        raise ValueError(
+                            f"Graph '{graph_name}' contains parameterized jobs {list(graph_parameterized_jobs.keys())} but has no entry in parameters configuration")
+
+                    graph_params = parameters_config[graph_name]
+
+                    # Validate parameter groups
+                    for group_name in graph_params.keys():
+                        if not group_name.startswith('params'):
+                            raise ValueError(
+                                f"Invalid parameter group name '{group_name}' in graph '{graph_name}'. Parameter groups must start with 'params'")
+
+                    # Validate that all parameters are filled for each group
+                    for group_name, group_params in graph_params.items():
+                        for job_name, required_params in graph_parameterized_jobs.items():
+                            if job_name not in group_params:
+                                raise ValueError(
+                                    f"Job '{job_name}' in graph '{graph_name}' requires parameters {required_params} but has no entry in parameter group '{group_name}'")
+
+                            # Each job should have a list of parameter sets
+                            job_param_sets = group_params[job_name]
+                            if not isinstance(job_param_sets, list):
+                                raise ValueError(
+                                    f"Parameters for job '{job_name}' in graph '{graph_name}', group '{group_name}' should be a list of parameter sets")
+
+                            # Validate each parameter set
+                            for param_set in job_param_sets:
+                                missing_params = required_params - set(param_set.keys())
+                                if missing_params:
+                                    raise ValueError(
+                                        f"Parameter set for job '{job_name}' in graph '{graph_name}', group '{group_name}' is missing required parameters: {missing_params}")
+
+                print(f"Graph {graph_name} passed all validations")
+
+        except (AttributeError, TypeError, KeyError) as e:
             raise ConfigurationError("Configuration is malformed. Unable to proceed with job execution.") from e
 
     @classmethod
