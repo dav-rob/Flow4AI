@@ -12,7 +12,7 @@ from jobchain.job_loader import ConfigLoader, JobFactory, ConfigurationError
 from jobchain.jobs.llm_jobs import OpenAIJob
 
 # Test configuration
-TEST_CONFIG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config"))
+TEST_CONFIG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config"))
 
 @pytest.fixture
 def job_factory():
@@ -93,7 +93,7 @@ async def test_openai_job_instantiation_and_execution(job_factory):
 def test_config_loader_separate():
     """Test loading configurations from separate files"""
     # Get absolute paths
-    test_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config"))
+    test_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config"))
     logging.info(f"\nTest config dir: {test_config_dir}")
     logging.info(f"Directory exists: {os.path.exists(test_config_dir)}")
     logging.info(f"Directory contents: {os.listdir(test_config_dir)}")
@@ -133,7 +133,7 @@ def test_config_loader_separate():
 def test_config_loader_all():
     """Test loading configurations from a single combined file"""
     # Get absolute paths
-    test_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config_all"))
+    test_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config_all"))
     logging.info(f"\nTest config dir: {test_config_dir}")
     logging.info(f"Directory exists: {os.path.exists(test_config_dir)}")
     logging.info(f"Directory contents: {os.listdir(test_config_dir)}")
@@ -173,7 +173,7 @@ def test_config_loader_all():
 def test_create_head_jobs_from_config(job_factory):
     """Test that create_head_jobs_from_config creates the correct number of graphs with correct structure"""
     # Set up test config directory
-    test_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config"))
+    test_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config"))
     logging.info(f"\nTest config dir: {test_config_dir}")
     logging.info(f"Directory exists: {os.path.exists(test_config_dir)}")
     logging.info(f"Directory contents: {os.listdir(test_config_dir)}")
@@ -240,7 +240,7 @@ def test_create_head_jobs_from_config(job_factory):
 def test_validate_all_jobs_in_graph():
     """Test that validation catches jobs referenced in graphs but not defined in jobs"""
     # Test with invalid configuration
-    invalid_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config_invalid"))
+    invalid_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config_invalid"))
     ConfigLoader._set_directories([invalid_config_dir])
     
     with pytest.raises(ValueError) as exc_info:
@@ -248,7 +248,7 @@ def test_validate_all_jobs_in_graph():
     assert "Job 'nonexistent_job' referenced in 'next' field of job 'read_file' in graph 'four_stage_parameterized'" in str(exc_info.value)
     
     # Test with valid configuration
-    valid_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config"))
+    valid_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config"))
     ConfigLoader._set_directories([valid_config_dir])
     
     try:
@@ -259,7 +259,7 @@ def test_validate_all_jobs_in_graph():
 def test_validate_all_parameters_filled():
     """Test that validation catches missing or invalid parameter configurations"""
     # Test with invalid parameter configuration
-    invalid_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config_invalid_parameters"))
+    invalid_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config_invalid_parameters"))
     ConfigLoader._set_directories([invalid_config_dir])
     
     with pytest.raises(ValueError) as exc_info:
@@ -270,7 +270,7 @@ def test_validate_all_parameters_filled():
     assert "Job 'read_file' in graph 'four_stage_parameterized' requires parameters {'filepath'} but has no entry in parameter group 'params1'" in error_msg
     
     # Test with valid configuration
-    valid_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_jc_config"))
+    valid_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config"))
     ConfigLoader._set_directories([valid_config_dir])
     
     try:
@@ -288,7 +288,7 @@ async def test_job_execution_chain(caplog):
     JobFactory.load_jobs_into_registry([TEST_CONFIG_DIR])
 
     # Set config directory for test
-    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_jc_config")])
+    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config")])
     ConfigLoader.reload_configs()
 
     # Get head jobs from config
@@ -318,7 +318,7 @@ async def test_job_execution_chain(caplog):
 async def test_head_jobs_in_jobchain_serial():
     """Test that head jobs from config can be executed in JobChain with serial processing"""
     # Set config directory for test
-    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_jc_config")])
+    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config")])
 
    
     results = []
@@ -386,7 +386,7 @@ async def test_head_jobs_in_jobchain_parallel():
         os.remove("count_parallel_results")
         
     # Set config directory for test
-    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_jc_config")])
+    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config")])
     
     # Create JobChain with parallel processing (default)
     job_chain = JobChain(job=None, result_processing_function=process_result)
@@ -449,7 +449,7 @@ def process_prompts(result):
 @pytest.mark.asyncio
 async def test_single_job_multiple_prompts():
     # Set config directory for test
-    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_single_job")])
+    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_single_job")])
     
     # Create JobChain with parallel processing (default)
     job_chain = JobChain(result_processing_function=process_prompts)
