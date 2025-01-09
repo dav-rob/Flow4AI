@@ -111,7 +111,7 @@ def reset_factory():
 def test_empty_initialization():
     """Test that JobChainFactory is initialized correctly"""
     # Set config directory for test
-    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_jc_config")])
+    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config")])
     
     # Create JobChain with serial processing to ensure deterministic results
     JobChainFactory()
