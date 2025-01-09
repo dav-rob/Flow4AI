@@ -477,7 +477,13 @@ class ConfigLoader:
                 print(f"Graph {graph_name} passed all validations")
 
         except (AttributeError, TypeError, KeyError) as e:
-            raise ConfigurationError("Configuration is malformed. Unable to proceed with job execution.") from e
+            error_msg = "Configuration is malformed. Unable to proceed with job execution.\n\n" \
+                        "-------------------------------------------------------\n" \
+                        "          Configuration file malformed - cannot continue\n" \
+                        "-------------------------------------------------------\n" \
+                        f"Error details: {str(e)}\n" \
+                        "-------------------------------------------------------"
+            raise ConfigurationError(error_msg) from e
 
     @classmethod
     def load_all_configs(cls) -> Dict[str, dict]:
