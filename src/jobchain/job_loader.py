@@ -262,8 +262,10 @@ class ConfigLoader:
             
         Raises:
             FileNotFoundError: If no valid jobchain directory is found in any of the directories
+            ConfigurationError: If configuration files are malformed
         """
         configs: Dict[str, dict] = {}
+        config_files: Dict[str, str] = {}  # Track which file each config came from
 
         # Convert directories to Path objects
         dir_paths = [Path(str(d)) for d in directories]
@@ -293,13 +295,26 @@ class ConfigLoader:
                     for ext in allowed_extensions:
                         config_path = dir_path / f"{config_base}{ext}"
                         if config_path.exists():
-                            with open(config_path) as f:
-                                configs[config_base] = yaml.safe_load(f)
+                            try:
+                                with open(config_path) as f:
+                                    configs[config_base] = yaml.safe_load(f)
+                                    config_files[config_base] = str(config_path)
+                            except yaml.YAMLError as e:
+                                error_msg = "Configuration is malformed. Unable to proceed with job execution.\n\n" \
+                                        "-------------------------------------------------------\n" \
+                                        "          Configuration file malformed - cannot continue\n" \
+                                        "-------------------------------------------------------\n" \
+                                        f"File: {config_path}\n" \
+                                        f"Error details: {str(e)}\n" \
+                                        "-------------------------------------------------------"
+                                raise ConfigurationError(error_msg) from e
                 break  # Stop searching after finding first valid directory
 
         if not found_valid_dir:
             raise FileNotFoundError(f"No valid jobchain directory found in search paths: {dir_paths}")
 
+        # Store file paths in configs
+        configs['__files__'] = config_files
         return configs
 
     @classmethod
@@ -419,6 +434,7 @@ class ConfigLoader:
             graphs_config = cls._extract_config_section(configs, 'graphs')
             jobs_config = cls._extract_config_section(configs, 'jobs')
             parameters_config = cls._extract_config_section(configs, 'parameters')
+            config_files = configs.get('__files__', {})
 
             if not graphs_config or not jobs_config:
                 return
@@ -426,6 +442,15 @@ class ConfigLoader:
             # First validate that all jobs in graphs exist
             defined_jobs = set(jobs_config.keys())
 
+            # Track which config we're currently validating
+            current_config = 'jobs'
+            
+            # Validate jobs config structure
+            for job_name, job_config in jobs_config.items():
+                if not isinstance(job_config, dict):
+                    raise TypeError(f"Job '{job_name}' configuration must be a dictionary")
+                
+            current_config = 'graphs'
             for graph_name, graph_def in graphs_config.items():
                 # Validate graph structure (no cycles, etc)
                 print(f"\nChecking {graph_name} for cycles...")
@@ -442,6 +467,7 @@ class ConfigLoader:
 
                 # If graph has parameterized jobs, it must have parameters
                 if graph_parameterized_jobs:
+                    current_config = 'parameters'
                     if graph_name not in parameters_config:
                         raise ValueError(
                             f"Graph '{graph_name}' contains parameterized jobs {list(graph_parameterized_jobs.keys())} but has no entry in parameters configuration")
@@ -477,10 +503,13 @@ class ConfigLoader:
                 print(f"Graph {graph_name} passed all validations")
 
         except (AttributeError, TypeError, KeyError) as e:
+            # Get the relevant file path based on which config we were validating
+            error_file = config_files.get(current_config, 'unknown file')
             error_msg = "Configuration is malformed. Unable to proceed with job execution.\n\n" \
                         "-------------------------------------------------------\n" \
                         "          Configuration file malformed - cannot continue\n" \
                         "-------------------------------------------------------\n" \
+                        f"File: {error_file}\n" \
                         f"Error details: {str(e)}\n" \
                         "-------------------------------------------------------"
             raise ConfigurationError(error_msg) from e

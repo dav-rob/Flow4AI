@@ -469,11 +469,38 @@ async def test_single_job_multiple_prompts():
 @pytest.mark.asyncio
 async def test_malformed_configuration():
     """Test that a malformed configuration file raises a clear error."""
-    # Set config directory for test
-    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_malformed_config")])
+    
+    # Test malformed graphs config
+    test_config_dir = os.path.join(os.path.dirname(__file__), "test_configs/test_malformed_config")
+    ConfigLoader._set_directories([test_config_dir])
     
     with pytest.raises(ConfigurationError) as excinfo:
-        # Force config validation
         ConfigLoader.load_all_configs()
         
-    assert "Configuration is malformed" in str(excinfo.value)
+    error_msg = str(excinfo.value)
+    assert "Configuration is malformed" in error_msg
+    assert "test_malformed_config/graphs.yaml" in error_msg
+    
+    # Test malformed jobs config
+    test_config_dir = os.path.join(os.path.dirname(__file__), "test_configs/test_malformed_config_jobs")
+    ConfigLoader._set_directories([test_config_dir])
+    ConfigLoader._cached_configs = None  # Reset cached configs
+    
+    with pytest.raises(ConfigurationError) as excinfo:
+        ConfigLoader.load_all_configs()
+        
+    error_msg = str(excinfo.value)
+    assert "Configuration is malformed" in error_msg
+    assert "test_malformed_config_jobs/jobs.yaml" in error_msg
+    
+    # Test malformed parameters config
+    test_config_dir = os.path.join(os.path.dirname(__file__), "test_configs/test_malformed_config_params")
+    ConfigLoader._set_directories([test_config_dir])
+    ConfigLoader._cached_configs = None  # Reset cached configs
+    
+    with pytest.raises(ConfigurationError) as excinfo:
+        ConfigLoader.load_all_configs()
+        
+    error_msg = str(excinfo.value)
+    assert "Configuration is malformed" in error_msg
+    assert "test_malformed_config_params/parameters.yaml" in error_msg

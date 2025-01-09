@@ -1,0 +1,9 @@
+ask_llm:
+  type: OpenAIJob
+  properties:
+    api:
+      model: "$model"
+      temperature: 0.7
+    rate_limit:
+      max_rate: 10
+      time_period
