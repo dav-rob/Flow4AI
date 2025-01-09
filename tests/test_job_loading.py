@@ -441,3 +441,27 @@ async def test_head_jobs_in_jobchain_parallel():
     
     # Clean up results file
     os.remove("count_parallel_results")
+
+def process_prompts(result):
+    """Process a result by appending it to the global results list and logging to file"""
+    print(f"Got result: {result}")
+
+@pytest.mark.asyncio
+async def test_single_job_multiple_prompts():
+    # Set config directory for test
+    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_single_job")])
+    
+    # Create JobChain with parallel processing (default)
+    job_chain = JobChain(result_processing_function=process_prompts)
+
+    prompts = ["what is the capital of france",
+    "what is the capital of germany",
+    "what is the capital of the UK",
+    "what is the capital of the USA"
+    ]
+
+    for prompt in prompts:
+        job_chain.submit_task({"prompt": prompt})
+    
+    # Mark input as completed and wait for all processing to finish
+    job_chain.mark_input_completed()

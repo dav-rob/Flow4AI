@@ -1,0 +1,3 @@
+single_stage:
+    ask_llm:
+      next:[] # this is deliberately malformed, it should error.
