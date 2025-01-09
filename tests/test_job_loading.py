@@ -8,7 +8,7 @@ import jobchain.jc_logging as logging
 from jobchain.jc_graph import validate_graph
 from jobchain.job import Task
 from jobchain.job_chain import JobChain  # Import JobChain
-from jobchain.job_loader import ConfigLoader, JobFactory
+from jobchain.job_loader import ConfigLoader, JobFactory, ConfigurationError
 from jobchain.jobs.llm_jobs import OpenAIJob
 
 # Test configuration
@@ -465,3 +465,15 @@ async def test_single_job_multiple_prompts():
     
     # Mark input as completed and wait for all processing to finish
     job_chain.mark_input_completed()
+
+@pytest.mark.asyncio
+async def test_malformed_configuration():
+    """Test that a malformed configuration file raises a clear error."""
+    # Set config directory for test
+    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_malformed_config")])
+    
+    with pytest.raises(ConfigurationError) as excinfo:
+        # Force config validation
+        ConfigLoader.load_all_configs()
+        
+    assert "Configuration is malformed" in str(excinfo.value)

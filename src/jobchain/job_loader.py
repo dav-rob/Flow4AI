@@ -16,6 +16,11 @@ class JobValidationError(Exception):
     pass
 
 
+class ConfigurationError(Exception):
+    """Exception raised when configuration is malformed."""
+    pass
+
+
 class JobLoader:
 
     @staticmethod
@@ -356,83 +361,27 @@ class ConfigLoader:
             configs: Dictionary containing all configurations
             
         Raises:
-            ValueError: If validation fails
+            ConfigurationError: If validation fails or configuration is malformed
         """
-        graphs_config = cls._extract_config_section(configs, 'graphs')
-        jobs_config = cls._extract_config_section(configs, 'jobs')
-        parameters_config = cls._extract_config_section(configs, 'parameters')
+        try:
+            graphs_config = cls._extract_config_section(configs, 'graphs')
+            jobs_config = cls._extract_config_section(configs, 'jobs')
+            parameters_config = cls._extract_config_section(configs, 'parameters')
 
-        if not graphs_config or not jobs_config:
-            return
+            if not graphs_config or not jobs_config:
+                return
 
-        # First validate that all jobs in graphs exist
-        defined_jobs = set(jobs_config.keys())
+            # First validate that all jobs in graphs exist
+            defined_jobs = set(jobs_config.keys())
 
-        for graph_name, graph_def in graphs_config.items():
-            for job_name, job_def in graph_def.items():
-                if job_name not in defined_jobs:
-                    raise ValueError(
-                        f"Job '{job_name}' referenced in graph '{graph_name}' is not defined in jobs configuration")
+            for graph_name, graph_def in graphs_config.items():
+                print(f"\nChecking {graph_name} for cycles...")
+                cls._validate_graph_structure(graph_def, defined_jobs, graph_name)
+                print("No cycles detected")
+                print(f"{cls.logger.info(f'Graph {graph_name} passed all validations')}")
 
-                # Check jobs in 'next' field
-                next_jobs = job_def.get('next', [])
-                for next_job in next_jobs:
-                    if next_job not in defined_jobs:
-                        raise ValueError(
-                            f"Job '{next_job}' referenced in 'next' field of job '{job_name}' in graph '{graph_name}' is not defined in jobs configuration")
-
-            # After verifying all jobs exist, validate graph structure
-            from jobchain.jc_graph import validate_graph
-            validate_graph(graph_def, graph_name)
-
-        # Now validate parameters
-        for graph_name, graph_def in graphs_config.items():
-            # Find all parameterized jobs in this graph
-            graph_parameterized_jobs = {}
-            for job_name in graph_def.keys():
-                job_config = jobs_config[job_name]
-                params = cls._find_parameterized_fields(job_config)
-                if params:
-                    graph_parameterized_jobs[job_name] = params
-
-            # If graph has parameterized jobs, it must have parameters
-            if graph_parameterized_jobs:
-                if graph_name not in parameters_config:
-                    raise ValueError(
-                        f"Graph '{graph_name}' contains parameterized jobs {list(graph_parameterized_jobs.keys())} but has no entry in parameters configuration")
-
-                graph_params = parameters_config[graph_name]
-
-                # Validate parameter groups
-                for group_name in graph_params.keys():
-                    if not group_name.startswith('params'):
-                        raise ValueError(
-                            f"Invalid parameter group name '{group_name}' in graph '{graph_name}'. Parameter groups must start with 'params'")
-
-                # Validate that all parameters are filled for each group
-                for group_name, group_params in graph_params.items():
-                    for job_name, required_params in graph_parameterized_jobs.items():
-                        if job_name not in group_params:
-                            raise ValueError(
-                                f"Job '{job_name}' in graph '{graph_name}' requires parameters {required_params} but has no entry in parameter group '{group_name}'")
-
-                        # Each job should have a list of parameter sets
-                        job_param_sets = group_params[job_name]
-                        if not isinstance(job_param_sets, list):
-                            raise ValueError(
-                                f"Parameters for job '{job_name}' in graph '{graph_name}', group '{group_name}' should be a list of parameter sets")
-
-                        # Check each parameter set
-                        for param_set in job_param_sets:
-                            missing_params = required_params - set(param_set.keys())
-                            if missing_params:
-                                raise ValueError(
-                                    f"Parameter set for job '{job_name}' in graph '{graph_name}', group '{group_name}' is missing required parameters: {missing_params}")
-
-            # If graph has no parameterized jobs, it should not have parameters
-            elif graph_name in parameters_config:
-                raise ValueError(
-                    f"Graph '{graph_name}' has no parameterized jobs but has an entry in parameters configuration")
+        except AttributeError as e:
+            raise ConfigurationError("Configuration is malformed. Unable to proceed with job execution.") from e
 
     @classmethod
     def load_all_configs(cls) -> Dict[str, dict]:
