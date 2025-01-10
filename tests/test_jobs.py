@@ -151,7 +151,10 @@ async def test_openrouter_api():
     tasks = [
         {"messages": [{"role": "user", "content": "What is 2+2?"}]},
         {"messages": [{"role": "user", "content": "What is the capital of France?"}]},
-        {"messages": [{"role": "user", "content": "What is the color of the sky?"}]}
+        {"messages": [{"role": "user", "content": "What is the color of the sky?"}]},
+        {"prompt": "Count to 1"},
+        {"prompt": "Count to 2"},
+        {"prompt": "Count to 3"}
     ]
     
     # Record start time
@@ -171,7 +174,7 @@ async def test_openrouter_api():
     logging.info(f"All OpenRouter calls completed in {elapsed_time:.2f} seconds")
     
     # Verify results
-    assert len(results) == 3
+    assert len(results) == 6
     for result in results:
         assert isinstance(result, dict)
         assert ("response" in result) or ("error" in result), "Expected either 'response' or 'error' in result"
