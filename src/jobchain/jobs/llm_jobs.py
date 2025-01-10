@@ -3,10 +3,9 @@ from typing import Any, Dict, Optional, Union
 
 from aiolimiter import AsyncLimiter
 from dotenv import load_dotenv
-from openai import AsyncOpenAI
-
 from jobchain import jc_logging as logging
 from jobchain.job import JobABC
+from openai import AsyncOpenAI
 
 
 class OpenAIClient:
@@ -160,7 +159,7 @@ class OpenAIJob(JobABC):
                 request_properties["messages"] = task["messages"]
             
             # Add any other valid API parameters from task
-            request_properties.update({k: v for k, v in task.items() if k not in ["prompt", "messages"]})
+            # request_properties.update({k: v for k, v in task.items() if k not in ["prompt", "messages"]})
         elif task:  # If task is not empty and not a dict
             # If task is not a dict, treat it as the prompt
             request_properties["messages"] = [
