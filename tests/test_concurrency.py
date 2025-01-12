@@ -1,5 +1,7 @@
 import asyncio
+import multiprocessing as mp
 import os
+from functools import partial
 from typing import Any, Dict
 
 import pytest
@@ -8,27 +10,32 @@ import jobchain.jc_logging as logging
 from jobchain.job_chain import JobChain
 from jobchain.job_loader import ConfigLoader
 
-# Global list to collect results
-results = []
+logging.setup_logging("DEBUG")
 
-def result_collector(result):
-    logging.debug(f"Result collector received: {result}")
-    results.append(result)
+# NB result_collector is used by the JobExecutorProcess and so has a different
+#  process to the test so results need to be shared using results = manager.list()
+#  its either this or write to file.
+def result_collector(shared_results, result):
+    logging.info(f"Result collector received: {result}")
+    shared_results.append(result)
 
 @pytest.mark.asyncio
 async def test_concurrent_state_corruption():
     """Test to demonstrate state corruption under concurrent load"""
-    #logging.getLogger().setLevel(logging.DEBUG)
     
-    # Clear previous results
-    results.clear()
+    # Create a manager for sharing the results list between processes
+    manager = mp.Manager()
+    results = manager.list()
+    
+    # Create a partial function with our shared results list
+    collector = partial(result_collector, results)
     
     # Set config directory for test
     config_dir = os.path.join(os.path.dirname(__file__), "test_configs/test_concurrency")
     ConfigLoader._set_directories([config_dir])
     
     # Create JobChain with parallel processing
-    job_chain = JobChain(result_processing_function=result_collector)
+    job_chain = JobChain(result_processing_function=collector)
     
     # Submit multiple tasks rapidly to each head
     num_tasks_per_head = 5
