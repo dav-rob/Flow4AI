@@ -147,6 +147,7 @@ class JobFactory:
     @classmethod
     def create_job(cls, name: str, job_type: str, job_def: Dict[str, Any]) -> JobABC:
         if job_type not in cls._job_types:
+            logging.error(f"*** Unknown job type: {job_type} ***")
             raise ValueError(f"Unknown job type: {job_type}")
         
         properties = job_def.get('properties', {})

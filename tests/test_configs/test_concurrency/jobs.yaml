@@ -1,0 +1,23 @@
+head1:
+  type: HeadJob
+  params: {}
+
+head2:
+  type: HeadJob
+  params: {}
+
+head3:
+  type: HeadJob
+  params: {}
+
+head4:
+  type: HeadJob
+  params: {}
+
+middle:
+  type: MiddleJob
+  params: {}
+
+tail:
+  type: TailJob
+  params: {}

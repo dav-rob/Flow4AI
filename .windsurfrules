@@ -32,13 +32,9 @@ For logging, use the jobchain.jc_logging module, not the standard logging module
 - for external files, examples and tests use
 `import jobchain.jc_logging as logging` 
 - for internal files under /src use the relative path import of jc_logging
-- to view DEBUG logs do this:
+- to view set the logging level use the JOBCHAIN_LOG_LEVEL environment variable, for example:
 ```bash
-export JOBCHAIN_LOG_LEVEL=DEBUG
-```
-- to revert back to INFO logs do this:
-```bash
-export JOBCHAIN_LOG_LEVEL=INFO
+JOBCHAIN_LOG_LEVEL=DEBUG python -m pytest tests/test_concurrency.py 
 ```
 If you're having problems seeing debug logs then report it, don't sit on it, but remember to see logs in pytest use the -s flag.
 

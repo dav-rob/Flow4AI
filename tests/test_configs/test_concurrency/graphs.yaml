@@ -1,0 +1,39 @@
+concurrent_test1:
+    head1:
+      next:
+        - middle
+    middle:
+      next:
+        - tail
+    tail:
+      next: []
+
+concurrent_test2:
+    head2:
+      next:
+        - middle
+    middle:
+      next:
+        - tail
+    tail:
+      next: []
+
+concurrent_test3:
+    head3:
+      next:
+        - middle
+    middle:
+      next:
+        - tail
+    tail:
+      next: []
+
+concurrent_test4:
+    head4:
+      next:
+        - middle
+    middle:
+      next:
+        - tail
+    tail:
+      next: []
