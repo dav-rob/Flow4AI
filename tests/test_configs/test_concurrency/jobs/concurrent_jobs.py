@@ -47,7 +47,9 @@ class HeadJob(StateTrackingJob):
     async def run(self, inputs):
         task_id = inputs.get('task_id', 'unknown')
         logging.debug(f"HeadJob {self.name} processing task {task_id}")
-        
+        # The code only loops once because there's only one yield statement, 
+        # making it effectively work like a context manager but with the 
+        # ability to pass back the concurrent execution count.
         async for current_concurrent in self._track_execution(task_id):
             await asyncio.sleep(0.001)  # Small delay to increase chance of race conditions
             return {
@@ -65,7 +67,9 @@ class MiddleJob(StateTrackingJob):
         first_input = next(iter(inputs.values()))
         task_id = first_input.get('task_id', 'unknown')
         logging.debug(f"MiddleJob {self.name} processing task {task_id}")
-        
+        # The code only loops once because there's only one yield statement, 
+        # making it effectively work like a context manager but with the 
+        # ability to pass back the concurrent execution count.
         async for current_concurrent in self._track_execution(task_id):
             await asyncio.sleep(0.01)  # Longer delay in middle to increase race condition chance
             return {
@@ -81,10 +85,12 @@ class TailJob(StateTrackingJob):
     async def run(self, inputs):
         first_input = next(iter(inputs.values()))
         task_id = first_input.get('task_id', 'unknown')
-        logging.debug(f"TailJob {self.name} processing task {task_id}")
-        
+        # The code only loops once because there's only one yield statement, 
+        # making it effectively work like a context manager but with the 
+        # ability to pass back the concurrent execution count.
         async for current_concurrent in self._track_execution(task_id):
             await asyncio.sleep(0.001)  # Small delay
+            logging.debug(f"TailJob: {self.name} processing task {task_id} - concurrent count: {current_concurrent}")
             return {
                 'task_id': task_id,
                 'source_job': self.name,
