@@ -145,6 +145,43 @@ class JobABC(ABC, metaclass=JobMeta):
         # Return a unique name based on the current class
         return f"{cls.__name__}_{cls._instance_counts[cls]}"
 
+    def deep_copy(self) -> 'JobABC':
+        """
+        Creates a deep copy of the job and its entire graph structure.
+        
+        The copy maintains the same structure as the original graph but with new job instances.
+        Note that job names in the copy are not guaranteed to be unique relative to the original
+        graph - uniqueness is maintained at the JobChain class level for maintaining several 
+        different job graphs in a job_map in the JobChain , not for use in the process_task 
+        method which does a deep_copy to manage concurrent state.
+        
+        Returns:
+            JobABC: A deep copy of this job and its graph
+        """
+        # Keep track of already copied jobs to handle cycles and shared nodes
+        copied_jobs: Dict[str, JobABC] = {}
+        
+        def _copy_job(job: JobABC) -> JobABC:
+            if job.name in copied_jobs:
+                return copied_jobs[job.name]
+            
+            # Create new instance of the same class
+            new_job = job.__class__(name=job.name, properties=job.properties.copy())
+            copied_jobs[job.name] = new_job
+            
+            # Copy next_jobs recursively
+            new_job.next_jobs = [_copy_job(next_job) for next_job in job.next_jobs]
+            
+            # Copy expected inputs - we use the same names since they'll be matched during execution
+            new_job.expected_inputs = job.expected_inputs.copy()
+            
+            # Copy other attributes
+            new_job.timeout = job.timeout
+            
+            return new_job
+        
+        return _copy_job(self)
+
     def __repr__(self):
         next_jobs_str = [job.name for job in self.next_jobs]
         expected_inputs_str = [input_name for input_name in self.expected_inputs]
