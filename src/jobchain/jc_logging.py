@@ -19,7 +19,8 @@ import logging
 import os
 from logging.config import dictConfig
 
-def get_logging_config():
+
+def get_logging_config(logging_level:str = None):
     """Get the logging configuration based on current environment variables."""
     return {
         'version': 1,
@@ -53,15 +54,15 @@ def get_logging_config():
             }
         },
         'root': {
-            'level': os.getenv('JOBCHAIN_LOG_LEVEL', 'INFO'),
+            'level': logging_level or os.getenv('JOBCHAIN_LOG_LEVEL', 'INFO'),
             # Set JOBCHAIN_LOG_HANDLERS='console,file' to enable both console and file logging
             'handlers': os.getenv('JOBCHAIN_LOG_HANDLERS', 'console').split(',')
         }
     }
 
-def setup_logging():
+def setup_logging(logging_level:str = None):
     """Setup logging with current configuration."""
-    config = get_logging_config()
+    config = get_logging_config(logging_level)
     
     # Always create log file with header, actual logging will only happen if handlers use it
     if not os.path.exists('jobchain.log'):
