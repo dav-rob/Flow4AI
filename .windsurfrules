@@ -32,11 +32,7 @@ For logging, use the jobchain.jc_logging module, not the standard logging module
 - for external files, examples and tests use
 `import jobchain.jc_logging as logging` 
 - for internal files under /src use the relative path import of jc_logging
-- to view set the logging level use the JOBCHAIN_LOG_LEVEL environment variable, for example:
-```bash
-JOBCHAIN_LOG_LEVEL=DEBUG python -m pytest tests/test_concurrency.py 
-```
-If you're having problems seeing debug logs then report it, don't sit on it, but remember to see logs in pytest use the -s flag.
+- to set the logging level in tests use `logging.setup_logging("DEBUG")`
 
 ## Command Macros
 When I ask you to run a macro do the following:
