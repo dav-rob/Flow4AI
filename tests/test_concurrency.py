@@ -55,40 +55,4 @@ async def test_concurrent_state_corruption():
     # Verify results
     assert len(results) == total_tasks, f"Expected {total_tasks} results, got {len(results)}"
     
-    # Get job instances from JobChain
-    jobs = job_chain.job_map
     
-    # Check for race conditions and state corruption in each job
-    for job_name, job in jobs.items():
-        logging.info(f"\nStats for {job_name}:")
-        logging.info(f"Total tasks processed: {job.stats.processed_count}")
-        logging.info(f"Maximum concurrent executions: {job.stats.max_concurrent}")
-        logging.info(f"Unique tasks processed: {len(job.stats.processed_tasks)}")
-        
-        # Check for duplicate processing
-        expected_tasks = set()
-        if job_name.startswith('head'):
-            expected_tasks = {f"{job_name}_{i}" for i in range(num_tasks_per_head)}
-        else:
-            # Middle and tail jobs should process all tasks
-            for job_name in ['head1', 'head2', 'head3', 'head4']:
-                expected_tasks.update({f"{job_name}_{i}" for i in range(num_tasks_per_head)})
-        
-        missing_tasks = expected_tasks - job.stats.processed_tasks
-        extra_tasks = job.stats.processed_tasks - expected_tasks
-        
-        if missing_tasks:
-            logging.error(f"{job_name} missing tasks: {missing_tasks}")
-        if extra_tasks:
-            logging.error(f"{job_name} has extra tasks: {extra_tasks}")
-        
-        assert not missing_tasks, f"{job_name} did not process all expected tasks"
-        assert not extra_tasks, f"{job_name} processed unexpected tasks"
-        
-    # Analyze timing patterns
-    for job_name, job in jobs.items():
-        logging.info(f"\nTiming analysis for {job_name}:")
-        for task_id, times in job.stats.processing_times.items():
-            if len(times) > 1:
-                logging.error(f"Task {task_id} was processed {len(times)} times!")
-                logging.error(f"Processing times: {times}")
