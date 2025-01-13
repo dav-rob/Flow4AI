@@ -1,11 +1,11 @@
 text_capitalize:
   type: TextCapitalizeJob
-  params: {}
+  properties: {}
 
 text_reverse:
   type: TextReverseJob
-  params: {}
+  properties: {}
 
 text_wrap:
   type: TextWrapJob
-  params: {}
+  properties: {}
