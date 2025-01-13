@@ -10,7 +10,6 @@ import jobchain.jc_logging as logging
 from jobchain.job_chain import JobChain
 from jobchain.job_loader import ConfigLoader
 
-logging.setup_logging("DEBUG")
 
 # NB result_collector is used by the JobExecutorProcess and so has a different
 #  process to the test so results need to be shared using results = manager.list()
