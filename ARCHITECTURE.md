@@ -99,7 +99,7 @@ JobChain is a sophisticated Python framework designed for parallel and asynchron
 #### Job Graph Loading in Multiprocessing
 
 ##### Process Synchronization Challenges
-- Jobs are not picklable (cannot be directly transferred between processes)
+- Not all jobs are picklable, so we cannot depend on passing them between processes.
 - Uses a unique approach to share job information across processes
 
 ##### Loading Mechanism in Separate Process
@@ -130,12 +130,6 @@ if not job_map:
     job_name_map.clear()
     job_name_map.update({name: name for name in job_map.keys()})
 ```
-
-##### Limitations and Design Considerations
-- Job recreation ensures process isolation
-- Prevents direct object transfer between processes
-- Maintains flexibility in job configuration
-- Allows dynamic job loading at runtime
 
 ### 4. Job Loading and Configuration (`job_loader.py`)
 
@@ -199,7 +193,7 @@ if not job_map:
     properties:    # Optional properties passed to job constructor
       key: value
   ```
-- The type field can be any name as long as a job class is registered with that name
+- The type field MUST be the exact case-sensitive name of the job class.
 - Properties are passed to the job's constructor during instantiation
 - Jobs are dynamically loaded and registered from Python files in specified directories
 
@@ -219,6 +213,8 @@ if not job_map:
 
 ##### Parameter Substitution
 - Replace configuration placeholders dynamically
+- A new graph and graph name is generated for each param1, param2, param3, to enable tests of different LLM models in separate configurations
+- The name of the parameter headings params1 etc. is arbitrary, it can be anything, it is added to the graph name.
 - Example:
   ```yaml
   jobs:
@@ -231,6 +227,8 @@ if not job_map:
     params1:
       read_file:
         - filepath: './data1.txt'
+    params2:
+      read_file:
         - filepath: './data2.txt'
   ```
 
@@ -245,7 +243,7 @@ if not job_map:
 #### Advanced Logging Configuration
 - Environment variable-based configuration
 - Flexible logging handlers
-- Debug and info level logging
+- Debug, info, warning etc. level logging
 - File and console logging support
 
 ## Execution Flow
@@ -326,7 +324,7 @@ JobChain is designed to be easily extended:
 
 ## Limitations and Considerations
 
-- Requires picklable job and result processing functions
+- Parallel processing of results requires module level function, not inner functions.
 - Performance depends on system resources
 - Complex graphs may increase complexity
 
