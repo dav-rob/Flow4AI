@@ -1,0 +1,29 @@
+text_processing_graph1:
+    text_capitalize:
+      next:
+        - text_reverse
+    text_reverse:
+      next:
+        - text_wrap
+    text_wrap:
+      next: []
+
+text_processing_graph2:
+    text_capitalize:
+      next:
+        - text_reverse
+    text_reverse:
+      next:
+        - text_wrap
+    text_wrap:
+      next: []
+
+text_processing_graph3:
+    text_capitalize:
+      next:
+        - text_reverse
+    text_reverse:
+      next:
+        - text_wrap
+    text_wrap:
+      next: []

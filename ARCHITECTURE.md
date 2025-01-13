@@ -22,6 +22,32 @@ JobChain is a sophisticated Python framework designed for parallel and asynchron
 - Async execution model
 - Tracing and performance instrumentation
 
+#### Custom Job Implementation Requirements
+1. Job Class Structure:
+   - Must inherit from JobABC
+   - Must implement the abstract `run` method (not `_execute`)
+   - Constructor must accept name and properties parameters:
+     ```python
+     def __init__(self, name: Optional[str] = None, properties: Dict[str, Any] = {}):
+         super().__init__(name, properties)
+     ```
+
+2. Method Implementation:
+   - The `run` method is where job-specific logic goes:
+     ```python
+     async def run(self, task: Dict[str, Any]) -> Dict[str, Any]:
+         # Job-specific processing logic here
+         return result_dict
+     ```
+   - Do not override `_execute` - it's handled by JobABC for job graph processing
+   - The `run` method receives task data and must return a dictionary
+
+3. Important Notes:
+   - JobABC handles job graph execution through `_execute`
+   - Custom jobs only need to implement business logic in `run`
+   - The `run` method is called by `_execute` with processed inputs
+   - Always call super().__init__ with name and properties parameters
+
 ### 2. Job Graph Management (`jc_graph.py`)
 
 #### Graph Validation and Manipulation
@@ -29,6 +55,35 @@ JobChain is a sophisticated Python framework designed for parallel and asynchron
 - Cross-graph reference validation
 - Head and tail node identification
 - Edge addition with cycle prevention
+
+#### Task Routing and Graph Instances
+- Tasks can flow through shared graph instances
+- Multiple tasks can be processed concurrently by the same graph
+- Design rationale:
+  - Efficient resource utilization
+  - Simplified configuration
+  - Natural parallel processing
+- Implementation approach:
+  - Tasks are queued and processed asynchronously
+  - Each job in the graph can handle multiple tasks
+  - State isolation is maintained at the task level
+  - Results are tracked per task through the chain
+- Example configuration:
+  ```yaml
+  processing_graph:
+    read_file:
+      next: [process_data]
+    process_data:
+      next: [save_results]
+    save_results:
+      next: []
+  ```
+- Multiple tasks can be submitted to the same graph:
+  ```python
+  # All tasks use the same graph instance
+  for task in tasks:
+      job_chain.submit_task(task, job_name='processing_graph__read_file')
+  ```
 
 ### 3. Job Execution Engine (`job_chain.py`)
 
@@ -135,6 +190,18 @@ if not job_map:
   - Runtime job graph generation
 - Enables complex, parameterized job workflows
 - Provides runtime flexibility in job graph construction
+
+##### Job Configuration Requirements
+- Job configuration in jobs.yaml defines job types and their properties:
+  ```yaml
+  job_name:
+    type: JobType  # Any name that matches a registered job class
+    properties:    # Optional properties passed to job constructor
+      key: value
+  ```
+- The type field can be any name as long as a job class is registered with that name
+- Properties are passed to the job's constructor during instantiation
+- Jobs are dynamically loaded and registered from Python files in specified directories
 
 ##### Multiprocessing Job Graph Loading
 - In `_async_worker` of JobChain:
@@ -262,6 +329,20 @@ JobChain is designed to be easily extended:
 - Requires picklable job and result processing functions
 - Performance depends on system resources
 - Complex graphs may increase complexity
+
+## TODO
+
+### Task Pass-Through Implementation
+- Implement automatic task metadata preservation in JobChain core
+- Currently users must manually implement task_pass_through in their jobs
+- This creates error-prone boilerplate code
+- Should be handled automatically by the system
+- Need to modify JobABC._execute to handle metadata preservation
+- Implementation plan:
+  - Store original task data in JobABC._execute
+  - Pass it through each job in the chain
+  - Merge it with job-specific results
+  - Return complete task context in final result
 
 ## Future Roadmap
 

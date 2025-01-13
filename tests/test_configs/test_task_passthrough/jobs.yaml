@@ -1,0 +1,11 @@
+text_capitalize:
+  type: TextCapitalizeJob
+  params: {}
+
+text_reverse:
+  type: TextReverseJob
+  params: {}
+
+text_wrap:
+  type: TextWrapJob
+  params: {}
