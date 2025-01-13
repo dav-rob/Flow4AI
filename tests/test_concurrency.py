@@ -11,13 +11,19 @@ from jobchain.job_chain import JobChain
 from jobchain.job_loader import ConfigLoader
 
 
-# NB result_collector is used by the JobExecutorProcess and so has a different
+# NB this result_collector is used by the JobExecutorProcess and so has a different
 #  process to the test so results need to be shared using results = manager.list()
 #  its either this or write to file.
 def result_collector(shared_results, result):
     logging.info(f"Result collector received: {result}")
     shared_results.append(result)
 
+
+# We have tried many many different ways to create race conditions in JobChain
+#   this is the remains of one of those ways.  Ways have been tried with 
+#   thousands of submitted tasks, to no avail.  Currently, this file is a place-
+#   holder until we find a test case.  Currently no race conditions, though the 
+#   code does not seem immune to them on first inspection.
 @pytest.mark.asyncio
 async def test_concurrent_state_corruption():
     """Test to demonstrate state corruption under concurrent load"""
