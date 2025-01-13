@@ -59,8 +59,7 @@ def get_logging_config(logging_level:str = None):
             'handlers': os.getenv('JOBCHAIN_LOG_HANDLERS', 'console').split(',')
         }
     }
-# This is a convenience method for setting logging level in Windsurf
-# because it cannot adjust environmental variables.
+
 def setup_logging(logging_level:str = None):
     """Setup logging with current configuration."""
     config = get_logging_config(logging_level)
