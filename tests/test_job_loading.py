@@ -374,8 +374,10 @@ async def test_head_jobs_in_jobchain_serial():
 def process_result(result):
     """Process a result by appending it to the global results list and logging to file"""
     print(f"Got result: {result}")
+    # Extract just the job-specific data, excluding task_pass_through
+    job_result = {k: v for k, v in result.items() if k != 'task_pass_through'}
     with open("count_parallel_results", "a") as f:
-        f.write(f"{str(result)}\n")
+        f.write(str(job_result) + "\n")
 
 
 @pytest.mark.asyncio
