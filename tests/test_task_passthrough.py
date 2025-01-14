@@ -37,24 +37,92 @@ async def test_task_passthrough():
     job_chain = JobChain(result_processing_function=collector)
     
     # Submit text processing tasks with unique identifiers
-    test_texts = [
-        "hello world",
-        "testing task passthrough",
-        "verify original data"
+    test_tasks = [
+        {
+            'text': 'hello world',
+            'task_id': 'task_0',
+            'metadata': {
+                'original_text': 'hello world',
+                'sequence': 0,
+                'type': 'text_processing',
+                'priority': 'high',
+                'tags': ['greeting', 'simple'],
+                'timestamp': '2025-01-14T01:42:04Z',
+                'nested': {
+                    'source': 'user_input',
+                    'language': 'en',
+                    'confidence': 0.95,
+                    'metrics': {
+                        'word_count': 2,
+                        'char_count': 11,
+                        'complexity_score': 0.1
+                    }
+                }
+            },
+            'config': {
+                'preserve_case': False,
+                'max_length': 100,
+                'filters': ['lowercase', 'trim']
+            }
+        },
+        {
+            'text': 'testing task passthrough',
+            'task_id': 'task_1',
+            'metadata': {
+                'original_text': 'testing task passthrough',
+                'sequence': 1,
+                'type': 'text_processing',
+                'priority': 'medium',
+                'tags': ['test', 'complex'],
+                'timestamp': '2025-01-14T01:42:04Z',
+                'nested': {
+                    'source': 'test_suite',
+                    'language': 'en',
+                    'confidence': 0.99,
+                    'metrics': {
+                        'word_count': 3,
+                        'char_count': 23,
+                        'complexity_score': 0.4
+                    }
+                }
+            },
+            'config': {
+                'preserve_case': True,
+                'max_length': 200,
+                'filters': ['punctuation', 'normalize']
+            }
+        },
+        {
+            'text': 'verify original data',
+            'task_id': 'task_2',
+            'metadata': {
+                'original_text': 'verify original data',
+                'sequence': 2,
+                'type': 'text_processing',
+                'priority': 'low',
+                'tags': ['verification', 'data'],
+                'timestamp': '2025-01-14T01:42:04Z',
+                'nested': {
+                    'source': 'validation',
+                    'language': 'en',
+                    'confidence': 0.85,
+                    'metrics': {
+                        'word_count': 3,
+                        'char_count': 19,
+                        'complexity_score': 0.6
+                    }
+                }
+            },
+            'config': {
+                'preserve_case': True,
+                'max_length': 150,
+                'filters': ['whitespace', 'special_chars']
+            }
+        }
     ]
     submitted_tasks = []
     
-    for i, text in enumerate(test_texts):
-        # Create task with text to process and metadata we want passed through
-        task = {
-            'text': text,
-            'task_id': f"task_{i}",
-            'metadata': {
-                'original_text': text,
-                'sequence': i,
-                'type': 'text_processing'
-            }
-        }
+    for i, task in enumerate(test_tasks):
         submitted_tasks.append(task)
         logging.info(f"Submitting task: {task}")
         # Use a different graph for each task
@@ -67,7 +135,7 @@ async def test_task_passthrough():
 
     
     # Verify basic results count
-    assert len(results) == len(test_texts), f"Expected {len(test_texts)} results, got {len(results)}"
+    assert len(results) == len(test_tasks), f"Expected {len(test_tasks)} results, got {len(results)}"
     
     logging.debug("Verifying task pass-through")
     # This test is designed to fail to demonstrate that task pass-through should be automatic.
@@ -76,7 +144,7 @@ async def test_task_passthrough():
     # the entire job chain.
     # try:
     for result in results:
-        # These assertions will fail because task_pass_through is not automatically handled
+        # Verify task_pass_through exists and contains all original task data
         assert 'task_pass_through' in result, "Result missing task_pass_through field"
         task_pass_through = result['task_pass_through']
         
@@ -89,8 +157,27 @@ async def test_task_passthrough():
         )
         assert matching_task is not None, f"No matching submitted task for {task_pass_through['task_id']}"
         
+        # Verify all metadata fields are preserved exactly
         assert task_pass_through['metadata'] == matching_task['metadata'], \
             f"Metadata mismatch for task {task_pass_through['task_id']}"
+        
+        # Verify nested structures are preserved
+        assert task_pass_through['metadata']['nested'] == matching_task['metadata']['nested'], \
+            f"Nested metadata mismatch for task {task_pass_through['task_id']}"
+        
+        # Verify arrays are preserved
+        assert task_pass_through['metadata']['tags'] == matching_task['metadata']['tags'], \
+            f"Tags mismatch for task {task_pass_through['task_id']}"
+        
+        # Verify metrics are preserved
+        assert task_pass_through['metadata']['nested']['metrics'] == matching_task['metadata']['nested']['metrics'], \
+            f"Metrics mismatch for task {task_pass_through['task_id']}"
+        
+        # Verify config is passed through if present
+        if 'config' in matching_task:
+            assert 'config' in task_pass_through, "Config not passed through"
+            assert task_pass_through['config'] == matching_task['config'], \
+                f"Config mismatch for task {task_pass_through['task_id']}"
     # except AssertionError as e:
     #     # Log the failure but don't fail the test yet - this is expected until we implement
     #     # automatic task pass-through in JobChain
