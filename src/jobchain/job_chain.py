@@ -420,9 +420,22 @@ class JobChain:
                 # Clean up completed tasks
                 done_tasks = {t for t in tasks if t.done()}
                 if done_tasks:
+                    for done_task in done_tasks:
+                        try:
+                            # Check if task raised an exception
+                            exc = done_task.exception()
+                            if exc:
+                                logger.error(f"Task failed with exception: {exc}")
+                        except asyncio.InvalidStateError:
+                            pass  # Task was cancelled or not done
                     tasks_completed += len(done_tasks)
                     logger.debug(f"Cleaned up {len(done_tasks)} completed tasks. Total completed: {tasks_completed}")
+                    logger.debug(f"Active tasks remaining: {len(tasks)}")
                 tasks.difference_update(done_tasks)
+
+                # Log task stats periodically
+                if tasks_completed % 5 == 0:
+                    logger.info(f"Tasks stats - Created: {tasks_created}, Completed: {tasks_completed}, Active: {len(tasks)}")
 
                 # A short pause to reduce CPU usage and avoid a busy-wait state.             
                 await asyncio.sleep(0.0001)
@@ -447,7 +460,8 @@ class JobChain:
             logger.debug("Running queue monitor")
             loop.run_until_complete(queue_monitor())
         except Exception as e:
-            logger.error(f"Error in async worker: {e}")
+            import traceback
+            logger.error(f"Error in async worker: {e}\n{traceback.format_exc()}")
         finally:
             logger.info("Closing event loop")
             loop.close()

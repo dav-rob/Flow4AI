@@ -244,7 +244,7 @@ def test_multiple_task_submissions():
             head_jobs = job_chain.get_job_names()
             
             # Submit text processing tasks with unique identifiers
-            num_iterations = 1
+            num_iterations = 2
             submitted_tasks = []
 
             # Submit each task through each head job multiple times
