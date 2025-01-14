@@ -10,34 +10,7 @@ import jobchain.jc_logging as logging
 from jobchain.job_chain import JobChain
 from jobchain.job_loader import ConfigLoader
 
-
-def result_collector(shared_results, result):
-    logging.info(f"Result collector received: {result}")
-    shared_results.append(result)
-    # Log the current count of results
-    logging.info(f"Current results count: {len(shared_results)}")
-
-
-@pytest.mark.asyncio
-async def test_task_passthrough():
-    """Test to verify task parameters are passed through from submit_task to result processing"""
-    
-    # Create a manager for sharing the results list between processes
-    manager = mp.Manager()
-    results = manager.list()
-    
-    # Create a partial function with our shared results list
-    collector = partial(result_collector, results)
-    
-    # Set config directory for test
-    config_dir = os.path.join(os.path.dirname(__file__), "test_configs/test_task_passthrough")
-    ConfigLoader._set_directories([config_dir])
-    
-    # Create JobChain with parallel processing
-    job_chain = JobChain(result_processing_function=collector)
-    
-    # Submit text processing tasks with unique identifiers
-    test_tasks = [
+test_tasks = [
         {
             'text': 'hello world',
             'task_id': 'task_0',
@@ -120,6 +93,34 @@ async def test_task_passthrough():
             }
         }
     ]
+
+def result_collector(shared_results, result):
+    logging.info(f"Result collector received: {result}")
+    shared_results.append(result)
+    # Log the current count of results
+    logging.info(f"Current results count: {len(shared_results)}")
+
+
+@pytest.mark.asyncio
+async def test_task_passthrough():
+    """Test to verify task parameters are passed through from submit_task to result processing"""
+    
+    # Create a manager for sharing the results list between processes
+    manager = mp.Manager()
+    results = manager.list()
+    
+    # Create a partial function with our shared results list
+    collector = partial(result_collector, results)
+    
+    # Set config directory for test
+    config_dir = os.path.join(os.path.dirname(__file__), "test_configs/test_task_passthrough")
+    ConfigLoader._set_directories([config_dir])
+    
+    # Create JobChain with parallel processing
+    job_chain = JobChain(result_processing_function=collector)
+    
+    # Submit text processing tasks with unique identifiers
+    
     submitted_tasks = []
     
     for i, task in enumerate(test_tasks):
