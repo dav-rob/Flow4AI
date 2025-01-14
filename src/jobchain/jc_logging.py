@@ -20,7 +20,7 @@ import os
 
 # Initializing the flag here stops logging caching root levels to another value
 # for reasons I'm not completely sure about.
-WINDSURF_LOG_FLAG = None #"DEBUG"
+WINDSURF_LOG_FLAG = None #None #"DEBUG"
 os.environ['JOBCHAIN_LOG_LEVEL'] = WINDSURF_LOG_FLAG or os.getenv('JOBCHAIN_LOG_LEVEL', 'INFO')
 import logging
 from logging.config import dictConfig
