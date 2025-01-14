@@ -21,6 +21,7 @@ JobChain is a sophisticated Python framework designed for parallel and asynchron
 - Support for job dependencies
 - Async execution model
 - Tracing and performance instrumentation
+- Automatic task metadata preservation throughout job chains
 
 #### Custom Job Implementation Requirements
 1. Job Class Structure:
@@ -41,12 +42,14 @@ JobChain is a sophisticated Python framework designed for parallel and asynchron
      ```
    - Do not override `_execute` - it's handled by JobABC for job graph processing
    - The `run` method receives task data and must return a dictionary
+   - Task metadata is automatically preserved and propagated through the job chain
 
 3. Important Notes:
    - JobABC handles job graph execution through `_execute`
    - Custom jobs only need to implement business logic in `run`
    - The `run` method is called by `_execute` with processed inputs
    - Always call super().__init__ with name and properties parameters
+   - Task metadata like task_id and custom metadata fields are automatically preserved
 
 ### 2. Job Graph Management (`jc_graph.py`)
 
@@ -333,11 +336,10 @@ JobChain is designed to be easily extended:
 ## TODO
 
 ### Task Pass-Through Implementation
-- Implement automatic task metadata preservation in JobChain core
-- Currently users must manually implement task_pass_through in their jobs
-- This creates error-prone boilerplate code
-- Should be handled automatically by the system
-- Need to modify JobABC._execute to handle metadata preservation
+- Implemented automatic task metadata preservation in JobChain core
+- No longer requires manual implementation of task_pass_through in jobs
+- This eliminates error-prone boilerplate code
+- Modified JobABC._execute to handle metadata preservation
 - Implementation plan:
   - Store original task data in JobABC._execute
   - Pass it through each job in the chain

@@ -192,6 +192,29 @@ class JobABC(ABC, metaclass=JobMeta):
         result = await self.run(self.inputs)
         self.logger.debug(f"Job {self.name} finished running")
 
+        # Ensure result is a dictionary
+        if not isinstance(result, dict):
+            result = {'result': result}
+
+        # Add task pass-through metadata if this is a head job (received task directly)
+        if isinstance(task, dict):
+            # Extract metadata fields we want to preserve
+            task_pass_through = {
+                'task_id': task.get('task_id'),
+                'metadata': task.get('metadata', {})
+            }
+            # Only include non-None values
+            task_pass_through = {k: v for k, v in task_pass_through.items() if v is not None}
+            if task_pass_through:
+                result['task_pass_through'] = task_pass_through
+        # For non-head jobs, look for task_pass_through in inputs
+        else:
+            # Find task_pass_through in any of the input results
+            for input_data in self.inputs.values():
+                if isinstance(input_data, dict) and 'task_pass_through' in input_data:
+                    result['task_pass_through'] = input_data['task_pass_through']
+                    break
+
         # Clear state for potential reuse
         self.inputs.clear()
         self.input_event.clear()
@@ -205,9 +228,11 @@ class JobABC(ABC, metaclass=JobMeta):
         # Execute all next jobs concurrently
         executing_jobs = []
         for next_job in self.next_jobs:
+            # Preserve task pass-through data in next job's input
+            input_data = result.copy()
             # Tell the next job where this input data came from.
             # so, the job can store its inputs data to with this job's name as a key.
-            await next_job.receive_input(self.name, result)
+            await next_job.receive_input(self.name, input_data)
             # If the next job has all its inputs, trigger its execution.
             #   This can be called multiple time for a single next_job
             #   called by different parent jobs, in that case, execution_started
