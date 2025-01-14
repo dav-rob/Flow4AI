@@ -365,7 +365,8 @@ class JobChain:
 
         async def process_task(task: Task):
             """Process a single task and return its result"""
-            logger.debug(f"Processing task: {task}")
+            task_id = task.get('task_id', 'unknown')
+            logger.info(f"[TASK_TRACK] Starting task {task_id}")
             try:
                 # If there's only one job, use it directly
                 if len(job_map) == 1:
@@ -378,11 +379,11 @@ class JobChain:
                     job = job_map[job_name]
 
                 result = await job._execute(task)
-                logger.debug(f"Task {task} completed successfully")
+                logger.info(f"[TASK_TRACK] Completed task {task_id}")
                 result_queue.put(result)
-                logger.debug(f"Result for task {task} put in queue")
+                logger.info(f"[TASK_TRACK] Result queued for task {task_id}")
             except Exception as e:
-                logger.error(f"Error processing task {task}: {e}")
+                logger.error(f"[TASK_TRACK] Failed task {task_id}: {e}")
                 raise
 
         async def queue_monitor():
@@ -499,4 +500,3 @@ class JobChainFactory:
         if not JobChainFactory._instance:
             raise RuntimeError("JobChainFactory not initialized")
         return JobChainFactory._instance._job_chain
-
