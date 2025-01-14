@@ -15,12 +15,21 @@ Example:
     $ export JOBCHAIN_LOG_LEVEL='DEBUG'
 """
 
-import logging
+
 import os
+
+# Initializing the flag here stops logging caching root levels to another value
+# for reasons I'm not completely sure about.
+WINDSURF_LOG_FLAG = None #"DEBUG"
+os.environ['JOBCHAIN_LOG_LEVEL'] = WINDSURF_LOG_FLAG or os.getenv('JOBCHAIN_LOG_LEVEL', 'INFO')
+import logging
 from logging.config import dictConfig
+
 
 def get_logging_config():
     """Get the logging configuration based on current environment variables."""
+    
+    
     return {
         'version': 1,
         'disable_existing_loggers': False,
@@ -53,7 +62,7 @@ def get_logging_config():
             }
         },
         'root': {
-            'level': os.getenv('JOBCHAIN_LOG_LEVEL', 'INFO'),
+            'level':  os.getenv('JOBCHAIN_LOG_LEVEL', 'INFO'),
             # Set JOBCHAIN_LOG_HANDLERS='console,file' to enable both console and file logging
             'handlers': os.getenv('JOBCHAIN_LOG_HANDLERS', 'console').split(',')
         }
@@ -68,6 +77,7 @@ def setup_logging():
         with open('jobchain.log', 'w') as f:
             f.write('# JobChain log file - This file is created empty and will be written to only when file logging is enabled\n')
     
+    print(f"Logging level: {config['root']['level']}")
     # Apply configuration
     dictConfig(config)
 

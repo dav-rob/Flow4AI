@@ -69,6 +69,7 @@ async def test_task_passthrough():
     # Verify basic results count
     assert len(results) == len(test_texts), f"Expected {len(test_texts)} results, got {len(results)}"
     
+    logging.debug("Verifying task pass-through")
     # This test is designed to fail to demonstrate that task pass-through should be automatic.
     # Currently, users have to manually implement task pass-through in their jobs, which is error-prone
     # and requires too much boilerplate. Instead, JobChain should automatically pass task data through
