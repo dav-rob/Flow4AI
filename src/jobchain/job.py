@@ -198,15 +198,8 @@ class JobABC(ABC, metaclass=JobMeta):
 
         # Add task pass-through metadata if this is a head job (received task directly)
         if isinstance(task, dict):
-            # Extract metadata fields we want to preserve
-            task_pass_through = {
-                'task_id': task.get('task_id'),
-                'metadata': task.get('metadata', {})
-            }
-            # Only include non-None values
-            task_pass_through = {k: v for k, v in task_pass_through.items() if v is not None}
-            if task_pass_through:
-                result['task_pass_through'] = task_pass_through
+            # Preserve all task data
+            result['task_pass_through'] = task
         # For non-head jobs, look for task_pass_through in inputs
         else:
             # Find task_pass_through in any of the input results
