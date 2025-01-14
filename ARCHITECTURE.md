@@ -78,6 +78,8 @@ JobChain is a sophisticated Python framework designed for parallel and asynchron
     save_results:
       next: []
   ```
+
+Note: there can only be one head job, the starting job, and one tail job, the last job in the graph. There can be many jobs in between.
 - Multiple tasks can be submitted to the same graph:
   ```python
   # All tasks use the same graph instance
