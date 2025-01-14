@@ -74,25 +74,25 @@ async def test_task_passthrough():
     # Currently, users have to manually implement task pass-through in their jobs, which is error-prone
     # and requires too much boilerplate. Instead, JobChain should automatically pass task data through
     # the entire job chain.
-    try:
-        for result in results:
-            # These assertions will fail because task_pass_through is not automatically handled
-            assert 'task_pass_through' in result, "Result missing task_pass_through field"
-            task_pass_through = result['task_pass_through']
-            
-            assert 'task_id' in task_pass_through, "task_id not passed through"
-            assert 'metadata' in task_pass_through, "metadata not passed through"
-            
-            matching_task = next(
-                (t for t in submitted_tasks if t['task_id'] == task_pass_through['task_id']), 
-                None
-            )
-            assert matching_task is not None, f"No matching submitted task for {task_pass_through['task_id']}"
-            
-            assert task_pass_through['metadata'] == matching_task['metadata'], \
-                f"Metadata mismatch for task {task_pass_through['task_id']}"
-    except AssertionError as e:
-        # Log the failure but don't fail the test yet - this is expected until we implement
-        # automatic task pass-through in JobChain
-        logging.error(f"Task pass-through test failed as expected: {e}")
-        logging.error("This is the intended behavior until JobChain implements automatic task pass-through")
+    # try:
+    for result in results:
+        # These assertions will fail because task_pass_through is not automatically handled
+        assert 'task_pass_through' in result, "Result missing task_pass_through field"
+        task_pass_through = result['task_pass_through']
+        
+        assert 'task_id' in task_pass_through, "task_id not passed through"
+        assert 'metadata' in task_pass_through, "metadata not passed through"
+        
+        matching_task = next(
+            (t for t in submitted_tasks if t['task_id'] == task_pass_through['task_id']), 
+            None
+        )
+        assert matching_task is not None, f"No matching submitted task for {task_pass_through['task_id']}"
+        
+        assert task_pass_through['metadata'] == matching_task['metadata'], \
+            f"Metadata mismatch for task {task_pass_through['task_id']}"
+    # except AssertionError as e:
+    #     # Log the failure but don't fail the test yet - this is expected until we implement
+    #     # automatic task pass-through in JobChain
+    #     logging.error(f"Task pass-through test failed as expected: {e}")
+    #     logging.error("This is the intended behavior until JobChain implements automatic task pass-through")
