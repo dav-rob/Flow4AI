@@ -153,6 +153,8 @@ def test_task_passthrough():
             
             # Submit text processing tasks with unique identifiers
             submitted_tasks = []
+
+            head_jobs = job_chain.get_job_names()
             
             for i, task in enumerate(test_tasks):
                 submitted_tasks.append(task)
@@ -218,3 +220,81 @@ def test_task_passthrough():
                 os.unlink(results_file)
             except Exception as e:
                 logging.warning(f"Failed to delete temporary file {results_file}: {e}")
+
+
+def test_multiple_task_submissions():
+    """Test submitting each task through each head job multiple times"""
+    
+    # Create a temporary file for storing results
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
+        results_file = temp_file.name
+        
+        try:
+            # Create a partial function with our results file
+            collector = partial(result_collector, results_file)
+            
+            # Set config directory for test
+            config_dir = os.path.join(os.path.dirname(__file__), "test_configs/test_task_passthrough")
+            ConfigLoader._set_directories([config_dir])
+            
+            # Create JobChain with parallel processing
+            job_chain = JobChain(result_processing_function=collector)
+            
+            # Get all head jobs
+            head_jobs = job_chain.get_job_names()
+            
+            # Submit text processing tasks with unique identifiers
+            num_iterations = 1
+            submitted_tasks = []
+
+            # Submit each task through each head job multiple times
+            for task in test_tasks:
+                for head_job in head_jobs:
+                    for iteration in range(num_iterations):
+                        # Create a new task with unique ID for this iteration
+                        task_copy = task.copy()
+                        task_copy['task_id'] = f"{task['task_id']}_head{head_job}_iter{iteration}"
+                        submitted_tasks.append(task_copy)
+                        logging.info(f"Submitting task {task_copy['task_id']} to head job {head_job}")
+                        job_chain.submit_task(task_copy, job_name=head_job)
+            
+            # Mark completion and wait for processing
+            job_chain.mark_input_completed()
+            
+            # Read results from file
+            with open(results_file, 'r') as f:
+                results = json.load(f)
+            
+            # Calculate expected number of tasks
+            expected_tasks = len(test_tasks) * len(head_jobs) * num_iterations
+            assert len(results) == expected_tasks, f"Expected {expected_tasks} results, got {len(results)}"
+            
+            logging.debug("Verifying task pass-through for multiple submissions")
+            
+            for result in results:
+                # Verify task_pass_through exists and contains all original task data
+                assert 'task_pass_through' in result, "Result missing task_pass_through field"
+                task_pass_through = result['task_pass_through']
+                
+                assert 'task_id' in task_pass_through, "task_id not passed through"
+                assert 'metadata' in task_pass_through, "metadata not passed through"
+                
+                matching_task = next(
+                    (t for t in submitted_tasks if t['task_id'] == task_pass_through['task_id']), 
+                    None
+                )
+                assert matching_task is not None, f"No matching submitted task for {task_pass_through['task_id']}"
+                
+                # Verify metadata fields are preserved exactly
+                assert task_pass_through['metadata'] == matching_task['metadata'], \
+                    f"Metadata mismatch for task {task_pass_through['task_id']}"
+                
+                # Verify processed text field exists
+                assert 'processed_text' in result, "Result missing processed_text field"
+                
+        finally:
+            # Clean up temporary file
+            try:
+                os.unlink(results_file)
+            except:
+                pass
