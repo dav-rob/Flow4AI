@@ -157,6 +157,29 @@ class D(JobABC):
     print(f"D returned: {dataD}")
     return dataD
 
+class E(MockJob):
+    async def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        return {'result': f'processed by {self.name}'}
+
+class F(MockJob):
+    async def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        return {'result': f'processed by {self.name}'}
+
+class G(MockJob):
+    async def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        return {'result': f'processed by {self.name}'}
+
+class H(MockJob):
+    async def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        return {'result': f'processed by {self.name}'}
+
+class I(MockJob):
+    async def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        return {'result': f'processed by {self.name}'}
+
+class J(MockJob):
+    async def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        return {'result': f'processed by {self.name}'}
 
 jobs = {
     'A': A('A'),
@@ -164,6 +187,15 @@ jobs = {
     'C': C('C'),
     'D': D('D')
 }
+jobs.update({
+    'E': E('E'),
+    'F': F('F'),
+    'G': G('G'),
+    'H': H('H'),
+    'I': I('I'),
+    'J': J('J'),
+})
+
 data:dict = {
     '1': {},
     '2': {}
@@ -175,6 +207,19 @@ graph_definition1 = {
     'C': {'next': ['D']},
     'D': {'next': []}
 } 
+
+graph_definition_complex = {
+    'A': {'next': ['B', 'C', 'E']},  # Head job with 3 branches
+    'B': {'next': ['D', 'F']},       # Branch 1
+    'C': {'next': ['F', 'G']},       # Branch 2
+    'D': {'next': ['H']},            # Merge point 1
+    'E': {'next': ['G', 'I']},       # Branch 3
+    'F': {'next': ['H']},            # Merge point 2
+    'G': {'next': ['I']},            # Merge point 3
+    'H': {'next': ['J']},            # Pre-final merge
+    'I': {'next': ['J']},            # Pre-final merge
+    'J': {'next': []}                # Tail job
+}
 
 def execute_graph(graph_definition: dict, jobs: dict, data: dict) -> Any:
     head_job = create_job_graph(graph_definition, jobs)
@@ -210,3 +255,25 @@ graph_definition2 = {
     'B': {'next': ['C']},
     'C': {'next': []},
 } 
+
+def test_complex_job_set():
+    """
+    Test job_set() with a complex graph structure containing:
+    - Multiple paths from head to tail
+    - Diamond patterns (multiple paths converging)
+    - Multiple levels of job dependencies
+    Graph structure:
+           A
+        /  |  \
+       B   C   E
+      /\  / \  /\
+     D  F    G  I
+      \ /     \ /
+       H       I
+        \     /
+          J
+    """
+    head_job = create_job_graph(graph_definition_complex, jobs)
+    job_set = head_job.job_set()
+    expected_jobs = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'}
+    assert job_set == expected_jobs, f"Expected {expected_jobs}, but got {job_set}"
