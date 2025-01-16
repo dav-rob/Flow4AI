@@ -9,6 +9,7 @@ class ConcurrencyTestJob(JobABC):
     def __init__(self, name: Optional[str] = None, properties: Dict[str, Any] = {}):
         super().__init__(name, properties)
         self.test_inputs: list = properties.get("test_inputs", [])
+        self.valid_return: str = properties.get("valid_return", "")
 
 
     async def run(self, inputs):
@@ -21,6 +22,10 @@ class ConcurrencyTestJob(JobABC):
             received_data.append(data)
         received_data.append(f"{cls.name}")
         return_data = ".".join(received_data)
+        if valid_return and return_data != valid_return:
+            logging.error(f"Invalid return data: {return_data}")
+            raise Exception(f"Job {self.name} returned invalid data: {return_data}, should have been {valid_return}")
+            
         return return_data
 
 

@@ -2,16 +2,19 @@ A:
   type: ConcurrencyTestJob
   properties:
     test_inputs: []
+    valid_return: "A"
 
 B:
   type: ConcurrencyTestJob
   properties:
     test_inputs: [A]
+    valid_return: "A.B"
 
 C:
   type: ConcurrencyTestJob
   properties:
     test_inputs: [A,B]
+    valid_return: "A.C.A.B"
 
 D:
   type: ConcurrencyTestJob

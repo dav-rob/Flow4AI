@@ -81,3 +81,5 @@ async def test_concurrency_by_expected_returns():
     
     # Create JobChain with parallel processing
     job_chain = JobChain(result_processing_function=collector)
+    logging.info(f"Names of jobs in head job: {job_chain.get_job_graph_mapping()}")
+    job_chain.mark_input_completed()
