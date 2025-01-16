@@ -190,6 +190,11 @@ def test_execute_graph1():
             'dataD2': {}
         }
 
+def test_job_set():
+    head_job = create_job_graph(graph_definition1, jobs)
+    job_set = head_job.job_set()
+    assert job_set == {'A', 'B', 'C', 'D'}
+
 def test_execute_graph2():
     final_result2 = execute_graph(graph_definition2, jobs, data)
     # Extract just the job result data, ignoring task_pass_through

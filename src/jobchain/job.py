@@ -247,6 +247,25 @@ class JobABC(ABC, metaclass=JobMeta):
         if self.expected_inputs.issubset(set(self.inputs.keys())):
             self.input_event.set()
 
+    def job_set(self) -> set[str]:
+        """
+        Returns a set of all unique job names in the job graph by recursively traversing
+        all possible paths through next_jobs.
+        
+        Returns:
+            set[str]: A set containing all unique job names in the graph
+        """
+        result = {self.name}  # Start with current job's name
+        
+        # Base case: if no next jobs, return current set
+        if not self.next_jobs:
+            return result
+            
+        # Recursive case: add all jobs from each path
+        for job in self.next_jobs:
+            result.update(job.job_set())
+            
+        return result
 
     @abstractmethod
     async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
