@@ -96,7 +96,7 @@ class JobChain:
             raise TypeError("job must be either Dict[str, Any], JobABC instance, or Collection[JobABC]")
 
         self._job_name_map.clear()
-        self._job_name_map.update({name: name for name in self.job_map.keys()})
+        self._job_name_map.update({job.name: job.job_set() for job in self.job_map.values()})
 
     # We will not to use context manager as it makes semantics of JobChain use less flexible
     # def __enter__(self):
@@ -355,10 +355,10 @@ class JobChain:
             ConfigLoader.reload_configs()
             head_jobs = JobFactory.get_head_jobs_from_config()
             job_map = {job.name: job for job in head_jobs}
-            # Update the shared job_name_map
+            # Update the shared job_name_map with each head job's complete set of reachable jobs
             job_name_map.clear()
-            job_name_map.update({name: name for name in job_map.keys()})
-            logger.info(f"Created job map with jobs: {list(job_name_map.keys())}")
+            job_name_map.update({job.name: job.job_set() for job in head_jobs})
+            logger.info(f"Created job map with head jobs: {list(job_name_map.keys())}")
 
         # Signal that jobs are loaded
         jobs_loaded.set()
@@ -481,6 +481,23 @@ class JobChain:
             raise TimeoutError("Timed out waiting for jobs to be loaded")
         
         return list(self._job_name_map.keys())
+
+    def get_job_graph_mapping(self) -> dict[str, set[str]]:
+        """
+        Returns a mapping of head job names to their complete set of job names in their graph.
+        
+        Returns:
+            dict[str, set[str]]: Dictionary mapping each head job name to a set of all job names
+                                reachable from that job (including itself).
+
+        Raises:
+            TimeoutError: If waiting for jobs to be loaded exceeds timeout
+        """
+        self.logger.debug("Waiting for jobs to be loaded before returning job graph mapping")
+        if not self._jobs_loaded.wait(timeout=5):
+            raise TimeoutError("Timed out waiting for jobs to be loaded")
+        
+        return dict(self._job_name_map)
 
 class JobChainFactory:
     _instance = None
