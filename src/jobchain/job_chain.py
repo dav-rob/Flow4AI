@@ -36,6 +36,9 @@ class JobChain:
             However, in most cases changing result_processing_function to be picklable is straightforward and should be the default.
             Defaults to False.
     """
+    # Constants
+    JOB_MAP_LOAD_TIME = 5  # Timeout in seconds for job map loading
+
     def __init__(self, job: Optional[Any] = None, result_processing_function: Optional[Callable[[Any], None]] = None, 
                  serial_processing: bool = False):
         # Get logger for JobChain
@@ -202,7 +205,7 @@ class JobChain:
         """
         try:
             # Wait for jobs to be loaded
-            if not self._jobs_loaded.wait(timeout=5):
+            if not self._jobs_loaded.wait(timeout=self.JOB_MAP_LOAD_TIME):
                 raise TimeoutError("Timed out waiting for jobs to be loaded")
 
             if task is None:
@@ -477,7 +480,7 @@ class JobChain:
             TimeoutError: If waiting for jobs to be loaded exceeds timeout
         """
         self.logger.debug("Waiting for jobs to be loaded before returning job names")
-        if not self._jobs_loaded.wait(timeout=5):
+        if not self._jobs_loaded.wait(timeout=self.JOB_MAP_LOAD_TIME):
             raise TimeoutError("Timed out waiting for jobs to be loaded")
         
         return list(self._job_name_map.keys())
@@ -494,7 +497,7 @@ class JobChain:
             TimeoutError: If waiting for jobs to be loaded exceeds timeout
         """
         self.logger.debug("Waiting for jobs to be loaded before returning job graph mapping")
-        if not self._jobs_loaded.wait(timeout=5):
+        if not self._jobs_loaded.wait(timeout=self.JOB_MAP_LOAD_TIME):
             raise TimeoutError("Timed out waiting for jobs to be loaded")
         
         return dict(self._job_name_map)
