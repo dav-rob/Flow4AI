@@ -1,0 +1,34 @@
+A:
+  type: ConcurrencyTestJob
+  properties:
+    test_inputs: []
+
+B:
+  type: ConcurrencyTestJob
+  properties:
+    test_inputs: [A]
+
+C:
+  type: ConcurrencyTestJob
+  properties:
+    test_inputs: [A,B]
+
+D:
+  type: ConcurrencyTestJob
+  properties:
+    test_inputs: [A]
+
+E:
+  type: ConcurrencyTestJob
+  properties:
+    test_inputs: [C]
+
+F:
+  type: ConcurrencyTestJob
+  properties:
+    test_inputs: [D]
+
+G:
+  type: ConcurrencyTestJob
+  properties:
+    test_inputs: [E,F]

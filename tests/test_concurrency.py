@@ -60,5 +60,23 @@ async def test_concurrent_state_corruption():
     
     # Verify results
     assert len(results) == total_tasks, f"Expected {total_tasks} results, got {len(results)}"
+
+    def returns_collector(shared_results, result):
+        logging.info(f"Result collector received: {result}")
+        shared_results.append(result)
     
-    
+    @pytest.mark.asyncio
+    async def test_concurrency_by_expected_returns():
+        # Create a manager for sharing the results list between processes
+        manager = mp.Manager()
+        results = manager.list()
+        
+        # Create a partial function with our shared results list
+        collector = partial(returns_collector, results)
+        
+        # Set config directory for test
+        config_dir = os.path.join(os.path.dirname(__file__), "test_configs/test_concurrency2")
+        ConfigLoader._set_directories([config_dir])
+        
+        # Create JobChain with parallel processing
+        job_chain = JobChain(result_processing_function=collector)
