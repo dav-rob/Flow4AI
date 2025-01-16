@@ -196,7 +196,7 @@ class JobFactory:
                     job_def: Dict[str, Any] = ConfigLoader.fill_job_with_parameters(raw_job_def, graph_name, param_name)
                 else:
                     job_def = raw_job_def
-                unique_job_name = graph_name + "_" + param_name + "_" + graph_job_name
+                unique_job_name = graph_name + "_" + param_name + "_" + graph_job_name + "__"
                 job_type: str = job_def["type"]
                 job: JobABC = cls.create_job(unique_job_name, job_type, job_def)
                 job_instances[graph_job_name] = job
@@ -209,7 +209,7 @@ class JobFactory:
         job_instances: dict[str, JobABC] = {}
         for graph_job_name in job_names_in_graph:
                 job_def: Dict[str, Any] = ConfigLoader.get_jobs_config()[graph_job_name]
-                unique_job_name = graph_name + "_" + "_" + graph_job_name
+                unique_job_name = graph_name + "_" + "_" + graph_job_name +"__"
                 job_type: str = job_def["type"]
                 job: JobABC = cls.create_job(unique_job_name, job_type, job_def)
                 job_instances[graph_job_name] = job

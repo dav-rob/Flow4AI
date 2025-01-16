@@ -161,7 +161,7 @@ def test_task_passthrough():
                 logging.info(f"Submitting task: {task}")
                 # Use a different graph for each task
                 graph_num = i + 1
-                job_chain.submit_task(task, job_name=f'text_processing_graph{graph_num}__text_capitalize')
+                job_chain.submit_task(task, job_name=f'text_processing_graph{graph_num}__text_capitalize__')
             
             # Mark completion and wait for processing
             job_chain.mark_input_completed()

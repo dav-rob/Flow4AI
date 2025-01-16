@@ -302,10 +302,10 @@ async def test_job_execution_chain(caplog):
 
     # Expected job names in the graph
     expected_jobs = {
-        'four_stage_parameterized_params1_read_file',
-        'four_stage_parameterized_params1_ask_llm',
-        'four_stage_parameterized_params1_save_to_db',
-        'four_stage_parameterized_params1_summarize'
+        'four_stage_parameterized_params1_read_file__',
+        'four_stage_parameterized_params1_ask_llm__',
+        'four_stage_parameterized_params1_save_to_db__',
+        'four_stage_parameterized_params1_summarize__'
     }
 
     # Check that all jobs were executed by verifying their presence in the log output
