@@ -73,25 +73,25 @@ class Task(dict):
             data = {'task': str(data)}
         
         super().__init__(data)
-        self.jobchain_unique_id:str = str(uuid.uuid4())
+        self.task_id:str = str(uuid.uuid4())
         if job_name is not None:
             self['job_name'] = job_name
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Task):
             return NotImplemented
-        return self.jobchain_unique_id == other.jobchain_unique_id
+        return self.task_id == other.task_id
 
     # mypy highlights this as an error because dicts are mutable
     #   and so not hashable, but I want each Task to have a unique id
     #   so it is hashable.
     def __hash__(self) -> int:
-        return hash(self.jobchain_unique_id)
+        return hash(self.task_id)
 
     def __repr__(self) -> str:
         job_name = self.get('job_name', 'None')
         task_preview = str(dict(self))[:50] + '...' if len(str(dict(self))) > 50 else str(dict(self))
-        return f"Task(id={self.jobchain_unique_id}, job_name={job_name}, data={task_preview})"
+        return f"Task(id={self.task_id}, job_name={job_name}, data={task_preview})"
 
 
 class JobABC(ABC, metaclass=JobMeta):
