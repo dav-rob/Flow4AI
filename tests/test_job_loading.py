@@ -8,7 +8,7 @@ import jobchain.jc_logging as logging
 from jobchain.jc_graph import validate_graph
 from jobchain.job import Task
 from jobchain.job_chain import JobChain  # Import JobChain
-from jobchain.job_loader import ConfigLoader, JobFactory, ConfigurationError
+from jobchain.job_loader import ConfigLoader, ConfigurationError, JobFactory
 from jobchain.jobs.llm_jobs import OpenAIJob
 
 # Test configuration
@@ -295,17 +295,17 @@ async def test_job_execution_chain(caplog):
     head_jobs = JobFactory.get_head_jobs_from_config()
 
     # Get the first head job from four_stage_parameterized_params1
-    head_job = [job for job in head_jobs if 'four_stage_parameterized_params1_read_file' in job.name][0]
+    head_job = [job for job in head_jobs if 'four_stage_parameterized$$params1$$read_file$$' in job.name][0]
 
     # Execute the head job
     await asyncio.create_task(head_job._execute(Task({"task": "Test task"})))
 
     # Expected job names in the graph
     expected_jobs = {
-        'four_stage_parameterized_params1_read_file__',
-        'four_stage_parameterized_params1_ask_llm__',
-        'four_stage_parameterized_params1_save_to_db__',
-        'four_stage_parameterized_params1_summarize__'
+        'four_stage_parameterized$$params1$$read_file$$',
+        'four_stage_parameterized$$params1$$ask_llm$$',
+        'four_stage_parameterized$$params1$$save_to_db$$',
+        'four_stage_parameterized$$params1$$summarize$$'
     }
 
     # Check that all jobs were executed by verifying their presence in the log output

@@ -121,10 +121,10 @@ def test_empty_initialization():
     
     # Verify head jobs are loaded - these are the entry point jobs from all graphs and parameter sets
     expected_jobs = sorted([
-        'four_stage_parameterized_params1_read_file__',
-        'four_stage_parameterized_params2_read_file__',
-        'three_stage_params1_ask_llm_mini__',
-        'three_stage_reasoning__ask_llm_reasoning__'
+        'four_stage_parameterized$$params1$$read_file$$',
+        'four_stage_parameterized$$params2$$read_file$$',
+        'three_stage$$params1$$ask_llm_mini$$',
+        'three_stage_reasoning$$$$ask_llm_reasoning$$'
     ])
     
     assert head_jobs == expected_jobs, "JobChain config not loaded correctly"
