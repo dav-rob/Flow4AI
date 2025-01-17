@@ -6,6 +6,23 @@ JobChain is a sophisticated Python framework designed for parallel and asynchron
 
 ## Core Architectural Components
 
+### Starting and terminating a JobChain
+- Anywhere in you code, within a function, create a JobChain instance:
+  ```python
+  job_chain = JobChain()
+  ```
+  The JobChain will configure itself with multiple job types from the configuration file.  The JobChainFactory creates a singleton instance of JobChain for convenience.
+
+- Submit tasks to the JobChain from many places to many different jobs:
+  ```python
+  job_chain.submit_task(task, job_name='job_name')
+  ```
+- Mark the JobChain as input completed, when you have finished submitting tasks:
+  ```python
+  job_chain.mark_input_completed()
+  ```
+This ensures all previous tasks are completed, and all processes are cleaned up.
+
 ### 1. Job Abstraction (`job.py`)
 
 #### JobABC (Abstract Base Class)
