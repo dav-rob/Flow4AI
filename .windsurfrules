@@ -23,6 +23,7 @@ Always read the architecture document in the root folder: ARCHITECTURE.md, befor
 
 ## Code Style and Structure
 - write clean, efficient, and well-documented Python code.
+- DRY (Don't Repeat Yourself), factor out common code into functions and classes.
 - test code for correctness and performance. 
 - prioritize readability,simplicity, and performance.
 - use type hints and annotations where possible.
