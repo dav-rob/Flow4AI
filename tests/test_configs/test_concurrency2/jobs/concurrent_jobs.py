@@ -15,7 +15,7 @@ class ConcurrencyTestJob(JobABC):
     async def run(self, inputs):
         received_data = []
         for job_name in self.test_inputs:
-            data = get_input_from(inputs,job_name)
+            data = self.get_input_from(inputs,job_name)
             if not data:
                 logging.error(f"Failed to get input from {job_name}")
                 raise Exception(f"Job {self.name} failed to get input from {job_name}")
