@@ -102,6 +102,9 @@ class JobABC(ABC, metaclass=JobMeta):
 
     # class variable to keep track of instance counts for each class
     _instance_counts: Dict[Type, int] = {}
+    
+    # Key used to pass task metadata through the job chain
+    TASK_INPUT_KEY: str = 'task_pass_through'
 
     def __init__(self, name: Optional[str] = None, properties: Dict[str, Any] = {}):
         """
@@ -209,6 +212,22 @@ class JobABC(ABC, metaclass=JobMeta):
         # Return a unique name based on the current class
         return f"{cls.__name__}_{cls._instance_counts[cls]}"
 
+    @classmethod
+    def get_input_from(cls, inputs: Dict[str, Any], job_name: str) -> Dict[str, Any]:
+        """Get input data from a specific job in the inputs dictionary.
+        
+        Args:
+            inputs (Dict[str, Any]): Dictionary of inputs from various jobs
+            job_name (str): Name of the job whose input we want to retrieve
+            
+        Returns:
+            Dict[str, Any]: The input data from the specified job, or empty dict if not found
+        """
+        for key in inputs.keys():
+            if cls.parse_job_name(key) == job_name:
+                return inputs[key]
+        return {}
+
     def __repr__(self):
         next_jobs_str = [job.name for job in self.next_jobs]
         expected_inputs_str = [input_name for input_name in self.expected_inputs]
@@ -263,13 +282,13 @@ class JobABC(ABC, metaclass=JobMeta):
         # Add task pass-through metadata if this is a head job (received task directly)
         if isinstance(task, dict):
             # Preserve all task data
-            result['task_pass_through'] = task
+            result[self.TASK_INPUT_KEY] = task
         # For non-head jobs, look for task_pass_through in inputs
         else:
             # Find task_pass_through in any of the input results
             for input_data in self.inputs.values():
-                if isinstance(input_data, dict) and 'task_pass_through' in input_data:
-                    result['task_pass_through'] = input_data['task_pass_through']
+                if isinstance(input_data, dict) and self.TASK_INPUT_KEY in input_data:
+                    result[self.TASK_INPUT_KEY] = input_data[self.TASK_INPUT_KEY]
                     break
 
         # Clear state for potential reuse
