@@ -129,6 +129,8 @@ def test_empty_initialization():
     
     assert head_jobs == expected_jobs, "JobChain config not loaded correctly"
 
+    JobChainFactory.get_instance().mark_input_completed()
+
 
 @pytest.mark.asyncio
 async def test_concurrent_task_execution():
