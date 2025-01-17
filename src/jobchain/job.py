@@ -139,6 +139,70 @@ class JobABC(ABC, metaclass=JobMeta):
         self.logger = logging.getLogger(self.__class__.__name__)
 
     @classmethod
+    def parse_job_loader_name(cls, name: str) -> Dict[str, str]:
+        """Parse a job loader name into its constituent parts.
+        
+        Args:
+            name: The full job loader name string in format:
+                 graph_name$$param_name$$job_name$$
+                 
+        Returns:
+            dict: A dictionary containing graph_name, param_name, and job_name,
+                 or {'parsing_message': 'UNSUPPORTED NAME FORMAT'} if invalid
+        """
+        try:
+            parts = name.split("$$")
+            if len(parts) != 4 or parts[3] != "" or not parts[0]:
+                return {"parsing_message": "UNSUPPORTED NAME FORMAT"}
+                
+            return {
+                "graph_name": parts[0],
+                "param_name": parts[1],
+                "job_name": parts[2]
+            }
+        except:
+            return {"parsing_message": "UNSUPPORTED NAME FORMAT"}
+
+    @classmethod
+    def parse_graph_name(cls, name: str) -> str:
+        """Parse and return the graph name from a job loader name.
+        
+        Args:
+            name: The full job loader name string
+            
+        Returns:
+            str: The graph name or 'UNSUPPORTED NAME FORMAT' if invalid
+        """
+        result = cls.parse_job_loader_name(name)
+        return result.get("graph_name", "UNSUPPORTED NAME FORMAT")
+
+    @classmethod
+    def parse_param_name(cls, name: str) -> str:
+        """Parse and return the parameter name from a job loader name.
+        
+        Args:
+            name: The full job loader name string
+            
+        Returns:
+            str: The parameter name or 'UNSUPPORTED NAME FORMAT' if invalid
+        """
+        result = cls.parse_job_loader_name(name)
+        return result.get("param_name", "UNSUPPORTED NAME FORMAT")
+
+    @classmethod
+    def parse_job_name(cls, name: str) -> str:
+        """Parse and return the job name from a job loader name.
+        
+        Args:
+            name: The full job loader name string
+            
+        Returns:
+            str: The job name or 'UNSUPPORTED NAME FORMAT' if invalid
+        """
+        result = cls.parse_job_loader_name(name)
+        return result.get("job_name", "UNSUPPORTED NAME FORMAT")
+
+    @classmethod
     def _getUniqueName(cls):
         # Increment the counter for the current class
         cls._instance_counts[cls] = cls._instance_counts.get(cls, 0) + 1
