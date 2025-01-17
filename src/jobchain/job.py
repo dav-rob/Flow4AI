@@ -228,6 +228,23 @@ class JobABC(ABC, metaclass=JobMeta):
                 return inputs[key]
         return {}
 
+    @classmethod
+    def getTask(cls, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        """Get task metadata from inputs dictionary.
+        
+        Args:
+            inputs (Dict[str, Any]): Dictionary of inputs to search for task metadata
+            
+        Returns:
+            Dict[str, Any]: The task metadata or empty dict if not found
+            
+        Raises:
+            TypeError: If inputs is not a dictionary
+        """
+        if not isinstance(inputs, dict):
+            raise TypeError("inputs must be a dictionary")
+        return cls.get_input_from(inputs, cls.TASK_INPUT_KEY)
+
     def __repr__(self):
         next_jobs_str = [job.name for job in self.next_jobs]
         expected_inputs_str = [input_name for input_name in self.expected_inputs]
