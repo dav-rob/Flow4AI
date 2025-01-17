@@ -229,7 +229,7 @@ class JobABC(ABC, metaclass=JobMeta):
         return {}
 
     @classmethod
-    def getTask(cls, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    def get_task(cls, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Get task metadata from inputs dictionary.
         
         Args:
