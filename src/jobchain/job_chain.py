@@ -368,8 +368,8 @@ class JobChain:
 
         async def process_task(task: Task):
             """Process a single task and return its result"""
-            task_id = task.get('task_id', 'unknown')
-            logger.info(f"[TASK_TRACK] Starting task {task_id}")
+            task_id = task.task_id  # task_id is not held in the dictionary itself i.e. NOT task['task_id']
+            logger.debug(f"[TASK_TRACK] Starting task {task_id}")
             try:
                 # If there's only one job, use it directly
                 if len(job_map) == 1:
@@ -382,11 +382,12 @@ class JobChain:
                     job = job_map[job_name]
 
                 result = await job._execute(task)
-                logger.info(f"[TASK_TRACK] Completed task {task_id}")
+                logger.debug(f"[TASK_TRACK] Completed task {task_id}")
                 result_queue.put(result)
-                logger.info(f"[TASK_TRACK] Result queued for task {task_id}")
+                logger.debug(f"[TASK_TRACK] Result queued for task {task_id}")
             except Exception as e:
                 logger.error(f"[TASK_TRACK] Failed task {task_id}: {e}")
+                logger.info("Detailed stack trace:", exc_info=True)
                 raise
 
         async def queue_monitor():
