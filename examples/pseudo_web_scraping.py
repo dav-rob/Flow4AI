@@ -18,10 +18,10 @@ class ExampleJob(JobABC):
         super().__init__("Example Job")
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    async def run(self, task):
-        self.logger.info(f"Processing task: {task}")
+    async def run(self, inputs):
+        self.logger.info(f"Processing task: {inputs}")
         await asyncio.sleep(0.1)  # Simulate processing
-        return {"task": task, "result": f"Processed {task}"}
+        return {"task": inputs, "result": f"Processed {inputs}"}
 
 # Simulates web scraping.
 def send_tasks_2(job_chain):

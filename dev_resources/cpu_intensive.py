@@ -42,11 +42,11 @@ class CPUIntensiveJob(JobABC):
         reason="This job intentionally performs CPU-intensive work to demonstrate "
                "process monitoring capabilities via tools like ps/top"
     )
-    async def run(self, task) -> dict:
+    async def run(self, inputs) -> dict:
         """Calculate prime numbers up to n using CPU-intensive operations"""
-        self.logger.debug(f"Starting prime calculation for n={task}")
+        self.logger.debug(f"Starting prime calculation for n={inputs}")
         
-        n = int(task)
+        n = int(inputs)
         
         def is_prime(num):
             if num < 2:
@@ -74,13 +74,13 @@ class CPUIntensiveJob(JobABC):
                 
         duration = time.time() - start_time
         result = {
-            "task": task,
+            "task": inputs,
             "primes_found": len(primes),
             "largest_prime": primes[-1] if primes else None,
             "duration": duration
         }
         
-        self.logger.debug(f"Completed task {task} in {duration:.2f}s")
+        self.logger.debug(f"Completed task {inputs} in {duration:.2f}s")
         self.logger.debug(f"Found {len(primes)} primes, largest: {primes[-1] if primes else None}")
             
         return result

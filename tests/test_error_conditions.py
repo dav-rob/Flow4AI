@@ -24,20 +24,20 @@ class ErrorTestJob(JobABC):
     def __init__(self):
         super().__init__(name="ErrorTestJob")
     
-    async def run(self, task):
-        task = task[self.name]  # Get the task from inputs dict
-        if task.get('raise_error'):
-            raise Exception(task.get('error_message', 'Simulated error'))
-        if task.get('timeout'):
-            await asyncio.sleep(float(task['timeout']))
-            return {'task': task, 'status': 'timeout_completed'}
-        if task.get('memory_error'):
+    async def run(self, inputs):
+        inputs = inputs[self.name]  # Get the task from inputs dict
+        if inputs.get('raise_error'):
+            raise Exception(inputs.get('error_message', 'Simulated error'))
+        if inputs.get('timeout'):
+            await asyncio.sleep(float(inputs['timeout']))
+            return {'task': inputs, 'status': 'timeout_completed'}
+        if inputs.get('memory_error'):
             # Explicitly raise MemoryError instead of trying to create a large list
             raise MemoryError("Simulated memory error")
-        if task.get('invalid_result'):
+        if inputs.get('invalid_result'):
             # Return an unpicklable object
             return lambda x: x  # Functions can't be pickled
-        return {'task': task, 'status': 'completed'}
+        return {'task': inputs, 'status': 'completed'}
 
 
 def test_basic_error_handling():

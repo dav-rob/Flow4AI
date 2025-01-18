@@ -7,8 +7,8 @@ class AsyncTestJob(JobABC):
     def __init__(self):
         super().__init__(name="AsyncTestJob")
     
-    async def run(self, task):
-        task = task[self.name]  # Get the task from inputs dict
+    async def run(self, inputs):
+        task = inputs[self.name]  # Get the task from inputs dict
         if isinstance(task, dict) and task.get('fail'):
             raise ValueError("Simulated task failure")
         if isinstance(task, dict) and task.get('delay'):

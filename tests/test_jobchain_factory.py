@@ -32,11 +32,11 @@ class AsyncTestJob(JobABC):
     def __init__(self):
         super().__init__(name="AsyncTestJob")
     
-    async def run(self, task):
-        task = task[self.name]
-        if isinstance(task, dict) and task.get('delay'):
-            await asyncio.sleep(task['delay'])
-        return {'task': task, 'completed': True}
+    async def run(self, inputs):
+        inputs = inputs[self.name]
+        if isinstance(inputs, dict) and inputs.get('delay'):
+            await asyncio.sleep(inputs['delay'])
+        return {'task': inputs, 'completed': True}
 
 
 class BasicTestJob(JobABC):
@@ -54,10 +54,10 @@ class DelayedJob(JobABC):
         super().__init__(name="DelayedJob")
         self.delay = delay
     
-    async def run(self, task):
-        logging.info(f"Executing DelayedJob for {task} with delay {self.delay}")
+    async def run(self, inputs):
+        logging.info(f"Executing DelayedJob for {inputs} with delay {self.delay}")
         await asyncio.sleep(self.delay)
-        return {"task": task, "status": "complete"}
+        return {"task": inputs, "status": "complete"}
 
 
 class ResultTimingJob(JobABC):
@@ -66,9 +66,9 @@ class ResultTimingJob(JobABC):
         super().__init__("ResultTimingJob")
         self.executed_tasks = set()
     
-    async def run(self, task):
+    async def run(self, inputs):
         # Extract the actual task
-        actual_task = task.get(self.name, task)
+        actual_task = inputs.get(self.name, inputs)
         # Record task execution
         task_str = str(actual_task)
         self.executed_tasks.add(task_str)

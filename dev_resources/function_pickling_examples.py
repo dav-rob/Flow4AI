@@ -78,8 +78,8 @@ class ExampleJob(JobABC):
     def __init__(self):
         super().__init__("Example Job")
 
-    async def run(self, task):
-        return {"task": task, "result": f"Processed {task}"}
+    async def run(self, inputs):
+        return {"task": inputs, "result": f"Processed {inputs}"}
 
 def demonstrate_valid_usage():
     """Demonstrate valid ways to use result processing functions."""

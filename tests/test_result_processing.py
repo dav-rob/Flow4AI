@@ -6,9 +6,10 @@
 import asyncio
 import os
 import time
-import pytest
-from typing import Dict, Any
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Dict
+
+import pytest
 
 from jobchain import jc_logging as logging
 from jobchain.job import JobABC
@@ -20,9 +21,9 @@ class ResultTimingJob(JobABC):
         super().__init__("Result Timing Job")
         self.executed_tasks = set()
 
-    async def run(self, task) -> dict:
+    async def run(self, inputs) -> dict:
         # Extract the actual task from the wrapped task
-        actual_task = task.get(self.name, task)
+        actual_task = inputs.get(self.name, inputs)
         # Record task execution using the task string
         if isinstance(actual_task, dict) and 'task' in actual_task:
             task_str = actual_task['task']

@@ -21,9 +21,9 @@ class DelayedJob(JobABC):
         super().__init__(name)
         self.delay = delay
 
-    async def run(self, task) -> dict:
+    async def run(self, inputs) -> dict:
         """Execute job with specified delay"""
-        task_id, delay = task  # Unpack the task data
+        task_id, delay = inputs  # Unpack the task data
         logger.info(f"Starting task {task_id} with delay {delay}s")
         await asyncio.sleep(delay)
         logger.info(f"Completed task {task_id}")
