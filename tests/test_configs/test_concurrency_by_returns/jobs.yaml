@@ -1,0 +1,41 @@
+A:
+  type: ConcurrencyTestJob
+  properties:
+    test_inputs: []
+    valid_return: "A"
+
+B:
+  type: ConcurrencyTestJob
+  properties:
+    test_inputs: [A]
+    valid_return: "A.B"
+
+C:
+  type: ConcurrencyTestJob
+  properties:
+    test_inputs: [A,B]
+    valid_return: "A.A.B.C"
+
+D:
+  type: ConcurrencyTestJob
+  properties:
+    test_inputs: [A]
+    valid_return: "A.D"
+
+E:
+  type: ConcurrencyTestJob
+  properties:
+    test_inputs: [C]
+    valid_return: "A.A.B.C.E"
+
+F:
+  type: ConcurrencyTestJob
+  properties:
+    test_inputs: [D]
+    valid_return: "A.D.F"
+
+G:
+  type: ConcurrencyTestJob
+  properties:
+    test_inputs: [E,F]
+    valid_return: "A.A.B.C.E.A.D.F.G"
