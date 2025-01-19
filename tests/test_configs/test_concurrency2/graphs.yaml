@@ -1,8 +1,0 @@
-test_graph:
-  A: {next: [B,C,D]}
-  B: {next: [C]}
-  C: {next: [E]}
-  D: {next: [F]}
-  E: {next: [G]}
-  F: {next: [G]}
-  G: {next: []}
