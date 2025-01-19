@@ -438,6 +438,7 @@ class JobChain:
                 tasks.difference_update(done_tasks)
 
                 # Log task stats periodically
+                # TODO: Only log if tasks_completed are changing, otherwise log once a second
                 if tasks_completed != 0 and tasks_completed % 5 == 0:
                     logger.info(f"Tasks stats - Created: {tasks_created}, Completed: {tasks_completed}, Active: {len(tasks)}")
 
