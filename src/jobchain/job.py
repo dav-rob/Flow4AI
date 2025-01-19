@@ -367,6 +367,26 @@ class JobABC(ABC, metaclass=JobMeta):
             
         return result
 
+    def job_set(self) -> set['JobABC']:
+        """
+        Returns a set of all unique job instances in the job graph by recursively traversing
+        all possible paths through next_jobs.
+        
+        Returns:
+            set[JobABC]: A set containing all unique job instances in the graph
+        """
+        result = {self}  # Start with current job instance
+        
+        # Base case: if no next jobs, return current set
+        if not self.next_jobs:
+            return result
+            
+        # Recursive case: add all jobs from each path
+        for job in self.next_jobs:
+            result.update(job.job_set())
+            
+        return result
+
     @abstractmethod
     async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
         """Execute the job on the given task. Must be implemented by subclasses."""

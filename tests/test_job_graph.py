@@ -277,3 +277,32 @@ def test_complex_job_set():
     job_set = head_job.job_set_str()
     expected_jobs = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'}
     assert job_set == expected_jobs, f"Expected {expected_jobs}, but got {job_set}"
+
+def test_complex_job_set_instances():
+    """
+    Test job_set() with a complex graph structure to verify it returns the actual job instances.
+    Uses the same graph structure as test_complex_job_set:
+           A
+        /  |  \
+       B   C   E
+      /\  / \  /\
+     D  F    G  I
+      \ /     \ /
+       H       I
+        \     /
+          J
+    """
+    head_job = create_job_graph(graph_definition_complex, jobs)
+    job_instances = head_job.job_set()
+    
+    # Verify we got the correct number of instances
+    expected_count = 10  # A through J
+    assert len(job_instances) == expected_count, f"Expected {expected_count} job instances, but got {len(job_instances)}"
+    
+    # Verify all instances are JobABC types
+    assert all(isinstance(job, JobABC) for job in job_instances), "All items in job_set should be JobABC instances"
+    
+    # Verify the job names match what we expect
+    job_names = {job.name for job in job_instances}
+    expected_names = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'}
+    assert job_names == expected_names, f"Expected jobs named {expected_names}, but got {job_names}"
