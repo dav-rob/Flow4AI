@@ -104,7 +104,7 @@ class JobABC(ABC, metaclass=JobMeta):
     _instance_counts: Dict[Type, int] = {}
     
     # Key used to pass task metadata through the job chain
-    TASK_INPUT_KEY: str = 'task_pass_through'
+    TASK_PASSTHROUGH_KEY: str = 'task_pass_through'
 
     def __init__(self, name: Optional[str] = None, properties: Dict[str, Any] = {}):
         """
@@ -243,7 +243,7 @@ class JobABC(ABC, metaclass=JobMeta):
         """
         if not isinstance(inputs, dict):
             raise TypeError("inputs must be a dictionary")
-        return cls.get_input_from(inputs, cls.TASK_INPUT_KEY)
+        return cls.get_input_from(inputs, cls.TASK_PASSTHROUGH_KEY)
 
     def __repr__(self):
         next_jobs_str = [job.name for job in self.next_jobs]
@@ -299,13 +299,13 @@ class JobABC(ABC, metaclass=JobMeta):
         # Add task pass-through metadata if this is a head job (received task directly)
         if isinstance(task, dict):
             # Preserve all task data
-            result[self.TASK_INPUT_KEY] = task
+            result[self.TASK_PASSTHROUGH_KEY] = task
         # For non-head jobs, look for task_pass_through in inputs
         else:
             # Find task_pass_through in any of the input results
             for input_data in self.inputs.values():
-                if isinstance(input_data, dict) and self.TASK_INPUT_KEY in input_data:
-                    result[self.TASK_INPUT_KEY] = input_data[self.TASK_INPUT_KEY]
+                if isinstance(input_data, dict) and self.TASK_PASSTHROUGH_KEY in input_data:
+                    result[self.TASK_PASSTHROUGH_KEY] = input_data[self.TASK_PASSTHROUGH_KEY]
                     break
 
         # Clear state for potential reuse
