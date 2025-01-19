@@ -99,7 +99,7 @@ class JobChain:
             raise TypeError("job must be either Dict[str, Any], JobABC instance, or Collection[JobABC]")
 
         self._job_name_map.clear()
-        self._job_name_map.update({job.name: job.job_set() for job in self.job_map.values()})
+        self._job_name_map.update({job.name: job.job_set_str() for job in self.job_map.values()})
 
     # We will not to use context manager as it makes semantics of JobChain use less flexible
     # def __enter__(self):
@@ -360,7 +360,7 @@ class JobChain:
             job_map = {job.name: job for job in head_jobs}
             # Update the shared job_name_map with each head job's complete set of reachable jobs
             job_name_map.clear()
-            job_name_map.update({job.name: job.job_set() for job in head_jobs})
+            job_name_map.update({job.name: job.job_set_str() for job in head_jobs})
             logger.info(f"Created job map with head jobs: {list(job_name_map.keys())}")
 
         # Signal that jobs are loaded

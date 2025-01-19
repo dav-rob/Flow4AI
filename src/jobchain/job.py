@@ -347,7 +347,7 @@ class JobABC(ABC, metaclass=JobMeta):
         if self.expected_inputs.issubset(set(self.inputs.keys())):
             self.input_event.set()
 
-    def job_set(self) -> set[str]:
+    def job_set_str(self) -> set[str]:
         """
         Returns a set of all unique job names in the job graph by recursively traversing
         all possible paths through next_jobs.
@@ -363,7 +363,7 @@ class JobABC(ABC, metaclass=JobMeta):
             
         # Recursive case: add all jobs from each path
         for job in self.next_jobs:
-            result.update(job.job_set())
+            result.update(job.job_set_str())
             
         return result
 

@@ -237,7 +237,7 @@ def test_execute_graph1():
 
 def test_job_set():
     head_job = create_job_graph(graph_definition1, jobs)
-    job_set = head_job.job_set()
+    job_set = head_job.job_set_str()
     assert job_set == {'A', 'B', 'C', 'D'}
 
 def test_execute_graph2():
@@ -274,6 +274,6 @@ def test_complex_job_set():
           J
     """
     head_job = create_job_graph(graph_definition_complex, jobs)
-    job_set = head_job.job_set()
+    job_set = head_job.job_set_str()
     expected_jobs = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'}
     assert job_set == expected_jobs, f"Expected {expected_jobs}, but got {job_set}"
