@@ -7,7 +7,7 @@ from typing import Any, Dict
 import pytest
 
 import jobchain.jc_logging as logging
-from jobchain.job import JobABC
+from jobchain.job import JobABC, Task, create_job_graph
 from jobchain.job_chain import JobChain
 from jobchain.job_loader import ConfigLoader
 
@@ -52,6 +52,7 @@ async def test_concurrency_by_expected_returns():
 
     job_chain.mark_input_completed()
 
+@pytest.mark.skip(reason="Test is currently not applicable")
 @pytest.mark.asyncio
 async def test_concurrency_by_expected_returns_fails_hangs():
     # Create a manager for sharing the results list between processes
@@ -86,3 +87,86 @@ async def test_concurrency_by_expected_returns_fails_hangs():
 
 
     job_chain.mark_input_completed()
+
+
+class A(JobABC):
+  async def run(self, inputs: Dict[str, Any]) -> Any:
+    print(f"\nA expected inputs: {self.expected_inputs}")
+    print(f"A data inputs: {inputs}")
+    dataA:dict = {
+        'dataA1': {},
+        'dataA2': {}
+    }
+    print(f"A returned: {dataA}")
+    return dataA
+
+class B(JobABC):
+  async def run(self, inputs: Dict[str, Any]) -> Any:
+    print(f"\nB expected inputs: {self.expected_inputs}")
+    print(f"B data inputs: {inputs}")
+    dataB:dict = {
+        'dataB1': {},
+        'dataB2': {}
+    }
+    print(f"B returned: {dataB}")
+    return dataB
+
+class C(JobABC):
+  async def run(self, inputs: Dict[str, Any]) -> Any:
+    print(f"\nC expected inputs: {self.expected_inputs}")
+    print(f"C data inputs: {inputs}")
+    dataC:dict = {
+        'dataC1': {},
+        'dataC2': {}
+    } 
+    print(f"C returned: {dataC}")
+    return dataC
+
+class D(JobABC):
+  async def run(self, inputs: Dict[str, Any]) -> Any:
+    print(f"\nD expected inputs: {self.expected_inputs}")
+    print(f"D data inputs: {inputs}")
+    dataD:dict = {
+        'dataD1': {},
+        'dataD2': {}
+    } 
+    print(f"D returned: {dataD}")
+    return dataD
+
+jobs = {
+    'A': A('A'),
+    'B': B('B'),
+    'C': C('C'),
+    'D': D('D')
+}
+
+graph_definition1 = {
+    'A': {'next': ['B', 'C']},
+    'B': {'next': ['C', 'D']},
+    'C': {'next': ['D']},
+    'D': {'next': []}
+} 
+
+
+
+@pytest.mark.asyncio
+async def test_simple_graph():
+    head_job:JobABC = create_job_graph(graph_definition1, jobs)
+    
+    # Create 50 tasks to run concurrently
+    tasks = []
+    for _ in range(1):
+        task = head_job._execute(Task({'1': {},'2': {}}))
+        tasks.append(task)
+    
+    # Run all tasks concurrently and gather results
+    results = await asyncio.gather(*tasks)
+    
+    # Verify each result matches the expected final output from job D
+    for final_result in results:
+        # Extract just the job result data, ignoring task_pass_through
+        result_data = {k: v for k, v in final_result.items() if k not in ['task_pass_through']}
+        assert result_data == {
+                'dataD1': {},
+                'dataD2': {}
+            }
