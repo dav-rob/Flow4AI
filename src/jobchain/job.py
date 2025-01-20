@@ -1,7 +1,7 @@
 import asyncio
 import uuid
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Any, Dict, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union
 
 from . import jc_logging as logging
 from .utils.otel_wrapper import TracerFactory, trace_function
@@ -391,6 +391,110 @@ class JobABC(ABC, metaclass=JobMeta):
     async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
         """Execute the job on the given task. Must be implemented by subclasses."""
         pass
+
+class JobState:
+  def __init__(self):
+      self.next_jobs: List[JobABC] = []
+      self.inputs: Dict[str, Dict[str, Any]] = {}
+      self.input_event = asyncio.Event()
+      self.execution_started = False
+
+class JobWrapper:
+    def __init__(self, job: JobABC):
+        self._job = job
+        self._state = JobState()
+
+    @property
+    def next_jobs(self) -> List['JobWrapper']:
+        return self._state.next_jobs
+
+    @next_jobs.setter
+    def next_jobs(self, value: List['JobWrapper']):
+        self._state.next_jobs = value
+        
+    @property
+    def inputs(self) -> Dict[str, Dict[str, Any]]:
+        return self._state.inputs
+
+    @property
+    def input_event(self) -> asyncio.Event:
+        return self._state.input_event
+
+    @property
+    def execution_started(self) -> bool:
+        return self._state.execution_started
+     
+    @execution_started.setter
+    def execution_started(self, value: bool):
+        self._state.execution_started = value
+
+    def __getattr__(self, name):
+        """Forward all other attributes to the underlying job"""
+        return getattr(self._job, name)
+
+    async def _execute(self, task: Union[Task, None]) -> Dict[str, Any]:
+        # Delegate to the wrapped job's _execute but use our state
+        original_state = (
+            self._job.next_jobs,
+            self._job.inputs,
+            self._job.input_event,
+            self._job.execution_started
+        )
+        
+        # Swap in our state
+        self._job.next_jobs = self.next_jobs
+        self._job.inputs = self.inputs
+        self._job.input_event = self.input_event
+        self._job.execution_started = self.execution_started
+        
+        try:
+            result = await self._job._execute(task)
+            return result
+        finally:
+            # Restore original state
+            (self._job.next_jobs,
+             self._job.inputs,
+             self._job.input_event,
+             self._job.execution_started) = original_state
+
+    async def receive_input(self, from_job: str, data: Dict[str, Any]) -> None:
+        # Delegate to wrapped job's receive_input but use our state
+        original_state = (
+            self._job.inputs,
+            self._job.input_event
+        )
+        
+        # Swap in our state
+        self._job.inputs = self.inputs
+        self._job.input_event = self.input_event
+        
+        try:
+            await self._job.receive_input(from_job, data)
+        finally:
+            # Restore original state
+            (self._job.inputs,
+             self._job.input_event) = original_state
+
+    @classmethod
+    def wrap_job_graph(cls, root_job: JobABC) -> 'JobWrapper':
+        job_map = {}
+        
+        def wrap_recursive(job: JobABC) -> 'JobWrapper':
+            if job in job_map:
+                return job_map[job]
+                
+            wrapper = cls(job)
+            job_map[job] = wrapper
+            
+            # Wire up next_jobs with wrapped versions
+            wrapper.next_jobs = [
+                wrap_recursive(next_job) for next_job in job.next_jobs
+            ]
+            
+            return wrapper
+            
+        return wrap_recursive(root_job)
+
 
 
 class SimpleJob(JobABC):

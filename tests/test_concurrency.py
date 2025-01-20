@@ -2,12 +2,12 @@ import asyncio
 import multiprocessing as mp
 import os
 from functools import partial
-from typing import Any, Dict
+from typing import Any, Coroutine, Dict
 
 import pytest
 
 import jobchain.jc_logging as logging
-from jobchain.job import JobABC, Task, create_job_graph
+from jobchain.job import JobABC, JobWrapper, Task, create_job_graph
 from jobchain.job_chain import JobChain
 from jobchain.job_loader import ConfigLoader
 
@@ -151,12 +151,16 @@ graph_definition1 = {
 
 @pytest.mark.asyncio
 async def test_simple_graph():
+    """
+    This test fails unless head_job is wrapped in a JobWrapper.
+    """
     head_job:JobABC = create_job_graph(graph_definition1, jobs)
     
     # Create 50 tasks to run concurrently
     tasks = []
-    for _ in range(1):
-        task = head_job._execute(Task({'1': {},'2': {}}))
+    for _ in range(50):
+        wrappedJob = JobWrapper.wrap_job_graph(head_job)
+        task:Coroutine[Any, Any, Dict[str, Any]] = wrappedJob._execute(Task({'1': {},'2': {}}))
         tasks.append(task)
     
     # Run all tasks concurrently and gather results
