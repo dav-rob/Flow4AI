@@ -289,7 +289,7 @@ class JobABC(ABC, metaclass=JobMeta):
         #  call run with the inputs provided by predecessor jobs
         #  or the Task provided on the head Job in the Job Graph.
         result = await self.run(self.inputs)
-        logger.debug(f"Job {self.name} finished running")
+        logging.debug(f"Job {self.name} finished running")
 
         # Ensure result is a dictionary
         if not isinstance(result, dict):
@@ -509,7 +509,7 @@ class SimpleJob(JobABC):
     
     async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
         """Run a simple job that logs and returns the task."""
-        logger.info(f"Async JOB for {task}")
+        logging.info(f"Async JOB for {task}")
         await asyncio.sleep(1)  # Simulate network delay
         return {"task": task, "status": "complete"}
 
@@ -520,15 +520,13 @@ class SimpleJobFactory:
     @staticmethod
     def _load_from_file(params: Dict[str, Any]) -> JobABC:
         """Create a traced job instance from file configuration."""
-        logger = logging.getLogger('JobFactory')
-        logger.info(f"Loading job with params: {params}")
+        logging.info(f"Loading job with params: {params}")
         return SimpleJob("File Job")
 
     @staticmethod
     def _load_from_datastore(params: Dict[str, Any]) -> JobABC:
         """Create a traced job instance from datastore."""
-        logger = logging.getLogger('JobFactory')
-        logger.info(f"Loading job from datastore with params: {params}")
+        logging.info(f"Loading job from datastore with params: {params}")
         return SimpleJob("Datastore Job")
 
     @staticmethod

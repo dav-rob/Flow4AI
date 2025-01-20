@@ -3,9 +3,10 @@ from typing import Any, Dict, Optional, Union
 
 from aiolimiter import AsyncLimiter
 from dotenv import load_dotenv
-from jobchain import jc_logging as logging
-from jobchain.job import JobABC
 from openai import AsyncOpenAI
+
+import jobchain.jc_logging as logging
+from jobchain.job import JobABC
 
 
 class OpenAIClient:
@@ -170,9 +171,9 @@ class OpenAIJob(JobABC):
         # Acquire the rate limiter before making the request
         async with self.limiter:
             try:
-                self.logger.info(f"{self.name} is making an OpenAI API call.")
+                logging.info(f"{self.name} is making an OpenAI API call.")
                 response = await self.client.chat.completions.create(**request_properties)
-                self.logger.info(f"{self.name} received a response.")
+                logging.info(f"{self.name} received a response.")
                 
                 # Handle the response
                 if hasattr(response, 'choices') and response.choices:
@@ -180,5 +181,5 @@ class OpenAIJob(JobABC):
                 else:
                     return {"error": "No valid response content found"}
             except Exception as e:
-                self.logger.error(f"Error in {self.name}: {e}")
+                logging.error(f"Error in {self.name}: {e}")
                 return {"error": str(e)}
