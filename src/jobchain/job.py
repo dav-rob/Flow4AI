@@ -416,9 +416,17 @@ class JobWrapper:
     def inputs(self) -> Dict[str, Dict[str, Any]]:
         return self._state.inputs
 
+    @inputs.setter
+    def inputs(self, value: Dict[str, Dict[str, Any]]):
+        self._state.inputs = value
+
     @property
     def input_event(self) -> asyncio.Event:
         return self._state.input_event
+
+    @input_event.setter
+    def input_event(self, value: asyncio.Event):
+        self._state.input_event = value
 
     @property
     def execution_started(self) -> bool:
