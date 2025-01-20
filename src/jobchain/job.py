@@ -139,7 +139,6 @@ class JobABC(ABC, metaclass=JobMeta):
         self.input_event = asyncio.Event() # Event waits for signal when all expected 
                                         # inputs are received
         self.timeout = 3000 # how long to wait for inputs from predecessor jobs
-        self.logger = logging.getLogger(self.__class__.__name__)
 
     @classmethod
     def parse_job_loader_name(cls, name: str) -> Dict[str, str]:
@@ -290,7 +289,7 @@ class JobABC(ABC, metaclass=JobMeta):
         #  call run with the inputs provided by predecessor jobs
         #  or the Task provided on the head Job in the Job Graph.
         result = await self.run(self.inputs)
-        self.logger.debug(f"Job {self.name} finished running")
+        logger.debug(f"Job {self.name} finished running")
 
         # Ensure result is a dictionary
         if not isinstance(result, dict):
@@ -510,7 +509,7 @@ class SimpleJob(JobABC):
     
     async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
         """Run a simple job that logs and returns the task."""
-        self.logger.info(f"Async JOB for {task}")
+        logger.info(f"Async JOB for {task}")
         await asyncio.sleep(1)  # Simulate network delay
         return {"task": task, "status": "complete"}
 
