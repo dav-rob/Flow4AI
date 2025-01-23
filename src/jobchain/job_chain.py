@@ -10,7 +10,7 @@ from multiprocessing import freeze_support, set_start_method
 from typing import Any, Callable, Collection, Dict, Optional, Union
 
 from . import jc_logging as logging
-from .job import JobABC, JobWrapper, SimpleJobFactory, Task
+from .job import JobABC, SimpleJobFactory, Task
 from .job_loader import ConfigLoader, JobFactory
 from .utils.print_utils import printh
 
@@ -380,8 +380,8 @@ class JobChain:
                     if not job_name:
                         raise ValueError("Task missing job_name when multiple jobs are present")
                     job = job_map[job_name]
-                wrapped_job = JobWrapper.wrap_job_graph(job)
-                result = await wrapped_job._execute(task)
+                #wrapped_job = JobWrapper.wrap_job_graph(job)
+                result = await job._execute(task)
                 logger.debug(f"[TASK_TRACK] Completed task {task_id}")
                 result_queue.put(result)
                 logger.debug(f"[TASK_TRACK] Result queued for task {task_id}")
