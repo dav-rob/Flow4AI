@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import Any, Dict, Optional, Type, Union
 
+import jobchain.jc_logging as logging
 from jobchain.job import Task, create_job_graph
 from jobchain.utils import timing_decorator
 
@@ -18,9 +19,11 @@ class JobState:
 job_graph_context : ContextVar[dict] = ContextVar('job_graph_context')
 
 @asynccontextmanager
-async def job_graph_context(job_set: set['JobABC']):
+async def job_graph_context_manager(job_set: set['JobABC']):
   """Create a new context for job execution, with a new JobState."""
   new_state = {}
+  for job in job_set:
+      new_state[job.name] = JobState()
   token = job_graph_context.set(new_state)
   try:
       yield new_state
@@ -47,37 +50,34 @@ class JobABC(ABC):
 
         self.name:str = self._getUniqueName() if name is None else name
         self.properties:Dict[str, Any] = properties
+        self.expected_inputs:set[str] = set()
         self.next_jobs:list[JobABC] = [] 
         self.timeout = 3000 
 
 
     async def _execute(self, task: Union[Task, None]) -> Dict[str, Any]:
         job_state_dict:dict = job_graph_context.get()
-        job_state = job_state_dict.get(self.name) or JobState()
-        job_state_dict[self.name] = job_state
+        job_state = job_state_dict.get(self.name)
         if isinstance(task, dict):
             job_state.inputs.update(task)
         elif task is None:
             pass 
         else:
             job_state.inputs[self.name] = task
-        job_graph_context.set(job_state_dict)
 
-        if job_state.expected_inputs:
+        if self.expected_inputs:
             if job_state.execution_started:
                 return None
             
             job_state.execution_started = True
-            job_graph_context.set(job_state)
             try:
-                await asyncio.wait_for(self.input_event.wait(), self.timeout)
+                await asyncio.wait_for(job_state.input_event.wait(), self.timeout)
             except asyncio.TimeoutError:
                 job_state.execution_started = False  # Reset on timeout
-                job_graph_context.set(job_state)
                 raise TimeoutError(
                     f"Timeout waiting for inputs in {self.name}. "
                     f"Expected: {self.expected_inputs}, "
-                    f"Received: {list(self.inputs.keys())}"
+                    f"Received: {list(job_state.inputs.keys())}"
                 )
 
         result = await self.run(job_state.inputs)
@@ -91,7 +91,7 @@ class JobABC(ABC):
             result[self.TASK_PASSTHROUGH_KEY] = task
         else:
             # Find task_pass_through in any of the input results
-            for input_data in self.inputs.values():
+            for input_data in job_state.inputs.values():
                 if isinstance(input_data, dict) and self.TASK_PASSTHROUGH_KEY in input_data:
                     result[self.TASK_PASSTHROUGH_KEY] = input_data[self.TASK_PASSTHROUGH_KEY]
                     break
@@ -100,7 +100,6 @@ class JobABC(ABC):
         job_state.inputs.clear()
         job_state.input_event.clear()
         job_state.execution_started = False
-        job_graph_context.set(job_state)
 
         # If this is a single job or a tail job in a graph, return the result.
         if not self.next_jobs:
@@ -110,7 +109,8 @@ class JobABC(ABC):
         for next_job in self.next_jobs:
             input_data = result.copy()
             await next_job.receive_input(self.name, input_data)
-            if next_job.expected_inputs.issubset(set(next_job.inputs.keys())):
+            next_job_inputs = job_state_dict.get(next_job.name).inputs
+            if next_job.expected_inputs.issubset(set(next_job_inputs.keys())):
                 executing_jobs.append(next_job._execute(task=None))
         
         if executing_jobs:
@@ -123,9 +123,11 @@ class JobABC(ABC):
 
     async def receive_input(self, from_job: str, data: Dict[str, Any]) -> None:
         """Receive input from a predecessor job"""
-        self.inputs[from_job] = data
-        if self.expected_inputs.issubset(set(self.inputs.keys())):
-            self.input_event.set()
+        job_state_dict:dict = job_graph_context.get()
+        job_state = job_state_dict.get(self.name)
+        job_state.inputs[from_job] = data
+        if self.expected_inputs.issubset(set(job_state.inputs.keys())):
+            job_state.input_event.set()
 
     @classmethod
     def job_set(cls, job) -> set['JobABC']:
@@ -226,7 +228,7 @@ async def test_simple_graph():
     # Create 50 tasks to run concurrently
     tasks = []
     for _ in range(5):
-      async with job_graph_context(job_set):
+      async with job_graph_context_manager(job_set):
         task = asyncio.create_task(head_job._execute(Task({'1': {},'2': {}})))
         tasks.append(task)
     
@@ -246,9 +248,7 @@ class AsyncPlay:
 
     async def execute(self, task):
       job_state_dict:dict = job_graph_context.get()
-      job_state = job_state_dict.get(task.id) or JobState()
-      job_state_dict[task.id] = job_state
-      job_graph_context.set(job_state_dict)
+      job_state = job_state_dict.get(task["name"]) or JobState()
 
       job_state.inputs.update(task)
       job_state.execution_started = True
@@ -257,8 +257,8 @@ class AsyncPlay:
   
     async def run(self, task: dict) -> Dict:
       job_state_dict:dict = job_graph_context.get()
-      job_state = job_state_dict.get(task.id)
-      print (f" execution started:{job_state.execution_started}, inputs = {job_state.inputs}")
+      job_state = job_state_dict.get(task["name"])
+      print (f" execution started = {job_state.execution_started}, inputs = {job_state.inputs}")
       await asyncio.sleep(1)
       print(f"Finished {task}")
       return {"task": task}
@@ -270,9 +270,9 @@ async def run_tasks():
     job_set = JobABC.job_set(head_job)
     async_play = AsyncPlay()
     tasks = []
-    for i in range(3):
-      async with job_graph_context(job_set):
-        tasks.append(asyncio.create_task(async_play.execute(Task({'id': i}))))
+    for job in job_set:
+      async with job_graph_context_manager(job_set):
+        tasks.append(asyncio.create_task(async_play.execute(Task({"name": job.name}))))
     
     # await each task
     results = await asyncio.gather(*tasks)
