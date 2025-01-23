@@ -2,7 +2,8 @@ import asyncio
 import time
 from typing import Any, Dict
 
-from jobchain.job import JobABC, Task, create_job_graph
+from jobchain.job import (JobABC, Task, create_job_graph,
+                          job_graph_context_manager)
 from jobchain.job_chain import JobChain
 
 
@@ -221,13 +222,15 @@ graph_definition_complex = {
     'J': {'next': []}                # Tail job
 }
 
-def execute_graph(graph_definition: dict, jobs: dict, data: dict) -> Any:
+async def execute_graph(graph_definition: dict, jobs: dict, data: dict) -> Any:
     head_job = create_job_graph(graph_definition, jobs)
-    final_result = asyncio.run(head_job._execute(Task(data)))
+    job_set = JobABC.job_set(head_job)
+    async with job_graph_context_manager(job_set):
+        final_result = await head_job._execute(Task(data))
     return final_result
 
 def test_execute_graph1():
-    final_result1 = execute_graph(graph_definition1, jobs, data)
+    final_result1 = asyncio.run(execute_graph(graph_definition1, jobs, data))
     # Extract just the job result data, ignoring task_pass_through
     result_data = {k: v for k, v in final_result1.items() if k not in ['task_pass_through']}
     assert result_data == {
@@ -241,7 +244,7 @@ def test_job_set():
     assert job_set == {'A', 'B', 'C', 'D'}
 
 def test_execute_graph2():
-    final_result2 = execute_graph(graph_definition2, jobs, data)
+    final_result2 = asyncio.run(execute_graph(graph_definition2, jobs, data))
     # Extract just the job result data, ignoring task_pass_through
     result_data = {k: v for k, v in final_result2.items() if k not in ['task_pass_through']}
     assert result_data == {

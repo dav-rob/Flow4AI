@@ -6,7 +6,7 @@ import yaml
 
 import jobchain.jc_logging as logging
 from jobchain.jc_graph import validate_graph
-from jobchain.job import Task
+from jobchain.job import JobABC, Task, job_graph_context_manager
 from jobchain.job_chain import JobChain  # Import JobChain
 from jobchain.job_loader import ConfigLoader, ConfigurationError, JobFactory
 from jobchain.jobs.llm_jobs import OpenAIJob
@@ -298,7 +298,9 @@ async def test_job_execution_chain(caplog):
     head_job = [job for job in head_jobs if 'four_stage_parameterized$$params1$$read_file$$' in job.name][0]
 
     # Execute the head job
-    await asyncio.create_task(head_job._execute(Task({"task": "Test task"})))
+    job_set = JobABC.job_set(head_job)
+    async with job_graph_context_manager(job_set):
+        await asyncio.create_task(head_job._execute(Task({"task": "Test task"})))
 
     # Expected job names in the graph
     expected_jobs = {

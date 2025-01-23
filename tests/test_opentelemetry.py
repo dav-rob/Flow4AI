@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import time
@@ -8,7 +9,7 @@ from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
 
 from jobchain import jc_logging as logging
-from jobchain.job import JobABC, Task
+from jobchain.job import JobABC, Task, job_graph_context_manager
 from jobchain.utils.otel_wrapper import TracerFactory, trace_function
 
 logging.basicConfig(level=logging.INFO)
@@ -237,12 +238,17 @@ def test_job_metaclass_tracing(trace_file, setup_file_exporter):
             # Extract just the task data we need
             task_data = inputs['task'] if isinstance(inputs, dict) else inputs
             return {"result": task_data}
-
+            
+    async def run_job(job_set):
+        async with job_graph_context_manager(job_set):
+            result = await job._execute(task)
+            return result
     # Create and execute job
     job = TestJob("test")
-    import asyncio
     task = Task("test task", job.name)
-    result = asyncio.run(job._execute(task))
+    job_set = JobABC.job_set(job)
+
+    result = asyncio.run(run_job(job_set))
     # Extract just the result field for comparison
     result_data = result.get("result") if isinstance(result, dict) else result
     assert result_data == "test task"
