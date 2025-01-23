@@ -221,13 +221,14 @@ graph_definition1 = {
     'D': {'next': []}
 } 
 
+
 async def test_simple_graph():
 
     head_job:JobABC = create_job_graph(graph_definition1, jobs)
     job_set = JobABC.job_set(head_job)
     # Create 50 tasks to run concurrently
     tasks = []
-    for _ in range(5):
+    for _ in range(50):
       async with job_graph_context_manager(job_set):
         task = asyncio.create_task(head_job._execute(Task({'1': {},'2': {}})))
         tasks.append(task)
@@ -264,6 +265,7 @@ class AsyncPlay:
       return {"task": task}
 
 # Using create_task() for concurrency
+
 async def run_tasks():
     # Create multiple tasks to run concurrently
     head_job:JobABC = create_job_graph(graph_definition1, jobs)
@@ -284,10 +286,14 @@ async def run_tasks():
 def main():
     asyncio.run(run_tasks())
 
+@timing_decorator
+def test():
+    asyncio.run(test_simple_graph())
+
 if __name__ == '__main__':
   if len(sys.argv) > 1 and sys.argv[1] == 'main':
     main()
   elif len(sys.argv) > 1 and sys.argv[1] == 'test':
-    asyncio.run(test_simple_graph())
+    test()
   else:
     print("Usage: python async_play.py [main|test]")
