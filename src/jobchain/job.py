@@ -1,10 +1,12 @@
 import asyncio
 import uuid
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Any, Dict, List, Optional, Type, Union
+from contextlib import asynccontextmanager
+from contextvars import ContextVar
+from typing import Any, Dict, Optional, Type, Union
 
 from . import jc_logging as logging
-from .utils.otel_wrapper import TracerFactory, trace_function
+from .utils.otel_wrapper import trace_function
 
 
 def _is_traced(method):
@@ -93,6 +95,25 @@ class Task(dict):
         task_preview = str(dict(self))[:50] + '...' if len(str(dict(self))) > 50 else str(dict(self))
         return f"Task(id={self.task_id}, job_name={job_name}, data={task_preview})"
 
+class JobState:
+  def __init__(self):
+      self.inputs: Dict[str, Dict[str, Any]] = {}
+      self.input_event = asyncio.Event()
+      self.execution_started = False
+
+job_graph_context : ContextVar[dict] = ContextVar('job_graph_context')
+
+@asynccontextmanager
+async def job_graph_context_manager(job_set: set['JobABC']):
+  """Create a new context for job execution, with a new JobState."""
+  new_state = {}
+  for job in job_set:
+      new_state[job.name] = JobState()
+  token = job_graph_context.set(new_state)
+  try:
+      yield new_state
+  finally:
+      job_graph_context.reset(token)
 
 class JobABC(ABC, metaclass=JobMeta):
     """
@@ -123,22 +144,9 @@ class JobABC(ABC, metaclass=JobMeta):
         """
         self.name:str = self._getUniqueName() if name is None else name
         self.properties:Dict[str, Any] = properties
-        self.next_jobs:list[JobABC] = []   # next_jobs is the outgoing edges in the
-                                #  graph definition, 
-                                #  it is the jobs to execute after executing this job.
-        self.expected_inputs:set[str] = set() # a set of job names that are expected to 
-                                # provide data as inputs to this job by calling 
-                                # receive_input(). The job will wait until all expected 
-                                # inputs are received before running _execute().
-        self.inputs:Dict[str, Dict[str, Any]] = {} # inputs are set by preceding jobs 
-                                # by calling receive_input(). The key is the name of the 
-                                # job that  sent the input, and the value is the result 
-                                # of the _execute() method of that job
-        
-        self.execution_started = False  # Flag to track execution status
-        self.input_event = asyncio.Event() # Event waits for signal when all expected 
-                                        # inputs are received
-        self.timeout = 3000 # how long to wait for inputs from predecessor jobs
+        self.expected_inputs:set[str] = set()
+        self.next_jobs:list[JobABC] = [] 
+        self.timeout = 3000 
 
     @classmethod
     def parse_job_loader_name(cls, name: str) -> Dict[str, str]:
@@ -244,6 +252,27 @@ class JobABC(ABC, metaclass=JobMeta):
             raise TypeError("inputs must be a dictionary")
         return cls.get_input_from(inputs, cls.TASK_PASSTHROUGH_KEY)
 
+    @classmethod
+    def job_set(cls, job) -> set['JobABC']:
+        """
+        Returns a set of all unique job instances in the job graph by recursively traversing
+        all possible paths through next_jobs.
+        
+        Returns:
+            set[JobABC]: A set containing all unique job instances in the graph
+        """
+        result = {job}  # Start with current job instance
+        
+        # Base case: if no next jobs, return current set
+        if not job.next_jobs:
+            return result
+            
+        # Recursive case: add all jobs from each path
+        for job in job.next_jobs:
+            result.update(cls.job_set(job))
+            
+        return result
+
     def __repr__(self):
         next_jobs_str = [job.name for job in self.next_jobs]
         expected_inputs_str = [input_name for input_name in self.expected_inputs]
@@ -253,83 +282,61 @@ class JobABC(ABC, metaclass=JobMeta):
                 f"properties: {self.properties}")
 
     async def _execute(self, task: Union[Task, None]) -> Dict[str, Any]:
-        """
-        Execute a job graph and return the result from the last job at the tail
-        of the graph.
-        
-        """
-        # This is called when the job is the head of the graph
-        #  and the task is provided as an argument
+        job_state_dict:dict = job_graph_context.get()
+        job_state = job_state_dict.get(self.name)
         if isinstance(task, dict):
-            self.inputs.update(task)
+            job_state.inputs.update(task)
         elif task is None:
-            pass # do nothing, self.inputs will contain the data to process
+            pass 
         else:
-            # Convert single input to dict format
-            #  this is never called currently.
-            self.inputs[self.name] = task
+            job_state.inputs[self.name] = task
 
-        # If we expect multiple inputs, wait for them
         if self.expected_inputs:
-            if self.execution_started:
-                # If execution already started by another parent job, just return
+            if job_state.execution_started:
                 return None
             
-            self.execution_started = True
+            job_state.execution_started = True
             try:
-                await asyncio.wait_for(self.input_event.wait(), self.timeout)
+                await asyncio.wait_for(job_state.input_event.wait(), self.timeout)
             except asyncio.TimeoutError:
-                self.execution_started = False  # Reset on timeout
+                job_state.execution_started = False  # Reset on timeout
                 raise TimeoutError(
                     f"Timeout waiting for inputs in {self.name}. "
                     f"Expected: {self.expected_inputs}, "
-                    f"Received: {list(self.inputs.keys())}"
+                    f"Received: {list(job_state.inputs.keys())}"
                 )
-        # Once the signal is received saying all inputs are ready,
-        #  call run with the inputs provided by predecessor jobs
-        #  or the Task provided on the head Job in the Job Graph.
-        result = await self.run(self.inputs)
+
+        result = await self.run(job_state.inputs)
         logging.debug(f"Job {self.name} finished running")
 
-        # Ensure result is a dictionary
         if not isinstance(result, dict):
             result = {'result': result}
 
-        # Add task pass-through metadata if this is a head job (received task directly)
         if isinstance(task, dict):
             # Preserve all task data
             result[self.TASK_PASSTHROUGH_KEY] = task
-        # For non-head jobs, look for task_pass_through in inputs
         else:
             # Find task_pass_through in any of the input results
-            for input_data in self.inputs.values():
+            for input_data in job_state.inputs.values():
                 if isinstance(input_data, dict) and self.TASK_PASSTHROUGH_KEY in input_data:
                     result[self.TASK_PASSTHROUGH_KEY] = input_data[self.TASK_PASSTHROUGH_KEY]
                     break
 
         # Clear state for potential reuse
-        self.inputs.clear()
-        self.input_event.clear()
-        self.execution_started = False
+        job_state.inputs.clear()
+        job_state.input_event.clear()
+        job_state.execution_started = False
 
         # If this is a single job or a tail job in a graph, return the result.
         if not self.next_jobs:
             return result
         
-        # if there are next_jobs then call those jobs with receive_input()
-        # Execute all next jobs concurrently
         executing_jobs = []
         for next_job in self.next_jobs:
-            # Preserve task pass-through data in next job's input
             input_data = result.copy()
-            # Tell the next job where this input data came from.
-            # so, the job can store its inputs data to with this job's name as a key.
             await next_job.receive_input(self.name, input_data)
-            # If the next job has all its inputs, trigger its execution.
-            #   This can be called multiple time for a single next_job
-            #   called by different parent jobs, in that case, execution_started
-            #   is marked as True, and multiple calls will be ignored.
-            if next_job.expected_inputs.issubset(set(next_job.inputs.keys())):
+            next_job_inputs = job_state_dict.get(next_job.name).inputs
+            if next_job.expected_inputs.issubset(set(next_job_inputs.keys())):
                 executing_jobs.append(next_job._execute(task=None))
         
         if executing_jobs:
@@ -342,9 +349,11 @@ class JobABC(ABC, metaclass=JobMeta):
 
     async def receive_input(self, from_job: str, data: Dict[str, Any]) -> None:
         """Receive input from a predecessor job"""
-        self.inputs[from_job] = data
-        if self.expected_inputs.issubset(set(self.inputs.keys())):
-            self.input_event.set()
+        job_state_dict:dict = job_graph_context.get()
+        job_state = job_state_dict.get(self.name)
+        job_state.inputs[from_job] = data
+        if self.expected_inputs.issubset(set(job_state.inputs.keys())):
+            job_state.input_event.set()
 
     def job_set_str(self) -> set[str]:
         """
@@ -366,142 +375,10 @@ class JobABC(ABC, metaclass=JobMeta):
             
         return result
 
-    def job_set(self) -> set['JobABC']:
-        """
-        Returns a set of all unique job instances in the job graph by recursively traversing
-        all possible paths through next_jobs.
-        
-        Returns:
-            set[JobABC]: A set containing all unique job instances in the graph
-        """
-        result = {self}  # Start with current job instance
-        
-        # Base case: if no next jobs, return current set
-        if not self.next_jobs:
-            return result
-            
-        # Recursive case: add all jobs from each path
-        for job in self.next_jobs:
-            result.update(job.job_set())
-            
-        return result
-
     @abstractmethod
     async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
         """Execute the job on the given task. Must be implemented by subclasses."""
         pass
-
-class JobState:
-  def __init__(self):
-      self.next_jobs: List[JobABC] = []
-      self.inputs: Dict[str, Dict[str, Any]] = {}
-      self.input_event = asyncio.Event()
-      self.execution_started = False
-
-class JobWrapper:
-    def __init__(self, job: JobABC):
-        self._job = job
-        self._state = JobState()
-
-    @property
-    def next_jobs(self) -> List['JobWrapper']:
-        return self._state.next_jobs
-
-    @next_jobs.setter
-    def next_jobs(self, value: List['JobWrapper']):
-        self._state.next_jobs = value
-        
-    @property
-    def inputs(self) -> Dict[str, Dict[str, Any]]:
-        return self._state.inputs
-
-    @inputs.setter
-    def inputs(self, value: Dict[str, Dict[str, Any]]):
-        self._state.inputs = value
-
-    @property
-    def input_event(self) -> asyncio.Event:
-        return self._state.input_event
-
-    @input_event.setter
-    def input_event(self, value: asyncio.Event):
-        self._state.input_event = value
-
-    @property
-    def execution_started(self) -> bool:
-        return self._state.execution_started
-     
-    @execution_started.setter
-    def execution_started(self, value: bool):
-        self._state.execution_started = value
-
-    def __getattr__(self, name):
-        """Forward all other attributes to the underlying job"""
-        return getattr(self._job, name)
-
-    async def _execute(self, task: Union[Task, None]) -> Dict[str, Any]:
-        # Delegate to the wrapped job's _execute but use our state
-        original_state = (
-            self._job.next_jobs,
-            self._job.inputs,
-            self._job.input_event,
-            self._job.execution_started
-        )
-        
-        # Swap in our state
-        self._job.next_jobs = self.next_jobs
-        self._job.inputs = self.inputs
-        self._job.input_event = self.input_event
-        self._job.execution_started = self.execution_started
-        
-        try:
-            result = await self._job._execute(task)
-            return result
-        finally:
-            # Restore original state
-            (self._job.next_jobs,
-             self._job.inputs,
-             self._job.input_event,
-             self._job.execution_started) = original_state
-
-    async def receive_input(self, from_job: str, data: Dict[str, Any]) -> None:
-        # Delegate to wrapped job's receive_input but use our state
-        original_state = (
-            self._job.inputs,
-            self._job.input_event
-        )
-        
-        # Swap in our state
-        self._job.inputs = self.inputs
-        self._job.input_event = self.input_event
-        
-        try:
-            await self._job.receive_input(from_job, data)
-        finally:
-            # Restore original state
-            (self._job.inputs,
-             self._job.input_event) = original_state
-
-    @classmethod
-    def wrap_job_graph(cls, root_job: JobABC) -> 'JobWrapper':
-        job_map = {}
-        
-        def wrap_recursive(job: JobABC) -> 'JobWrapper':
-            if job in job_map:
-                return job_map[job]
-                
-            wrapper = cls(job)
-            job_map[job] = wrapper
-            
-            # Wire up next_jobs with wrapped versions
-            wrapper.next_jobs = [
-                wrap_recursive(next_job) for next_job in job.next_jobs
-            ]
-            
-            return wrapper
-            
-        return wrap_recursive(root_job)
-
 
 
 class SimpleJob(JobABC):

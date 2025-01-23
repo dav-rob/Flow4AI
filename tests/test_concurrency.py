@@ -1,13 +1,15 @@
 import asyncio
+import contextvars
 import multiprocessing as mp
 import os
 from functools import partial
-from typing import Any, Coroutine, Dict
+from typing import Any, Dict
 
 import pytest
 
 import jobchain.jc_logging as logging
-from jobchain.job import JobABC, JobWrapper, Task, create_job_graph
+from jobchain.job import (JobABC, Task, create_job_graph,
+                          job_graph_context_manager)
 from jobchain.job_chain import JobChain
 from jobchain.job_loader import ConfigLoader
 
@@ -45,48 +47,13 @@ async def test_concurrency_by_expected_returns():
         shared_results[:] = []  # Clear the shared_results using slice assignment
     
 
-    submit_task(1)
-    check_results()
-
-
-
-    job_chain.mark_input_completed()
-
-@pytest.mark.skip(reason="Test is currently not applicable")
-@pytest.mark.asyncio
-async def test_concurrency_by_expected_returns_fails_hangs():
-    # Create a manager for sharing the results list between processes
-    manager = mp.Manager()
-    shared_results = manager.list()
-    
-    # Create a partial function with our shared results list
-    collector = partial(returns_collector, shared_results)
-    
-    # Set config directory for test
-    config_dir = os.path.join(os.path.dirname(__file__), "test_configs/test_concurrency_by_returns")
-    ConfigLoader._set_directories([config_dir])
-    
-    # Create JobChain with parallel processing
-    job_chain = JobChain(result_processing_function=collector)
-    logging.info(f"Names of jobs in head job: {job_chain.get_job_graph_mapping()}")
-
-    def submit_task(range_val:int):
-        for i in range(range_val):
-            job_chain.submit_task({'task': f'range {range_val}, item {i}'})
-
-    def check_results():
-        for result in shared_results:
-            assert result['result'] == 'A.A.B.C.E.A.D.F.G'
-
-        shared_results[:] = []  # Clear the shared_results using slice assignment
-    
-
     submit_task(7)
     check_results()
 
 
 
     job_chain.mark_input_completed()
+
 
 
 class A(JobABC):
@@ -151,16 +118,13 @@ graph_definition1 = {
 
 @pytest.mark.asyncio
 async def test_simple_graph():
-    """
-    This test fails unless head_job is wrapped in a JobWrapper.
-    """
     head_job:JobABC = create_job_graph(graph_definition1, jobs)
-    
+    job_set = JobABC.job_set(head_job)
     # Create 50 tasks to run concurrently
     tasks = []
     for _ in range(50):
-        wrappedJob = JobWrapper.wrap_job_graph(head_job)
-        task:Coroutine[Any, Any, Dict[str, Any]] = wrappedJob._execute(Task({'1': {},'2': {}}))
+      async with job_graph_context_manager(job_set):
+        task = asyncio.create_task(head_job._execute(Task({'1': {},'2': {}})))
         tasks.append(task)
     
     # Run all tasks concurrently and gather results

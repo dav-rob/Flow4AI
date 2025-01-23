@@ -293,7 +293,7 @@ def test_complex_job_set_instances():
           J
     """
     head_job = create_job_graph(graph_definition_complex, jobs)
-    job_instances = head_job.job_set()
+    job_instances = JobABC.job_set(head_job)
     
     # Verify we got the correct number of instances
     expected_count = 10  # A through J
