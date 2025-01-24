@@ -255,7 +255,7 @@ class JobChain:
     def mark_input_completed(self):
         """Signal completion of input and wait for all processing to finish."""
         self.logger.debug("Marking input as completed")
-        printh("task_queue ended")
+        self.logger.info("task_queue ended")
         self._task_queue.put(None)
         self._wait_for_completion()
 
