@@ -12,6 +12,7 @@ from typing import Any, Callable, Collection, Dict, Optional, Union
 from . import jc_logging as logging
 from .job import JobABC, SimpleJobFactory, Task, job_graph_context_manager
 from .job_loader import ConfigLoader, JobFactory
+from .utils.monitor_utils import should_log_task_stats
 from .utils.print_utils import printh
 
 
@@ -439,9 +440,9 @@ class JobChain:
                 tasks.difference_update(done_tasks)
 
                 # Log task stats periodically
-                # TODO: Only log if tasks_completed are changing, otherwise log once a second
                 if tasks_completed != 0 and tasks_completed % 5 == 0:
-                    logger.info(f"Tasks stats - Created: {tasks_created}, Completed: {tasks_completed}, Active: {len(tasks)}")
+                    if should_log_task_stats(queue_monitor, tasks_created, tasks_completed):
+                        logger.info(f"Tasks stats - Created: {tasks_created}, Completed: {tasks_completed}, Active: {len(tasks)}")
 
                 # A short pause to reduce CPU usage and avoid a busy-wait state.             
                 await asyncio.sleep(0.0001)
