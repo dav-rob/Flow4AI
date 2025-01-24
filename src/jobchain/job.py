@@ -375,6 +375,15 @@ class JobABC(ABC, metaclass=JobMeta):
             
         return result
 
+    def head_job(self) -> bool:
+        """
+        Check if this job is a head job (has no expected inputs).
+
+        Returns:
+            bool: True if this is a head job (no expected inputs), False otherwise
+        """
+        return len(self.expected_inputs) == 0
+
     @abstractmethod
     async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
         """Execute the job on the given task. Must be implemented by subclasses."""
