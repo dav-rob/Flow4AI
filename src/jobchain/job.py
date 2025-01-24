@@ -375,7 +375,7 @@ class JobABC(ABC, metaclass=JobMeta):
             
         return result
 
-    def head_job(self) -> bool:
+    def is_head_job(self) -> bool:
         """
         Check if this job is a head job (has no expected inputs).
 
