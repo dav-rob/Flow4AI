@@ -10,6 +10,8 @@ import yaml
 from . import jc_logging as logging
 from .job import JobABC, create_job_graph
 
+logger = logging.getLogger(__name__)
+
 
 class JobValidationError(Exception):
     """Raised when a custom job fails validation"""
@@ -55,27 +57,27 @@ class JobLoader:
         jobs_path = Path(jobs_dir)
 
         if not jobs_path.exists():
-            logging.info(f"Jobs directory not found: {jobs_dir}")
+            logger.info(f"Jobs directory not found: {jobs_dir}")
             return jobs
 
         # Add the custom jobs directory to Python path
-        logging.debug(f"Python path before: {sys.path}")
+        logger.debug(f"Python path before: {sys.path}")
         sys.path.append(str(jobs_path))
-        logging.info(f"Added {jobs_path} to Python path")
-        logging.debug(f"Python path after: {sys.path}")
+        logger.info(f"Added {jobs_path} to Python path")
+        logger.debug(f"Python path after: {sys.path}")
 
         # Scan for Python files
         for file_path in jobs_path.glob("**/*.py"):
             if file_path.name.startswith("__"):
                 continue
 
-            logging.info(f"Loading jobs from {file_path}")
+            logger.info(f"Loading jobs from {file_path}")
             try:
                 # Load the module
                 module_name = file_path.stem
                 spec = importlib.util.spec_from_file_location(module_name, str(file_path))
                 if spec is None or spec.loader is None:
-                    logging.warning(f"Could not create module spec for {file_path}")
+                    logger.warning(f"Could not create module spec for {file_path}")
                     continue
 
                 module = importlib.util.module_from_spec(spec)
@@ -86,16 +88,16 @@ class JobLoader:
                     if inspect.isclass(obj) and obj.__module__ == module.__name__:
                         try:
                             if cls.validate_job_class(obj):
-                                logging.info(f"Found valid job class: {name}")
+                                logger.info(f"Found valid job class: {name}")
                                 jobs[name] = obj
                         except Exception as e:
-                            logging.error(f"Error validating job class {name} in {file_path}: {str(e)}")
+                            logger.error(f"Error validating job class {name} in {file_path}: {str(e)}")
                             raise JobValidationError(
                                 f"Error validating job class {name} in {file_path}: {str(e)}"
                             )
 
             except Exception as e:
-                logging.error(f"Error loading custom job from {file_path}: {str(e)}")
+                logger.error(f"Error loading custom job from {file_path}: {str(e)}")
                 raise ImportError(
                     f"Error loading custom job from {file_path}: {str(e)}"
                 )
@@ -147,12 +149,12 @@ class JobFactory:
     @classmethod
     def create_job(cls, name: str, job_type: str, job_def: Dict[str, Any]) -> JobABC:
         if job_type not in cls._job_types:
-            logging.error(f"*** Unknown job type: {job_type} ***")
+            logger.error(f"*** Unknown job type: {job_type} ***")
             raise ValueError(f"Unknown job type: {job_type}")
         
         properties = job_def.get('properties', {})
         if not properties:
-            logging.info(f"No properties specified for job {name} of type {job_type}")
+            logger.info(f"No properties specified for job {name} of type {job_type}")
             
         return cls._job_types[job_type](name, properties)
 
@@ -270,12 +272,12 @@ class ConfigLoader:
 
         # Convert directories to Path objects
         dir_paths = [Path(str(d)) for d in directories]
-        logging.info(f"Looking for config files in directories: {dir_paths}")
+        logger.info(f"Looking for config files in directories: {dir_paths}")
 
         found_valid_dir = False
         for dir_path in dir_paths:
             if not dir_path.exists():
-                logging.info(f"Directory not found, skipping: {dir_path}")
+                logger.info(f"Directory not found, skipping: {dir_path}")
                 continue
 
             # Check if any config files exist in this directory
@@ -290,7 +292,7 @@ class ConfigLoader:
 
             if has_configs:
                 found_valid_dir = True
-                logging.info(f"Found valid jobchain directory: {dir_path}")
+                logger.info(f"Found valid jobchain directory: {dir_path}")
                 # Load configs from this directory only
                 for config_base in config_bases:
                     for ext in allowed_extensions:
@@ -526,7 +528,7 @@ class ConfigLoader:
     @classmethod
     def reload_configs(cls) -> Dict[str, dict]:
         """Force a reload of all configurations."""
-        logging.info("Reloading configs...")
+        logger.info("Reloading configs...")
         cls._cached_configs = None
         return cls.load_all_configs()
 
