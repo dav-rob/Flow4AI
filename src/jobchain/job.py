@@ -311,12 +311,12 @@ class JobABC(ABC, metaclass=JobMeta):
         job_state.input_event.clear()
         job_state.execution_started = False
 
-        # Store this job's result
+        # Store the job name that returns the result
         result[JobABC.RETURN_JOB] = self.name
 
         # If this is a tail job, return immediately
         if not self.next_jobs:
-            self.logger.info(f"Tail Job {self.name} returning result: {result['result']} for task {result[self.TASK_PASSTHROUGH_KEY]['task']}")
+            self.logger.debug(f"Tail Job {self.name} returning result: {result['result']}")
             return result
 
         # Execute child jobs
@@ -335,7 +335,7 @@ class JobABC(ABC, metaclass=JobMeta):
             if tail_results:
                 # Always return the first valid tail result
                 tail_result = tail_results[0]
-                self.logger.info(f"Job {self.name} propagating tail result: {tail_result['result']}")
+                self.logger.debug(f"Job {self.name} propagating tail result: {tail_result['result']}")
                 # Preserve the original tail job that generated the result
                 return tail_result
 
