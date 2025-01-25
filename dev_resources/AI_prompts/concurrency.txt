@@ -1,0 +1,33 @@
+@test_concurrency_by_expected_returns is a test that is specifically designed to reveal race conditions and problems with concurrent execution using the files under @test_concurrency_by_returns.  The code in @_execute in @JobABC is called by @process_task in @_async_worker in @JobChain, it uses an async context manager to manager state using 'async with job_graph_context_manager(job_set):'
+
+The test in revealing intermittant errors because of the @_execute algorithm, however, much of it is working well, the @ConcurrencyTestJob always returns the values expected of it however, there are errors when processing these values in @_execute.
+
+The errors can be seen by running this code, but it produces a lot of output, about 530 line:
+
+python -m pytest tests/test_concurrency.py::test_concurrency_by_expected_returns -s
+
+When the test breaks it produces outputs such as here:
+
+    root:52 - Job test_graph$$$$G$$ returned: A.A.B.C.E.A.D.F.G for task 29
+    ConcurrencyTestJob:319 - Tail Job test_graph$$$$G$$ returning result: A.A.B.C.E.A.D.F.G for task 29
+    ConcurrencyTestJob:337 - Job test_graph$$$$F$$ has 1 child jobs, one is returning executed result: A.A.B.C.E.A.D.F.G 
+    root:52 - Job test_graph$$$$G$$ returned: A.A.B.C.E.A.D.F.G for task 28
+    ConcurrencyTestJob:319 - Tail Job test_graph$$$$G$$ returning result: A.A.B.C.E.A.D.F.G for task 28
+    ConcurrencyTestJob:337 - Job test_graph$$$$D$$ has 1 child jobs, one is returning executed result: A.A.B.C.E.A.D.F.G 
+    ConcurrencyTestJob:337 - Job test_graph$$$$E$$ has 1 child jobs, one is returning executed result: A.A.B.C.E.A.D.F.G 
+    ConcurrencyTestJob:337 - Job test_graph$$$$A$$ has 2 child jobs, one is returning executed result: A.A.B.C.E for task 29
+    AsyncWorker:390 - [TASK_TRACK] Completed task A.A.B.C.E, returned by job test_graph$$$$A$$, for task 29
+    ConcurrencyTestJob:337 - Job test_graph$$$$C$$ has 1 child jobs, one is returning executed result: A.A.B.C.E.A.D.F.G 
+    ConcurrencyTestJob:337 - Job test_graph$$$$B$$ has 1 child jobs, one is returning executed result: A.A.B.C.E.A.D.F.G 
+    ConcurrencyTestJob:337 - Job test_graph$$$$A$$ has 2 child jobs, one is returning executed result: A.A.B.C.E.A.D.F.G 
+    AsyncWorker:390 - [TASK_TRACK] Completed task A.A.B.C.E.A.D.F.G, returned by job test_graph$$$$A$$, for task 28
+
+The "AsyncWorker:390 - [TASK_TRACK]" is where @process_task has received the results from @_execute, and each time it is receiving the results from the head job(test_graph$$$$A$$), not the tail job (test_graph$$$$G$$), usually the result is fortunately correct "Completed task A.A.B.C.E.A.D.F.G, ", but intermittantly it its wrong "Completed task A.A.B.C.E, "
+
+So, the tail jobs(test_graph$$$$G$$) are producing the correct results, but these aren't being returned, it appears some kind of stack is being popped all the way up to the first job(test_graph$$$$A$$), and that is being returned, and sometimes that returns the wrong value, so it appears that the core algorithm is wrong.
+
+Your task is to produce three different ways of fixing this problem by producing three different files that are copies of the file job.py, called job_a.py, job_b.py, job_c.py, they will contain the fix to @_execute, that can be switched in by copying the file to job.py we will then run the test in quiet mode, without the -s flag
+
+python -m pytest tests/test_concurrency.py::test_concurrency_by_expected_returns
+
+running each version several times to see that it works, then we will decide which of the fixes is truly working best.
