@@ -236,22 +236,6 @@ class JobABC(ABC, metaclass=JobMeta):
                 return inputs[key]
         return {}
 
-    @classmethod
-    def get_task(cls, inputs: Dict[str, Any]) -> Dict[str, Any]:
-        """Get task metadata from inputs dictionary.
-        
-        Args:
-            inputs (Dict[str, Any]): Dictionary of inputs to search for task metadata
-            
-        Returns:
-            Dict[str, Any]: The task metadata or empty dict if not found
-            
-        Raises:
-            TypeError: If inputs is not a dictionary
-        """
-        if not isinstance(inputs, dict):
-            raise TypeError("inputs must be a dictionary")
-        return cls.get_input_from(inputs, cls.TASK_PASSTHROUGH_KEY)
 
     @classmethod
     def job_set(cls, job) -> set['JobABC']:
@@ -330,23 +314,27 @@ class JobABC(ABC, metaclass=JobMeta):
 
         # If this is a single job or a tail job in a graph, return the result.
         if not self.next_jobs:
-            self.logger.info(f"Job {self.name} returning result: {result}")
+            self.logger.info(f"Tail Job {self.name} returning result: {result['result']} for task {result[self.TASK_PASSTHROUGH_KEY]['task']}")
             return result
         
         executing_jobs = []
         for next_job in self.next_jobs:
             input_data = result.copy()
+            #pass result as input_data to next_job
             await next_job.receive_input(self.name, input_data)
             next_job_inputs = job_state_dict.get(next_job.name).inputs
+            # if next_job has all inputs then add it to executing_jobs
             if next_job.expected_inputs.issubset(set(next_job_inputs.keys())):
                 executing_jobs.append(next_job._execute(task=None))
         
         if executing_jobs:
             results = await asyncio.gather(*executing_jobs)
-            if any(results):  # If any result is not None
-                return results[0]  # Return the first non-None result
+            if any(results): 
+                executing_result = results[0] 
+                self.logger.info(f"Job {self.name} has {len(results)} child jobs, one is returning executed result: {executing_result['result']} for task {executing_result[self.TASK_PASSTHROUGH_KEY]['task']}")
+                return executing_result
         
-        #  this appears never to be reached
+        self.logger.info(f"Job {self.name} has no executing child jobs, returning result at the end: {result['result']} for task {result[self.TASK_PASSTHROUGH_KEY]['task']}")
         return result
 
     async def receive_input(self, from_job: str, data: Dict[str, Any]) -> None:
