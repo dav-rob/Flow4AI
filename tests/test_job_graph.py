@@ -232,7 +232,7 @@ async def execute_graph(graph_definition: dict, jobs: dict, data: dict) -> Any:
 def test_execute_graph1():
     final_result1 = asyncio.run(execute_graph(graph_definition1, jobs, data))
     # Extract just the job result data, ignoring task_pass_through
-    result_data = {k: v for k, v in final_result1.items() if k not in ['task_pass_through']}
+    result_data = {k: v for k, v in final_result1.items() if k not in ['task_pass_through', 'RETURN_JOB']}
     assert result_data == {
             'dataD1': {},
             'dataD2': {}
@@ -246,7 +246,7 @@ def test_job_set():
 def test_execute_graph2():
     final_result2 = asyncio.run(execute_graph(graph_definition2, jobs, data))
     # Extract just the job result data, ignoring task_pass_through
-    result_data = {k: v for k, v in final_result2.items() if k not in ['task_pass_through']}
+    result_data = {k: v for k, v in final_result2.items() if k not in ['task_pass_through', 'RETURN_JOB']}
     assert result_data == {
             'dataC1': {},
             'dataC2': {}

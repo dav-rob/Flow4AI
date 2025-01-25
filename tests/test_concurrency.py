@@ -132,7 +132,7 @@ async def test_simple_graph():
     # Verify each result matches the expected final output from job D
     for final_result in results:
         # Extract just the job result data, ignoring task_pass_through
-        result_data = {k: v for k, v in final_result.items() if k not in ['task_pass_through']}
+        result_data = {k: v for k, v in final_result.items() if k not in ['task_pass_through', 'RETURN_JOB']}
         assert result_data == {
                 'dataD1': {},
                 'dataD2': {}

@@ -316,7 +316,7 @@ class JobABC(ABC, metaclass=JobMeta):
 
         # If this is a tail job, return immediately
         if not self.next_jobs:
-            self.logger.debug(f"Tail Job {self.name} returning result: {result['result']}")
+            self.logger.debug(f"Tail Job {self.name} returning result: {result}")
             return result
 
         # Execute child jobs
@@ -335,7 +335,7 @@ class JobABC(ABC, metaclass=JobMeta):
             if tail_results:
                 # Always return the first valid tail result
                 tail_result = tail_results[0]
-                self.logger.debug(f"Job {self.name} propagating tail result: {tail_result['result']}")
+                self.logger.debug(f"Job {self.name} propagating tail result: {tail_result}")
                 # Preserve the original tail job that generated the result
                 return tail_result
 
