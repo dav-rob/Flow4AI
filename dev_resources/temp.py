@@ -1,417 +1,258 @@
-import importlib.util
-import inspect
-import os
-import sys
-from glob import glob
-from pathlib import Path
-from typing import Any, Collection, Dict, List, Type
+(.venv) davidroberts [JobChain] (main)$ python -m pytest tests/test_concurrency.py::test_concurrency_by_expected_returns -s
+Logging level: INFO
+======================================================================= test session starts =======================================================================
+platform darwin -- Python 3.11.11, pytest-8.3.4, pluggy-1.5.0
+rootdir: /Users/davidroberts/projects/JobChain
+configfile: pytest.ini
+plugins: anyio-4.8.0, asyncio-0.25.1
+asyncio: mode=Mode.STRICT, asyncio_default_fixture_loop_scope=function
+collected 1 item                                                                                                                                                  
 
-import anyconfig
+tests/test_concurrency.py 2025-01-25 01:19:49 [INFO] JobChain:47 - Initializing JobChain
+2025-01-25 01:19:49 [INFO] JobChain:180 - Job executor process started with PID 93547
+2025-01-25 01:19:49 [INFO] JobChain:190 - Result processor process started with PID 93548
+Logging level: INFO
+Logging level: INFO
+2025-01-25 01:19:49 [INFO] AsyncWorker:358 - Creating job map from JobLoader
+2025-01-25 01:19:49 [INFO] AsyncWorker:359 - Using directories from process: ['/Users/davidroberts/projects/JobChain/tests/test_configs/test_concurrency_by_returns']
+2025-01-25 01:19:49 [INFO] jobchain.job_loader:66 - Added /Users/davidroberts/projects/JobChain/src/jobchain/jobs to Python path
+2025-01-25 01:19:49 [INFO] jobchain.job_loader:74 - Loading jobs from /Users/davidroberts/projects/JobChain/src/jobchain/jobs/llm_jobs.py
+2025-01-25 01:19:49 [INFO] jobchain.job_loader:91 - Found valid job class: OpenAIJob
+Registered custom job: OpenAIJob
+2025-01-25 01:19:49 [INFO] jobchain.job_loader:66 - Added /Users/davidroberts/projects/JobChain/tests/test_configs/test_concurrency_by_returns/jobs to Python path
+2025-01-25 01:19:49 [INFO] jobchain.job_loader:74 - Loading jobs from /Users/davidroberts/projects/JobChain/tests/test_configs/test_concurrency_by_returns/jobs/concurrent_jobs.py
+2025-01-25 01:19:49 [INFO] jobchain.job_loader:91 - Found valid job class: ConcurrencyTestJob
+Registered custom job: ConcurrencyTestJob
+2025-01-25 01:19:49 [INFO] jobchain.job_loader:531 - Reloading configs...
+2025-01-25 01:19:49 [INFO] jobchain.job_loader:275 - Looking for config files in directories: [PosixPath('/Users/davidroberts/projects/JobChain/tests/test_configs/test_concurrency_by_returns')]
+2025-01-25 01:19:49 [INFO] jobchain.job_loader:295 - Found valid jobchain directory: /Users/davidroberts/projects/JobChain/tests/test_configs/test_concurrency_by_returns
 
-import jc_logging as logging
-from job import JobABC, create_job_graph
+Checking test_graph for cycles...
+No cycles detected
+Graph test_graph passed all validations
+2025-01-25 01:19:49 [INFO] AsyncWorker:368 - Created job map with head jobs: ['test_graph$$$$A$$']
+2025-01-25 01:19:49 [INFO] root:36 - Names of jobs in head job: {'test_graph$$$$A$$': {'test_graph$$$$D$$', 'test_graph$$$$A$$', 'test_graph$$$$F$$', 'test_graph$$$$C$$', 'test_graph$$$$B$$', 'test_graph$$$$E$$', 'test_graph$$$$G$$'}}
+2025-01-25 01:19:49 [INFO] JobChain:259 - *** task_queue ended ***
+2025-01-25 01:19:49 [INFO] AsyncWorker:413 - Received end signal in task queue
+2025-01-25 01:19:52 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=92b99449-7504-45a2-8f90-df8320988d4d, job_name=test_graph$$$$A$$, data={'task': '10', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:52 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=92b99449-7504-45a2-8f90-df8320988d4d, job_name=test_graph$$$$A$$, data={'task': '10', 'job_name': 'test_graph$$$$A$$'})}
+Logging level: INFO
+2025-01-25 01:19:53 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=d4470a61-99b8-4d18-99c9-42216ca27a48, job_name=test_graph$$$$A$$, data={'task': '16', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=d4470a61-99b8-4d18-99c9-42216ca27a48, job_name=test_graph$$$$A$$, data={'task': '16', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=28322281-5355-47ae-aa71-f0831f97c7c6, job_name=test_graph$$$$A$$, data={'task': '33', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=28322281-5355-47ae-aa71-f0831f97c7c6, job_name=test_graph$$$$A$$, data={'task': '33', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=0f751a3f-f2b0-49b1-845e-6139eca34220, job_name=test_graph$$$$A$$, data={'task': '49', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=0f751a3f-f2b0-49b1-845e-6139eca34220, job_name=test_graph$$$$A$$, data={'task': '49', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=41ba4553-4200-43b6-ad3b-e98d6484260f, job_name=test_graph$$$$A$$, data={'task': '23', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] AsyncWorker:449 - Tasks stats - Created: 70, Completed: 5, Active: 65
+2025-01-25 01:19:53 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E', 'task_pass_through': Task(id=41ba4553-4200-43b6-ad3b-e98d6484260f, job_name=test_graph$$$$A$$, data={'task': '23', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=a5c8694c-d1bb-42e0-8446-b34a0394b9bf, job_name=test_graph$$$$A$$, data={'task': '51', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=a5c8694c-d1bb-42e0-8446-b34a0394b9bf, job_name=test_graph$$$$A$$, data={'task': '51', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=42d271c6-ab79-4ecc-a8b3-dc88ad04796e, job_name=test_graph$$$$A$$, data={'task': '62', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=42d271c6-ab79-4ecc-a8b3-dc88ad04796e, job_name=test_graph$$$$A$$, data={'task': '62', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=32218625-b1a1-4177-b21c-c163130ec196, job_name=test_graph$$$$A$$, data={'task': '0', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=32218625-b1a1-4177-b21c-c163130ec196, job_name=test_graph$$$$A$$, data={'task': '0', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=f48b7b9c-d36e-4d15-93f9-b4ce5ea85895, job_name=test_graph$$$$A$$, data={'task': '39', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=f48b7b9c-d36e-4d15-93f9-b4ce5ea85895, job_name=test_graph$$$$A$$, data={'task': '39', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=b2f8e373-70f1-4f67-be99-842a4a8791b5, job_name=test_graph$$$$A$$, data={'task': '36', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] AsyncWorker:449 - Tasks stats - Created: 70, Completed: 10, Active: 60
+2025-01-25 01:19:53 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E', 'task_pass_through': Task(id=b2f8e373-70f1-4f67-be99-842a4a8791b5, job_name=test_graph$$$$A$$, data={'task': '36', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=56bcbe98-1bc4-4a84-b6f1-103eb0b2b31b, job_name=test_graph$$$$A$$, data={'task': '63', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=56bcbe98-1bc4-4a84-b6f1-103eb0b2b31b, job_name=test_graph$$$$A$$, data={'task': '63', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=44417651-9881-4c95-a5ba-dc742774defb, job_name=test_graph$$$$A$$, data={'task': '60', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E', 'task_pass_through': Task(id=44417651-9881-4c95-a5ba-dc742774defb, job_name=test_graph$$$$A$$, data={'task': '60', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=11138628-7e39-4852-b0c2-fbb23fb1a8d6, job_name=test_graph$$$$A$$, data={'task': '57', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=11138628-7e39-4852-b0c2-fbb23fb1a8d6, job_name=test_graph$$$$A$$, data={'task': '57', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=c5de4ed3-6f2f-4681-be98-36322d5d2e05, job_name=test_graph$$$$A$$, data={'task': '30', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=c5de4ed3-6f2f-4681-be98-36322d5d2e05, job_name=test_graph$$$$A$$, data={'task': '30', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=f9c2eefa-d687-407d-92a2-c2625dcbe471, job_name=test_graph$$$$A$$, data={'task': '12', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] AsyncWorker:449 - Tasks stats - Created: 70, Completed: 15, Active: 55
+2025-01-25 01:19:53 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=f9c2eefa-d687-407d-92a2-c2625dcbe471, job_name=test_graph$$$$A$$, data={'task': '12', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=bdb5dbda-8063-429c-95bb-bf4a34432080, job_name=test_graph$$$$A$$, data={'task': '3', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=bdb5dbda-8063-429c-95bb-bf4a34432080, job_name=test_graph$$$$A$$, data={'task': '3', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=e40c723b-e3b9-458f-ac55-bde891b8069c, job_name=test_graph$$$$A$$, data={'task': '20', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=e40c723b-e3b9-458f-ac55-bde891b8069c, job_name=test_graph$$$$A$$, data={'task': '20', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=e8ce6fa2-1a9c-4237-9d03-187eb9344a1f, job_name=test_graph$$$$A$$, data={'task': '52', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E', 'task_pass_through': Task(id=e8ce6fa2-1a9c-4237-9d03-187eb9344a1f, job_name=test_graph$$$$A$$, data={'task': '52', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:53 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=a7bbef97-a0bb-44a9-a781-3b243d3780a6, job_name=test_graph$$$$A$$, data={'task': '34', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=7b90fccf-7915-4fd6-a0c1-e47e71b90d39, job_name=test_graph$$$$A$$, data={'task': '64', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=a7bbef97-a0bb-44a9-a781-3b243d3780a6, job_name=test_graph$$$$A$$, data={'task': '34', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E', 'task_pass_through': Task(id=7b90fccf-7915-4fd6-a0c1-e47e71b90d39, job_name=test_graph$$$$A$$, data={'task': '64', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] AsyncWorker:449 - Tasks stats - Created: 70, Completed: 20, Active: 50
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=1670062c-f0c4-414b-938b-a2d533b2bfc2, job_name=test_graph$$$$A$$, data={'task': '4', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=1670062c-f0c4-414b-938b-a2d533b2bfc2, job_name=test_graph$$$$A$$, data={'task': '4', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=c4ef6fb2-acc8-4912-8d1c-b7ea60801568, job_name=test_graph$$$$A$$, data={'task': '50', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=c4ef6fb2-acc8-4912-8d1c-b7ea60801568, job_name=test_graph$$$$A$$, data={'task': '50', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=a569638d-fc30-4155-98aa-5800c44c3d11, job_name=test_graph$$$$A$$, data={'task': '31', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=a569638d-fc30-4155-98aa-5800c44c3d11, job_name=test_graph$$$$A$$, data={'task': '31', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=31f9d2b6-7700-4c59-9901-af3913c64ee8, job_name=test_graph$$$$A$$, data={'task': '24', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=440e103d-535d-4245-951a-48f30c503067, job_name=test_graph$$$$A$$, data={'task': '14', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=31f9d2b6-7700-4c59-9901-af3913c64ee8, job_name=test_graph$$$$A$$, data={'task': '24', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=440e103d-535d-4245-951a-48f30c503067, job_name=test_graph$$$$A$$, data={'task': '14', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] AsyncWorker:449 - Tasks stats - Created: 70, Completed: 25, Active: 45
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=dd236727-78ab-4f16-aa74-cc1db4b984e9, job_name=test_graph$$$$A$$, data={'task': '53', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=4ada4d7e-b9bd-4e37-8e87-a3884e2f71df, job_name=test_graph$$$$A$$, data={'task': '35', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=61002291-3f95-4590-9893-267661e35970, job_name=test_graph$$$$A$$, data={'task': '68', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=dd236727-78ab-4f16-aa74-cc1db4b984e9, job_name=test_graph$$$$A$$, data={'task': '53', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=4ada4d7e-b9bd-4e37-8e87-a3884e2f71df, job_name=test_graph$$$$A$$, data={'task': '35', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=35b505ba-6145-4bd7-abf6-db2c51c862cc, job_name=test_graph$$$$A$$, data={'task': '54', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=61002291-3f95-4590-9893-267661e35970, job_name=test_graph$$$$A$$, data={'task': '68', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=0db5dcf6-515e-4be4-b3dc-a3e019ec0d6f, job_name=test_graph$$$$A$$, data={'task': '45', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=35b505ba-6145-4bd7-abf6-db2c51c862cc, job_name=test_graph$$$$A$$, data={'task': '54', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] AsyncWorker:449 - Tasks stats - Created: 70, Completed: 30, Active: 40
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E', 'task_pass_through': Task(id=0db5dcf6-515e-4be4-b3dc-a3e019ec0d6f, job_name=test_graph$$$$A$$, data={'task': '45', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=88a70a95-d50f-4a34-b84b-5e80fd6f52db, job_name=test_graph$$$$A$$, data={'task': '69', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=88a70a95-d50f-4a34-b84b-5e80fd6f52db, job_name=test_graph$$$$A$$, data={'task': '69', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=0094676c-c8d4-428b-b72a-3f02c78720eb, job_name=test_graph$$$$A$$, data={'task': '25', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=0094676c-c8d4-428b-b72a-3f02c78720eb, job_name=test_graph$$$$A$$, data={'task': '25', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=a430e256-50c9-4437-853d-5f7117ac21ed, job_name=test_graph$$$$A$$, data={'task': '6', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=a430e256-50c9-4437-853d-5f7117ac21ed, job_name=test_graph$$$$A$$, data={'task': '6', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=60d5f51f-115e-4833-a25d-df6830998213, job_name=test_graph$$$$A$$, data={'task': '66', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=60d5f51f-115e-4833-a25d-df6830998213, job_name=test_graph$$$$A$$, data={'task': '66', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=e3a3e177-4a27-4e09-a232-bef71dddae7f, job_name=test_graph$$$$A$$, data={'task': '38', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=e3a3e177-4a27-4e09-a232-bef71dddae7f, job_name=test_graph$$$$A$$, data={'task': '38', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] AsyncWorker:449 - Tasks stats - Created: 70, Completed: 35, Active: 35
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=b9991b6d-12f4-4ed5-bf58-c0fcf9ded159, job_name=test_graph$$$$A$$, data={'task': '26', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=b9991b6d-12f4-4ed5-bf58-c0fcf9ded159, job_name=test_graph$$$$A$$, data={'task': '26', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=b0cedf87-77a6-49ff-9437-c7aa6998f612, job_name=test_graph$$$$A$$, data={'task': '46', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=b0cedf87-77a6-49ff-9437-c7aa6998f612, job_name=test_graph$$$$A$$, data={'task': '46', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=fdb82caf-2e40-4ed5-a536-05ee6875f8ca, job_name=test_graph$$$$A$$, data={'task': '1', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=b35de45d-3991-42b0-bf25-dbad58be55c8, job_name=test_graph$$$$A$$, data={'task': '44', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=fdb82caf-2e40-4ed5-a536-05ee6875f8ca, job_name=test_graph$$$$A$$, data={'task': '1', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E', 'task_pass_through': Task(id=b35de45d-3991-42b0-bf25-dbad58be55c8, job_name=test_graph$$$$A$$, data={'task': '44', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=07ca830b-a396-49de-a821-40235d48d5c7, job_name=test_graph$$$$A$$, data={'task': '19', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=07ca830b-a396-49de-a821-40235d48d5c7, job_name=test_graph$$$$A$$, data={'task': '19', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] AsyncWorker:449 - Tasks stats - Created: 70, Completed: 40, Active: 30
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=4a7e2e43-0488-401e-aa27-774ed69bf5e3, job_name=test_graph$$$$A$$, data={'task': '18', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E', 'task_pass_through': Task(id=4a7e2e43-0488-401e-aa27-774ed69bf5e3, job_name=test_graph$$$$A$$, data={'task': '18', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=bc152654-3849-43ea-87f8-3f7fb770c028, job_name=test_graph$$$$A$$, data={'task': '55', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E', 'task_pass_through': Task(id=bc152654-3849-43ea-87f8-3f7fb770c028, job_name=test_graph$$$$A$$, data={'task': '55', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=8ebd3ceb-21fb-4454-ae48-2204421a3acb, job_name=test_graph$$$$A$$, data={'task': '11', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=8ebd3ceb-21fb-4454-ae48-2204421a3acb, job_name=test_graph$$$$A$$, data={'task': '11', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=28787498-d8d5-4838-933b-8513aad23057, job_name=test_graph$$$$A$$, data={'task': '28', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=28787498-d8d5-4838-933b-8513aad23057, job_name=test_graph$$$$A$$, data={'task': '28', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=9fe6f432-ff3e-4829-bd6e-a7b583670e9d, job_name=test_graph$$$$A$$, data={'task': '40', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=9fe6f432-ff3e-4829-bd6e-a7b583670e9d, job_name=test_graph$$$$A$$, data={'task': '40', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] AsyncWorker:449 - Tasks stats - Created: 70, Completed: 45, Active: 25
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=9801dc64-655b-4740-b381-6891f0cd5c7c, job_name=test_graph$$$$A$$, data={'task': '5', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=9801dc64-655b-4740-b381-6891f0cd5c7c, job_name=test_graph$$$$A$$, data={'task': '5', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=1dfc157b-8ba7-4111-8361-bf6092c6777d, job_name=test_graph$$$$A$$, data={'task': '17', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=1dfc157b-8ba7-4111-8361-bf6092c6777d, job_name=test_graph$$$$A$$, data={'task': '17', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=5a3da1ef-9464-4bd7-89a8-3a53aeeb2f46, job_name=test_graph$$$$A$$, data={'task': '8', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=5a3da1ef-9464-4bd7-89a8-3a53aeeb2f46, job_name=test_graph$$$$A$$, data={'task': '8', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=ed17dc92-e5f3-4570-8de4-8a3f462e2e78, job_name=test_graph$$$$A$$, data={'task': '22', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=ed17dc92-e5f3-4570-8de4-8a3f462e2e78, job_name=test_graph$$$$A$$, data={'task': '22', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=8045537e-1856-426e-a5f4-426ff41ede75, job_name=test_graph$$$$A$$, data={'task': '9', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=8045537e-1856-426e-a5f4-426ff41ede75, job_name=test_graph$$$$A$$, data={'task': '9', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] AsyncWorker:449 - Tasks stats - Created: 70, Completed: 50, Active: 20
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=75482382-5ef5-4187-81c2-685270a8e269, job_name=test_graph$$$$A$$, data={'task': '7', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=75482382-5ef5-4187-81c2-685270a8e269, job_name=test_graph$$$$A$$, data={'task': '7', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=87eeb545-4677-4a90-b999-ec49c4f2ddf4, job_name=test_graph$$$$A$$, data={'task': '21', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=87eeb545-4677-4a90-b999-ec49c4f2ddf4, job_name=test_graph$$$$A$$, data={'task': '21', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=e60080dc-7288-41ec-b355-4c1170671cdb, job_name=test_graph$$$$A$$, data={'task': '32', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=e60080dc-7288-41ec-b355-4c1170671cdb, job_name=test_graph$$$$A$$, data={'task': '32', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=f779d1bb-a4de-44f2-a576-43f73f3690f2, job_name=test_graph$$$$A$$, data={'task': '61', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=f779d1bb-a4de-44f2-a576-43f73f3690f2, job_name=test_graph$$$$A$$, data={'task': '61', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=6ead0e77-dca0-4d4b-ada5-7bbc62d3a67b, job_name=test_graph$$$$A$$, data={'task': '13', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] AsyncWorker:449 - Tasks stats - Created: 70, Completed: 55, Active: 15
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=6ead0e77-dca0-4d4b-ada5-7bbc62d3a67b, job_name=test_graph$$$$A$$, data={'task': '13', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=a2e0ffcc-e5d1-4aee-a852-d435ee8efaa7, job_name=test_graph$$$$A$$, data={'task': '15', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=a2e0ffcc-e5d1-4aee-a852-d435ee8efaa7, job_name=test_graph$$$$A$$, data={'task': '15', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=977d0bca-73ca-465e-a79d-1c199c97d86e, job_name=test_graph$$$$A$$, data={'task': '2', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=977d0bca-73ca-465e-a79d-1c199c97d86e, job_name=test_graph$$$$A$$, data={'task': '2', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=da644158-4239-42ba-9ef9-7f84a679b74d, job_name=test_graph$$$$A$$, data={'task': '47', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:54 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=da644158-4239-42ba-9ef9-7f84a679b74d, job_name=test_graph$$$$A$$, data={'task': '47', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=50ff77ee-bfa2-4ed0-9429-35868a843d65, job_name=test_graph$$$$A$$, data={'task': '67', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=f770d1ee-bfcd-4715-aadc-27301f672197, job_name=test_graph$$$$A$$, data={'task': '65', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=50ff77ee-bfa2-4ed0-9429-35868a843d65, job_name=test_graph$$$$A$$, data={'task': '67', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=f770d1ee-bfcd-4715-aadc-27301f672197, job_name=test_graph$$$$A$$, data={'task': '65', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] AsyncWorker:449 - Tasks stats - Created: 70, Completed: 60, Active: 10
+2025-01-25 01:19:55 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=a77c49be-b78a-40d1-9f78-4e5679f36814, job_name=test_graph$$$$A$$, data={'task': '27', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=a77c49be-b78a-40d1-9f78-4e5679f36814, job_name=test_graph$$$$A$$, data={'task': '27', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=a18d57ed-9c12-474e-a864-e71b30522770, job_name=test_graph$$$$A$$, data={'task': '42', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=a18d57ed-9c12-474e-a864-e71b30522770, job_name=test_graph$$$$A$$, data={'task': '42', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=a19f6719-1bb7-4da8-9e05-8a8fe99fd184, job_name=test_graph$$$$A$$, data={'task': '29', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E', 'task_pass_through': Task(id=a19f6719-1bb7-4da8-9e05-8a8fe99fd184, job_name=test_graph$$$$A$$, data={'task': '29', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=38729701-2f7a-4fe2-a15e-ebed3972c8df, job_name=test_graph$$$$A$$, data={'task': '41', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=38729701-2f7a-4fe2-a15e-ebed3972c8df, job_name=test_graph$$$$A$$, data={'task': '41', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=68aa7e30-0bea-4c57-bdd0-36469525cdcc, job_name=test_graph$$$$A$$, data={'task': '48', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] AsyncWorker:449 - Tasks stats - Created: 70, Completed: 65, Active: 5
+2025-01-25 01:19:55 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=68aa7e30-0bea-4c57-bdd0-36469525cdcc, job_name=test_graph$$$$A$$, data={'task': '48', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=28857b59-fa9e-4cb2-add9-49ce614b1b71, job_name=test_graph$$$$A$$, data={'task': '58', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=28857b59-fa9e-4cb2-add9-49ce614b1b71, job_name=test_graph$$$$A$$, data={'task': '58', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=7d0bed93-28f1-4863-a0bb-954e609d63ed, job_name=test_graph$$$$A$$, data={'task': '43', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=7d0bed93-28f1-4863-a0bb-954e609d63ed, job_name=test_graph$$$$A$$, data={'task': '43', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=cc054cb2-4923-4a58-a9e2-be108c986da6, job_name=test_graph$$$$A$$, data={'task': '37', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=cc054cb2-4923-4a58-a9e2-be108c986da6, job_name=test_graph$$$$A$$, data={'task': '37', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=cc6df2c6-d5ef-4939-abf4-a555fa46c132, job_name=test_graph$$$$A$$, data={'task': '59', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=cc6df2c6-d5ef-4939-abf4-a555fa46c132, job_name=test_graph$$$$A$$, data={'task': '59', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] ConcurrencyTestJob:333 - Job test_graph$$$$G$$ returning result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=68732a3a-edd2-4351-8a74-7ffa300b1f50, job_name=test_graph$$$$A$$, data={'task': '56', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] AsyncWorker:449 - Tasks stats - Created: 70, Completed: 70, Active: 0
+2025-01-25 01:19:55 [INFO] ResultProcessor:279 - ResultProcessor received result: {'result': 'A.A.B.C.E.A.D.F.G', 'task_pass_through': Task(id=68732a3a-edd2-4351-8a74-7ffa300b1f50, job_name=test_graph$$$$A$$, data={'task': '56', 'job_name': 'test_graph$$$$A$$'})}
+2025-01-25 01:19:55 [INFO] AsyncWorker:463 - *** result_queue ended ***
+2025-01-25 01:19:55 [INFO] AsyncWorker:478 - Closing event loop
+2025-01-25 01:19:56 [INFO] JobChain:121 - Cleaning up JobChain resources
+F
 
+============================================================================ FAILURES =============================================================================
+______________________________________________________________ test_concurrency_by_expected_returns _______________________________________________________________
 
-class JobValidationError(Exception):
-    """Raised when a custom job fails validation"""
-    pass
+    @pytest.mark.asyncio
+    async def test_concurrency_by_expected_returns():
+        # Create a manager for sharing the results list between processes
+        manager = mp.Manager()
+        shared_results = manager.list()
+    
+        # Create a partial function with our shared results list
+        collector = partial(returns_collector, shared_results)
+    
+        # Set config directory for test
+        config_dir = os.path.join(os.path.dirname(__file__), "test_configs/test_concurrency_by_returns")
+        ConfigLoader._set_directories([config_dir])
+    
+        # Create JobChain with parallel processing
+        job_chain = JobChain(result_processing_function=collector)
+        logging.info(f"Names of jobs in head job: {job_chain.get_job_graph_mapping()}")
+    
+        def submit_task(range_val:int):
+            for i in range(range_val):
+                job_chain.submit_task({'task': f'{i}'})
+    
+        def check_results():
+            for result in shared_results:
+                #logging.info(f"Result: {result}")
+                assert result['result'] == 'A.A.B.C.E.A.D.F.G'
+    
+            shared_results[:] = []  # Clear the shared_results using slice assignment
+    
+    
+        submit_task(70)
+    
+        job_chain.mark_input_completed() # this waits for all results to be returned
+    
+>       check_results()
 
+tests/test_concurrency.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
-class CustomJobLoader:
+    def check_results():
+        for result in shared_results:
+            #logging.info(f"Result: {result}")
+>           assert result['result'] == 'A.A.B.C.E.A.D.F.G'
+E           AssertionError: assert 'A.A.B.C.E' == 'A.A.B.C.E.A.D.F.G'
+E             
+E             - A.A.B.C.E.A.D.F.G
+E             + A.A.B.C.E
 
-    @staticmethod
-    def validate_job_class(job_class: Type) -> bool:
-        """
-        Validate that a class meets the requirements to be a valid job:
-        - Inherits from JobABC
-        - Has required methods
-        - Has required attributes
-        """
-        # Check if it's a class and inherits from JobABC
-        if not (inspect.isclass(job_class) and issubclass(job_class, JobABC)):
-            return False
-
-        # Check for required async run method
-        if not hasattr(job_class, 'run'):
-            return False
-
-        # Check if run method is async
-        run_method = getattr(job_class, 'run')
-        if not inspect.iscoroutinefunction(run_method):
-            return False
-
-        return True
-
-    @classmethod
-    def load_custom_jobs(cls, custom_jobs_dir: str) -> Dict[str, Type[JobABC]]:
-        """
-        Load all custom job classes from the specified directory
-        """
-        custom_jobs = {}
-        custom_jobs_path = Path(custom_jobs_dir)
-
-        if not custom_jobs_path.exists():
-            raise FileNotFoundError(f"Custom jobs directory not found: {custom_jobs_dir}")
-
-        # Add the custom jobs directory to Python path
-        sys.path.append(str(custom_jobs_path))
-
-        # Scan for Python files
-        for file_path in custom_jobs_path.glob("**/*.py"):
-            if file_path.name.startswith("__"):
-                continue
-
-            try:
-                # Load the module
-                module_name = file_path.stem
-                spec = importlib.util.spec_from_file_location(module_name, str(file_path))
-                if spec is None or spec.loader is None:
-                    continue
-
-                module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(module)
-
-                # Find all classes in the module that inherit from JobABC
-                for name, obj in inspect.getmembers(module):
-                    if inspect.isclass(obj) and obj.__module__ == module.__name__:
-                        try:
-                            if cls.validate_job_class(obj):
-                                custom_jobs[name] = obj
-                        except Exception as e:
-                            raise JobValidationError(
-                                f"Error validating job class {name} in {file_path}: {str(e)}"
-                            )
-
-            except Exception as e:
-                raise ImportError(
-                    f"Error loading custom job from {file_path}: {str(e)}"
-                )
-
-        return custom_jobs
-
-
-class JobFactory:
-    _job_types: Dict[str, Type[JobABC]] = {}
-    _default_jobs_dir: str = os.path.join(os.path.dirname(__file__), "jobs")
-
-    @classmethod
-    def load_custom_jobs_directory(cls, custom_jobs_dir: str):
-        """
-        Load and register all custom jobs from a directory
-        """
-        loader = CustomJobLoader()
-        # Create an iterable of directories, including the default and any custom directory.
-        jobs_dirs = [cls._default_jobs_dir] + ([custom_jobs_dir] if custom_jobs_dir else [])
-        for jobs_dir in jobs_dirs:
-            custom_jobs = loader.load_custom_jobs(jobs_dir)
-            # Register all valid custom jobs
-            for job_name, job_class in custom_jobs.items():
-                cls.register_job_type(job_name, job_class)
-                print(f"Registered custom job: {job_name}")
-
-    @classmethod
-    def create_job(cls, name: str, job_type: str, properties: Dict[str, Any]) -> JobABC:
-        if job_type not in cls._job_types:
-            raise ValueError(f"Unknown job type: {job_type}")
-        return cls._job_types[job_type](name, properties)
-
-    @classmethod
-    def register_job_type(cls, type_name: str, job_class: Type[JobABC]):
-        cls._job_types[type_name] = job_class
-
-    @classmethod
-    def create_head_jobs_from_config(cls) -> Collection[JobABC]:
-        job_graphs: list[JobABC] = []
-        graphs_config = ConfigLoader.get_graphs_config()
-        graph_names = list(graphs_config.keys())
-        for graph_name in graph_names:
-            graph_def = graphs_config[graph_name]
-            job_names_in_graph = list(graph_def.keys())
-            param_groups_for_graph_name = ConfigLoader.get_parameters_config().get(graph_name, {})
-            if param_groups_for_graph_name:
-                param_jobs_graphs: List[JobABC] = cls.create_job_graph_using_parameters(graph_def, graph_name,
-                                                                                        param_groups_for_graph_name,
-                                                                                        job_names_in_graph)
-                job_graphs += param_jobs_graphs
-            else:
-                job_graph_no_params: JobABC = cls.create_job_graph_no_params(graph_def, graph_name,
-                                                                                     job_names_in_graph)
-                job_graphs.append(job_graph_no_params)
-        return job_graphs
-
-    @classmethod
-    def create_job_graph_using_parameters(cls, graph_def, graph_name, param_groups_for_graph_name,
-                                          job_names_in_graph) -> List[JobABC]:
-        job_graphs: list[JobABC] = []
-        params_for_graph_name = list(param_groups_for_graph_name.keys())
-        for param_name in params_for_graph_name:
-            job_instances: dict[str, JobABC] = {}
-            for graph_job_name in job_names_in_graph:
-                raw_job_def: Dict[str, Any] = ConfigLoader.get_jobs_config()[graph_job_name]
-                if ConfigLoader.is_parameterized_job(raw_job_def):
-                    job_def: Dict[str, Any] = ConfigLoader.fill_job_with_parameters(raw_job_def, graph_name, param_name)
-                else:
-                    job_def = raw_job_def
-                unique_job_name = graph_name + "_" + param_name + "_" + graph_job_name
-                job_type: str = job_def["type"]
-                job: JobABC = cls.create_job(unique_job_name, job_type, job_def)
-                job_instances[graph_job_name] = job
-            job_graph: JobABC = create_job_graph(graph_def, job_instances)
-            job_graphs.append(job_graph)
-        return job_graphs
-
-    @classmethod
-    def create_job_graph_no_params(cls, graph_def, graph_name, job_names_in_graph)-> JobABC:
-        job_instances: dict[str, JobABC] = {}
-        for graph_job_name in job_names_in_graph:
-                raw_job_def: Dict[str, Any] = ConfigLoader.get_jobs_config()[graph_job_name]
-                if ConfigLoader.is_parameterized_job(raw_job_def):
-                    job_def: Dict[str, Any] = ConfigLoader.fill_job_with_parameters(raw_job_def, graph_name, param_name)
-                else:
-                    job_def = raw_job_def
-                unique_job_name = graph_name + "_" + "_" + graph_job_name
-                job_type: str = job_def["type"]
-                job: JobABC = cls.create_job(unique_job_name, job_type, job_def)
-                job_instances[graph_job_name] = job
-        job_graph: JobABC = create_job_graph(graph_def, job_instances)
-        return job_graph
-
-
-class ConfigLoader:
-    directories = [
-        "./local/config",
-        "/etc/myapp/config"
-    ]
-    _cached_configs: Dict[str, dict] = None
-
-    @classmethod
-    def load_configs_from_dirs(
-            cls,
-            directories: List[str] = ["./config", "/etc/myapp/config"],
-            config_bases: List[str] = ['graphs', 'jobs', 'parameters', 'jobchain_all'],
-            allowed_extensions: tuple = ('.yaml', '.yml', '.json')
-    ) -> Dict[str, dict]:
-        """
-        Load configuration files from multiple directories.
-        
-        Args:
-            directories: List of directory paths to search
-            config_bases: List of configuration file base names to look for
-            allowed_extensions: Tuple of allowed file extensions
-        
-        Returns:
-            Dictionary with config_base as key and loaded config as value
-        """
-        configs: Dict[str, dict] = {}
-
-        # Convert directories to Path objects
-        dir_paths = [Path(str(d)) for d in directories]  # Handle both string and Path objects
-        logging.info(f"Looking for config files in directories: {dir_paths}")
-
-        # For each config file we want to find
-        for config_base in config_bases:
-            logging.info(f"Looking for {config_base} config file...")
-            # Search through directories in order
-            for dir_path in dir_paths:
-                if not dir_path.exists():
-                    logging.info(f"Directory {dir_path} does not exist")
-                    continue
-
-                # Look for matching files
-                matches = [f for f in dir_path.glob(f"{config_base}.*")
-                           if f.suffix.lower() in allowed_extensions]
-                logging.info(f"Found matches in {dir_path}: {matches}")
-
-                # If we found a match, load it and break the directory loop
-                if matches:
-                    try:
-                        configs[config_base] = anyconfig.load(str(matches[0]))  # Convert Path to string for anyconfig
-                        logging.info(f"Loaded {matches[0]} with content: {configs[config_base]}")  # Debug print
-                        break  # Stop searching other directories for this config
-                    except Exception as e:
-                        logging.error(f"Error loading {matches[0]}: {e}")
-                        continue
-
-        logging.info(f"Final configs: {configs}")
-        return configs
-
-    @classmethod
-    def _extract_config_section(cls, configs: Dict[str, dict], section_name: str) -> dict:
-        """
-        Extract a configuration section from either a dedicated file or jobchain_all.
-        
-        Args:
-            configs: Dictionary containing all configurations
-            section_name: Name of the section to extract (e.g., 'graphs', 'jobs', 'parameters')
-            
-        Returns:
-            Dictionary containing the configuration section, or empty dict if not found
-        """
-        # Try to get from dedicated file first
-        if section_name in configs:
-            return configs[section_name]
-
-        # If not found, try to get from jobchain_all
-        if 'jobchain_all' in configs and isinstance(configs['jobchain_all'], dict):
-            return configs['jobchain_all'].get(section_name, {})
-
-        # If nothing found, return empty dict
-        return {}
-
-    @classmethod
-    def _find_parameterized_fields(cls, job_config: dict) -> set:
-        """
-        Find all parameterized fields in a job configuration.
-        A field is parameterized if its value starts with '$'.
-        
-        Args:
-            job_config: Job configuration dictionary
-            
-        Returns:
-            Set of parameterized field names
-        """
-        params = set()
-
-        def search_dict(d):
-            for k, v in d.items():
-                if isinstance(v, dict):
-                    search_dict(v)
-                elif isinstance(v, str) and v.startswith('$'):
-                    params.add(v[1:])  # Remove the '$' prefix
-
-        search_dict(job_config.get('properties', {}))
-        return params
-
-    @classmethod
-    def validate_configs(cls, configs: Dict[str, dict]) -> None:
-        """
-        Validate that:
-        1. All jobs referenced in graphs exist in jobs configuration
-        2. All parameterized jobs have corresponding parameter values
-        
-        Args:
-            configs: Dictionary containing all configurations
-            
-        Raises:
-            ValueError: If validation fails
-        """
-        graphs_config = cls._extract_config_section(configs, 'graphs')
-        jobs_config = cls._extract_config_section(configs, 'jobs')
-        parameters_config = cls._extract_config_section(configs, 'parameters')
-
-        if not graphs_config or not jobs_config:
-            return
-
-        # First validate that all jobs in graphs exist
-        defined_jobs = set(jobs_config.keys())
-
-        for graph_name, graph_def in graphs_config.items():
-            for job_name, job_def in graph_def.items():
-                if job_name not in defined_jobs:
-                    raise ValueError(
-                        f"Job '{job_name}' referenced in graph '{graph_name}' is not defined in jobs configuration")
-
-                # Check jobs in 'next' field
-                next_jobs = job_def.get('next', [])
-                for next_job in next_jobs:
-                    if next_job not in defined_jobs:
-                        raise ValueError(
-                            f"Job '{next_job}' referenced in 'next' field of job '{job_name}' in graph '{graph_name}' is not defined in jobs configuration")
-
-        # Now validate parameters
-        for graph_name, graph_def in graphs_config.items():
-            # Find all parameterized jobs in this graph
-            graph_parameterized_jobs = {}
-            for job_name in graph_def.keys():
-                job_config = jobs_config[job_name]
-                params = cls._find_parameterized_fields(job_config)
-                if params:
-                    graph_parameterized_jobs[job_name] = params
-
-            # If graph has parameterized jobs, it must have parameters
-            if graph_parameterized_jobs:
-                if graph_name not in parameters_config:
-                    raise ValueError(
-                        f"Graph '{graph_name}' contains parameterized jobs {list(graph_parameterized_jobs.keys())} but has no entry in parameters configuration")
-
-                graph_params = parameters_config[graph_name]
-
-                # Validate parameter groups
-                for group_name in graph_params.keys():
-                    if not group_name.startswith('params'):
-                        raise ValueError(
-                            f"Invalid parameter group name '{group_name}' in graph '{graph_name}'. Parameter groups must start with 'params'")
-
-                # Validate that all parameters are filled for each group
-                for group_name, group_params in graph_params.items():
-                    for job_name, required_params in graph_parameterized_jobs.items():
-                        if job_name not in group_params:
-                            raise ValueError(
-                                f"Job '{job_name}' in graph '{graph_name}' requires parameters {required_params} but has no entry in parameter group '{group_name}'")
-
-                        # Each job should have a list of parameter sets
-                        job_param_sets = group_params[job_name]
-                        if not isinstance(job_param_sets, list):
-                            raise ValueError(
-                                f"Parameters for job '{job_name}' in graph '{graph_name}', group '{group_name}' should be a list of parameter sets")
-
-                        # Check each parameter set
-                        for param_set in job_param_sets:
-                            missing_params = required_params - set(param_set.keys())
-                            if missing_params:
-                                raise ValueError(
-                                    f"Parameter set for job '{job_name}' in graph '{graph_name}', group '{group_name}' is missing required parameters: {missing_params}")
-
-            # If graph has no parameterized jobs, it should not have parameters
-            elif graph_name in parameters_config:
-                raise ValueError(
-                    f"Graph '{graph_name}' has no parameterized jobs but has an entry in parameters configuration")
-
-    @classmethod
-    def load_all_configs(cls) -> Dict[str, dict]:
-        """Load all configurations and validate them"""
-        cls._cached_configs = cls.load_configs_from_dirs(cls.directories)
-        cls.validate_configs(cls._cached_configs)
-        return cls._cached_configs
-
-    @classmethod
-    def reload_configs(cls) -> Dict[str, dict]:
-        """Force a reload of all configurations."""
-        logging.info("Reloading configs...")
-        cls._cached_configs = None
-        return cls.load_all_configs()
-
-    @classmethod
-    def get_graphs_config(cls) -> dict:
-        """
-        Get graphs configuration from either dedicated graphs file or jobchain_all.
-        Returns empty dict if no configuration is found.
-        """
-        configs = cls.load_all_configs()
-        return cls._extract_config_section(configs, 'graphs')
-
-    @classmethod
-    def get_jobs_config(cls) -> dict:
-        """
-        Get jobs configuration from either dedicated jobs file or jobchain_all.
-        Returns empty dict if no configuration is found.
-        """
-        configs = cls.load_all_configs()
-        return cls._extract_config_section(configs, 'jobs')
-
-    @classmethod
-    def get_parameters_config(cls) -> dict:
-        """
-        Get parameters configuration from either dedicated parameters file or jobchain_all.
-        Returns empty dict if no configuration is found.
-        """
-        configs = cls.load_all_configs()
-        return cls._extract_config_section(configs, 'parameters')
-
-    @classmethod
-    def fill_job_with_parameters(cls, job_config: dict, graph_name: str, param_group: str) -> dict:
-        pass
-
-    @classmethod
-    def is_parameterized_job(cls, raw_job_def):
-        pass
+tests/test_concurrency.py:45: AssertionError
+------------------------------------------------------------------------ Captured log call ------------------------------------------------------------------------
+INFO     JobChain:job_chain.py:47 Initializing JobChain
+INFO     JobChain:job_chain.py:180 Job executor process started with PID 93547
+INFO     JobChain:job_chain.py:190 Result processor process started with PID 93548
+INFO     root:test_concurrency.py:36 Names of jobs in head job: {'test_graph$$$$A$$': {'test_graph$$$$D$$', 'test_graph$$$$A$$', 'test_graph$$$$F$$', 'test_graph$$$$C$$', 'test_graph$$$$B$$', 'test_graph$$$$E$$', 'test_graph$$$$G$$'}}
+INFO     JobChain:job_chain.py:259 *** task_queue ended ***
+INFO     JobChain:job_chain.py:121 Cleaning up JobChain resources
+===================================================================== short test summary info =====================================================================
+FAILED tests/test_concurrency.py::test_concurrency_by_expected_returns - AssertionError: assert 'A.A.B.C.E' == 'A.A.B.C.E.A.D.F.G'
+======================================================================== 1 failed in 7.17s ========================================================================
+(.venv) davidroberts [JobChain] (main)$ 

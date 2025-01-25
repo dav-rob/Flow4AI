@@ -251,6 +251,7 @@ class JobChain:
             self._task_queue.put(task_obj)
         except Exception as e:
             self.logger.error(f"Error submitting task: {e}")
+            self.logger.info("Detailed stack trace:", exc_info=True)
 
     def mark_input_completed(self):
         """Signal completion of input and wait for all processing to finish."""
@@ -275,7 +276,7 @@ class JobChain:
                 if result is None:
                     logger.debug("Received completion signal from result queue")
                     break
-
+                #logger.info(f"ResultProcessor received result: {result}")
                 try:
                     # Handle both dictionary and non-dictionary results
                     task_id = result.get('task', str(result)) if isinstance(result, dict) else str(result)
@@ -284,6 +285,7 @@ class JobChain:
                     logger.debug(f"Finished processing result for task {task_id}")
                 except Exception as e:
                     logger.error(f"Error processing result: {e}")
+                    logger.info("Detailed stack trace:", exc_info=True)
             except queue.Empty:
                 continue
 
@@ -328,6 +330,7 @@ class JobChain:
                         self.logger.debug(f"Finished processing result for task {task_id}")
                     except Exception as e:
                         self.logger.error(f"Error processing result: {e}")
+                        self.logger.info("Detailed stack trace:", exc_info=True)
             except queue.Empty:
                 job_executor_is_alive = self.job_executor_process and self.job_executor_process.is_alive()
                 self.logger.debug(f"Queue empty, job executor process alive status = {job_executor_is_alive}")
@@ -432,6 +435,7 @@ class JobChain:
                             exc = done_task.exception()
                             if exc:
                                 logger.error(f"Task failed with exception: {exc}")
+                                logger.info("Detailed stack trace:", exc_info=True)
                         except asyncio.InvalidStateError:
                             pass  # Task was cancelled or not done
                     tasks_completed += len(done_tasks)
@@ -469,6 +473,7 @@ class JobChain:
         except Exception as e:
             import traceback
             logger.error(f"Error in async worker: {e}\n{traceback.format_exc()}")
+            logger.info("Detailed stack trace:", exc_info=True)
         finally:
             logger.info("Closing event loop")
             loop.close()

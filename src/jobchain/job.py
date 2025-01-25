@@ -146,7 +146,8 @@ class JobABC(ABC, metaclass=JobMeta):
         self.properties:Dict[str, Any] = properties
         self.expected_inputs:set[str] = set()
         self.next_jobs:list[JobABC] = [] 
-        self.timeout = 3000 
+        self.timeout = 3000
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     @classmethod
     def parse_job_loader_name(cls, name: str) -> Dict[str, str]:
@@ -307,7 +308,7 @@ class JobABC(ABC, metaclass=JobMeta):
                 )
 
         result = await self.run(job_state.inputs)
-        logging.debug(f"Job {self.name} finished running")
+        self.logger.debug(f"Job {self.name} finished running")
 
         if not isinstance(result, dict):
             result = {'result': result}
@@ -329,6 +330,7 @@ class JobABC(ABC, metaclass=JobMeta):
 
         # If this is a single job or a tail job in a graph, return the result.
         if not self.next_jobs:
+            self.logger.info(f"Job {self.name} returning result: {result}")
             return result
         
         executing_jobs = []
@@ -388,6 +390,7 @@ class JobABC(ABC, metaclass=JobMeta):
     async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
         """Execute the job on the given task. Must be implemented by subclasses."""
         pass
+
 
 
 class SimpleJob(JobABC):
