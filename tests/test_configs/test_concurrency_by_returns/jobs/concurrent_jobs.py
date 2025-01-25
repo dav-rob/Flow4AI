@@ -36,10 +36,7 @@ class ConcurrencyTestJob(JobABC):
                     logging.error(f"Failed to get input from {short_job_name}")
                     raise Exception(f"Job {self.name} failed to get input from {short_job_name}")
                 received_data.append(data['result']) # return from run() from parent job is a str it is converted to dict.
-            first_value = next(iter(inputs.values()))
-            task = first_value[JobABC.TASK_PASSTHROUGH_KEY]
-        else:
-            task = inputs
+        task = self.get_task(inputs)
         await asyncio.sleep(self.get_random_sleep_duration())
         short_job_name = self.parse_job_name(self.name)
         received_data.append(f"{short_job_name}")

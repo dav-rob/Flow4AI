@@ -379,6 +379,20 @@ class JobABC(ABC, metaclass=JobMeta):
         """
         return len(self.expected_inputs) == 0
 
+    def get_task(self, inputs: Dict[str, Any]) -> Union[Dict[str, Any], Task]:
+        """
+        Get the task associated with this job.
+
+        Returns:
+            Union[Dict[str, Any], Task]: The task associated with this job.
+        """
+        if not self.is_head_job(): 
+            first_parent_result = next(iter(inputs.values()))
+            task = first_parent_result[JobABC.TASK_PASSTHROUGH_KEY]
+        else:
+            task = inputs
+        return task
+
     @abstractmethod
     async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
         """Execute the job on the given task. Must be implemented by subclasses."""
