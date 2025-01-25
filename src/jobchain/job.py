@@ -285,7 +285,7 @@ class JobABC(ABC, metaclass=JobMeta):
             try:
                 await asyncio.wait_for(job_state.input_event.wait(), self.timeout)
             except asyncio.TimeoutError:
-                job_state.execution_started = False  # Reset on timeout
+                job_state.execution_started = False
                 raise TimeoutError(
                     f"Timeout waiting for inputs in {self.name}. "
                     f"Expected: {self.expected_inputs}, "
@@ -299,10 +299,8 @@ class JobABC(ABC, metaclass=JobMeta):
             result = {'result': result}
 
         if isinstance(task, dict):
-            # Preserve all task data
             result[self.TASK_PASSTHROUGH_KEY] = task
         else:
-            # Find task_pass_through in any of the input results
             for input_data in job_state.inputs.values():
                 if isinstance(input_data, dict) and self.TASK_PASSTHROUGH_KEY in input_data:
                     result[self.TASK_PASSTHROUGH_KEY] = input_data[self.TASK_PASSTHROUGH_KEY]
@@ -313,34 +311,36 @@ class JobABC(ABC, metaclass=JobMeta):
         job_state.input_event.clear()
         job_state.execution_started = False
 
-        
-        # If this is a single job or a tail job in a graph, return the result.
+        # Store this job's result
+        result[JobABC.RETURN_JOB] = self.name
+
+        # If this is a tail job, return immediately
         if not self.next_jobs:
             self.logger.info(f"Tail Job {self.name} returning result: {result['result']} for task {result[self.TASK_PASSTHROUGH_KEY]['task']}")
-            result[JobABC.RETURN_JOB] = self.name
             return result
-        
+
+        # Execute child jobs
         executing_jobs = []
         for next_job in self.next_jobs:
             input_data = result.copy()
-            #pass result as input_data to next_job
             await next_job.receive_input(self.name, input_data)
             next_job_inputs = job_state_dict.get(next_job.name).inputs
-            # if next_job has all inputs then add it to executing_jobs
             if next_job.expected_inputs.issubset(set(next_job_inputs.keys())):
                 executing_jobs.append(next_job._execute(task=None))
-        
+
         if executing_jobs:
-            results = await asyncio.gather(*executing_jobs)
-            if any(results): 
-                executing_result = results[0] 
-                self.logger.info(f"Job {self.name} has {len(results)} child jobs, one is returning executed result: {executing_result['result']} for task {executing_result[self.TASK_PASSTHROUGH_KEY]['task']}")
-                executing_result[JobABC.RETURN_JOB] = self.name
-                return executing_result
-        
-        self.logger.info(f"Job {self.name} has no executing child jobs, returning result at the end: {result['result']} for task {result[self.TASK_PASSTHROUGH_KEY]['task']}")
-        result[JobABC.RETURN_JOB] = self.name
-        return result
+            child_results = await asyncio.gather(*executing_jobs)
+            # Find the tail job result (the one that has no next_jobs)
+            tail_results = [r for r in child_results if r is not None]
+            if tail_results:
+                # Always return the first valid tail result
+                tail_result = tail_results[0]
+                self.logger.info(f"Job {self.name} propagating tail result: {tail_result['result']}")
+                # Preserve the original tail job that generated the result
+                return tail_result
+
+        # If no child jobs executed or no tail result found, return None
+        return None
 
     async def receive_input(self, from_job: str, data: Dict[str, Any]) -> None:
         """Receive input from a predecessor job"""

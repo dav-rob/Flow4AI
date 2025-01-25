@@ -47,7 +47,7 @@ async def test_concurrency_by_expected_returns():
         shared_results[:] = []  # Clear the shared_results using slice assignment
     
 
-    submit_task(30)
+    submit_task(300)
 
     job_chain.mark_input_completed() # this waits for all results to be returned
 
