@@ -126,6 +126,7 @@ class JobABC(ABC, metaclass=JobMeta):
     
     # Key used to pass task metadata through the job chain
     TASK_PASSTHROUGH_KEY: str = 'task_pass_through'
+    RETURN_JOB='RETURN_JOB'
 
     def __init__(self, name: Optional[str] = None, properties: Dict[str, Any] = {}):
         """
@@ -312,9 +313,11 @@ class JobABC(ABC, metaclass=JobMeta):
         job_state.input_event.clear()
         job_state.execution_started = False
 
+        
         # If this is a single job or a tail job in a graph, return the result.
         if not self.next_jobs:
             self.logger.info(f"Tail Job {self.name} returning result: {result['result']} for task {result[self.TASK_PASSTHROUGH_KEY]['task']}")
+            result[JobABC.RETURN_JOB] = self.name
             return result
         
         executing_jobs = []
@@ -332,9 +335,11 @@ class JobABC(ABC, metaclass=JobMeta):
             if any(results): 
                 executing_result = results[0] 
                 self.logger.info(f"Job {self.name} has {len(results)} child jobs, one is returning executed result: {executing_result['result']} for task {executing_result[self.TASK_PASSTHROUGH_KEY]['task']}")
+                executing_result[JobABC.RETURN_JOB] = self.name
                 return executing_result
         
         self.logger.info(f"Job {self.name} has no executing child jobs, returning result at the end: {result['result']} for task {result[self.TASK_PASSTHROUGH_KEY]['task']}")
+        result[JobABC.RETURN_JOB] = self.name
         return result
 
     async def receive_input(self, from_job: str, data: Dict[str, Any]) -> None:
