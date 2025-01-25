@@ -35,8 +35,7 @@ def get_logging_config():
         'disable_existing_loggers': False,
         'formatters': {
             'detailed': {
-                'format': '%(asctime)s [%(levelname)s] %(name)s:%(lineno)d - %(message)s',
-                'datefmt': '%Y-%m-%d %H:%M:%S'
+                'format': '%(asctime)s [%(levelname)s] %(name)s:%(lineno)d - %(message)s'
             }
         },
         'handlers': {
