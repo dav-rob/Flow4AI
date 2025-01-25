@@ -15,10 +15,9 @@ from jobchain.job_loader import ConfigLoader
 
 
 def returns_collector(shared_results, result):
-    logging.info(f"Result collector received: {result[JobABC.TASK_PASSTHROUGH_KEY]['task']}, with result: {result['result']}")
     shared_results.append(result)
 
-
+#@pytest.mark.skip("Skipping test due to working yet")
 @pytest.mark.asyncio
 async def test_concurrency_by_expected_returns():
     # Create a manager for sharing the results list between processes
@@ -38,21 +37,21 @@ async def test_concurrency_by_expected_returns():
 
     def submit_task(range_val:int):
         for i in range(range_val):
-            job_chain.submit_task({'task': f'range {range_val}, item {i}'})
+            job_chain.submit_task({'task': f'{i}'})
 
     def check_results():
         for result in shared_results:
+            #logging.info(f"Result: {result}")
             assert result['result'] == 'A.A.B.C.E.A.D.F.G'
 
         shared_results[:] = []  # Clear the shared_results using slice assignment
     
 
-    submit_task(7)
+    submit_task(70)
+
+    job_chain.mark_input_completed() # this waits for all results to be returned
+
     check_results()
-
-
-
-    job_chain.mark_input_completed()
 
 
 
