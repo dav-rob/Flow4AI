@@ -36,6 +36,10 @@ class ConcurrencyTestJob(JobABC):
                     logging.error(f"Failed to get input from {short_job_name}")
                     raise Exception(f"Job {self.name} failed to get input from {short_job_name}")
                 received_data.append(data['result']) # return from run() from parent job is a str it is converted to dict.
+            first_value = next(iter(inputs.values()))
+            task = first_value[JobABC.TASK_PASSTHROUGH_KEY]
+        else:
+            task = inputs
         await asyncio.sleep(self.get_random_sleep_duration())
         short_job_name = self.parse_job_name(self.name)
         received_data.append(f"{short_job_name}")
@@ -45,4 +49,5 @@ class ConcurrencyTestJob(JobABC):
             logging.error(f"Invalid return data: {return_data}")
             raise Exception(f"Job {self.name} returned invalid data: {return_data}, should have been {self.valid_return}")
 
+        logging.info(f"Job {self.name} returned: {return_data} for task {task['task']}")
         return return_data

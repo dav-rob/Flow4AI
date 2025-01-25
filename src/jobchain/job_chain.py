@@ -276,7 +276,7 @@ class JobChain:
                 if result is None:
                     logger.debug("Received completion signal from result queue")
                     break
-                #logger.info(f"ResultProcessor received result: {result}")
+                logger.debug(f"ResultProcessor received result: {result}")
                 try:
                     # Handle both dictionary and non-dictionary results
                     task_id = result.get('task', str(result)) if isinstance(result, dict) else str(result)
@@ -387,7 +387,7 @@ class JobChain:
                 job_set = JobABC.job_set(job)
                 async with job_graph_context_manager(job_set):
                     result = await job._execute(task)
-                    logger.debug(f"[TASK_TRACK] Completed task {task_id}")
+                    logger.info(f"[TASK_TRACK] Completed task {result['result']} for task {result[JobABC.TASK_PASSTHROUGH_KEY]['task']}")
                     result_queue.put(result)
                     logger.debug(f"[TASK_TRACK] Result queued for task {task_id}")
             except Exception as e:
