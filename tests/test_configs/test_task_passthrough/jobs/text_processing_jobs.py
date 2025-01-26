@@ -12,12 +12,12 @@ class TextCapitalizeJob(JobABC):
     def __init__(self, name: Optional[str] = None, properties: Dict[str, Any] = {}):
         super().__init__(name, properties)
     
-    async def run(self, task: Dict[str, Any]) -> Dict[str, Any]:
-        task_id = task.get('task_id', 'unknown')
+    async def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        task_id = inputs.get('task_id', 'unknown')
         logging.info(f"[TASK_TRACK] TextCapitalizeJob START task_id: {task_id}")
-        logging.debug(f"TextCapitalizeJob full task: {task}")
+        logging.debug(f"TextCapitalizeJob full task: {inputs}")
         
-        input_text = task.get('text', '')
+        input_text = inputs.get('text', '')
         logging.debug(f"TextCapitalizeJob input text: {input_text}")
         
         # Simulate some processing time
@@ -38,21 +38,20 @@ class TextReverseJob(JobABC):
     def __init__(self, name: Optional[str] = None, properties: Dict[str, Any] = {}):
         super().__init__(name, properties)
     
-    async def run(self, task: Dict[str, Any]) -> Dict[str, Any]:
-        task_id = task.get('task_id', 'unknown')
-        logging.info(f"[TASK_TRACK] TextReverseJob START task_id: {task_id}")
-        logging.debug(f"TextReverseJob full task: {task}")
+    async def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        logging.debug(f"TextReverseJob full task: {inputs}")
         
         # Get task data from previous job
-        task_data = next(iter(task.values())) if task else {}
-        logging.debug(f"TextReverseJob task_data: {task_data}")
+        input_data = next(iter(inputs.values())) if inputs else {}
+        logging.debug(f"TextReverseJob task_data: {input_data}")
         
         # Check for task_pass_through key in task_data
-        if 'task_pass_through' not in task_data:
-            logging.error(f"[TASK_TRACK] TextReverseJob task_id: {task_id} missing task_pass_through")
+        task = self.get_task()
+        if not task:
+            logging.error(f"[TASK_TRACK] TextReverseJob missing task_pass_through")
             raise KeyError("Required key 'task_pass_through' not found in task")
             
-        input_text = task_data.get('text', '')
+        input_text = input_data.get('text', '')
         logging.debug(f"TextReverseJob input text: {input_text}")
         
         # Simulate some processing time
@@ -62,7 +61,7 @@ class TextReverseJob(JobABC):
             'text': input_text[::-1],
             'processing_stage': 'reversal'
         }
-        logging.info(f"[TASK_TRACK] TextReverseJob END task_id: {task_id}")
+        logging.info(f"[TASK_TRACK] TextReverseJob END")
         logging.debug(f"TextReverseJob result: {result}")
         return result
 
@@ -73,21 +72,20 @@ class TextWrapJob(JobABC):
     def __init__(self, name: Optional[str] = None, properties: Dict[str, Any] = {}):
         super().__init__(name, properties)
     
-    async def run(self, task: Dict[str, Any]) -> Dict[str, Any]:
-        task_id = task.get('task_id', 'unknown')
-        logging.info(f"[TASK_TRACK] TextWrapJob START task_id: {task_id}")
-        logging.debug(f"TextWrapJob full task: {task}")
+    async def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        logging.debug(f"TextWrapJob full task: {inputs}")
         
         # Get task data from previous job
-        task_data = next(iter(task.values())) if task else {}
-        logging.debug(f"TextWrapJob task_data: {task_data}")
+        input_data = next(iter(inputs.values())) if inputs else {}
+        logging.debug(f"TextWrapJob task_data: {input_data}")
         
         # Check for task_pass_through key in task_data
-        if 'task_pass_through' not in task_data:
-            logging.error(f"[TASK_TRACK] TextWrapJob task_id: {task_id} missing task_pass_through")
+        task = self.get_task()
+        if not task:
+            logging.error(f"[TASK_TRACK] TextWrapJob missing task_pass_through")
             raise KeyError("Required key 'task_pass_through' not found in task")
             
-        input_text = task_data.get('text', '')
+        input_text = input_data.get('text', '')
         logging.debug(f"TextWrapJob input text: {input_text}")
         
         # Simulate some processing time
@@ -97,6 +95,6 @@ class TextWrapJob(JobABC):
             'text': f"[{input_text}]",
             'processing_stage': 'wrapping'
         }
-        logging.info(f"[TASK_TRACK] TextWrapJob END task_id: {task_id}")
+        logging.info(f"[TASK_TRACK] TextWrapJob END")
         logging.debug(f"TextWrapJob result: {result}")
         return result

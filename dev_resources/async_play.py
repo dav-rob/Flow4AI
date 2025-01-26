@@ -88,12 +88,12 @@ class JobABC(ABC):
 
         if isinstance(task, dict):
             # Preserve all task data
-            result[self.TASK_PASSTHROUGH_KEY] = task
+            result[JobABC.TASK_PASSTHROUGH_KEY] = task
         else:
             # Find task_pass_through in any of the input results
             for input_data in job_state.inputs.values():
-                if isinstance(input_data, dict) and self.TASK_PASSTHROUGH_KEY in input_data:
-                    result[self.TASK_PASSTHROUGH_KEY] = input_data[self.TASK_PASSTHROUGH_KEY]
+                if isinstance(input_data, dict) and JobABC.TASK_PASSTHROUGH_KEY in input_data:
+                    result[JobABC.TASK_PASSTHROUGH_KEY] = input_data[JobABC.TASK_PASSTHROUGH_KEY]
                     break
 
         # Clear state for potential reuse
