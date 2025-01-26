@@ -254,7 +254,7 @@ class JobChain:
             self.logger.info("Detailed stack trace:", exc_info=True)
 
     def mark_input_completed(self):
-        """Signal completion of input and wait for all processing to finish."""
+        """Signal completion of input and wait for all processes to finish and shut down."""
         self.logger.debug("Marking input as completed")
         self.logger.info("*** task_queue ended ***")
         self._task_queue.put(None)
