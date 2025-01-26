@@ -387,7 +387,7 @@ class JobChain:
                 job_set = JobABC.job_set(job)
                 async with job_graph_context_manager(job_set):
                     result = await job._execute(task)
-                    logger.info(f"[TASK_TRACK] Completed task {result}, returned by job {result[JobABC.RETURN_JOB]}")
+                    logger.info(f"[TASK_TRACK] Completed task {task_id}, returned by job {result[JobABC.RETURN_JOB]}")
                     result_queue.put(result)
                     logger.debug(f"[TASK_TRACK] Result queued for task {task_id}")
             except Exception as e:
