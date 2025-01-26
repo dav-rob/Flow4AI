@@ -109,6 +109,7 @@ async def job_graph_context_manager(job_set: set['JobABC']):
   new_state = {}
   for job in job_set:
       new_state[job.name] = JobState()
+  new_state[JobABC.CONTEXT] = {}
   token = job_graph_context.set(new_state)
   try:
       yield new_state
@@ -127,21 +128,16 @@ class JobABC(ABC, metaclass=JobMeta):
     # Key used to pass task metadata through the job chain
     TASK_PASSTHROUGH_KEY: str = 'task_pass_through'
     RETURN_JOB='RETURN_JOB'
+    CONTEXT='CONTEXT'
 
     def __init__(self, name: Optional[str] = None, properties: Dict[str, Any] = {}):
         """
         Initialize an JobABC instance.
 
         Args:
-            name (Optional[str], optional): A unique identifier for this job within the context of a JobChain.
-                       The name must be unique among all jobs in the same JobChain to ensure
-                       proper job identification and dependency resolution. If not provided,
-                       a unique name will be auto-generated.
-
-        Note:
-            The uniqueness of the name is crucial for proper JobChain operation. Using
-            duplicate names within the same JobChain can lead to unexpected behavior
-            in job execution and dependency management.
+            name (Optional[str], optional): Must be a unique identifier for this job within the context of a JobChain.
+                                            If not provided, a unique name will be auto-generated.
+            properties (Dict[str, Any], optional): configuration properties passed in by jobs.yaml
         """
         self.name:str = self._getUniqueName() if name is None else name
         self.properties:Dict[str, Any] = properties
@@ -268,10 +264,27 @@ class JobABC(ABC, metaclass=JobMeta):
                 f"properties: {self.properties}")
 
     async def _execute(self, task: Union[Task, None]) -> Dict[str, Any]:
+        """ Responsible for executing the job graph, maintaining state of the graph
+        by updating the JobState object and propagating the tail results back up the graph
+        when a tail job is reached.
+
+        Can only be used within a job_graph_context set up with:
+           ```python
+            async with job_graph_context_manager(job_set):
+                        result = await job._execute(task)
+            ```
+
+        Args:
+            task (Union[Task, None]): the input to the first (head) job of the job graph, is None in child jobs.
+
+        Returns:
+            Dict[str, Any]: The output of the job graph execution
+        """
         job_state_dict:dict = job_graph_context.get()
         job_state = job_state_dict.get(self.name)
         if isinstance(task, dict):
             job_state.inputs.update(task)
+            self.get_context()[JobABC.TASK_PASSTHROUGH_KEY] = task
         elif task is None:
             pass 
         else:
@@ -298,13 +311,13 @@ class JobABC(ABC, metaclass=JobMeta):
         if not isinstance(result, dict):
             result = {'result': result}
 
-        if isinstance(task, dict):
-            result[self.TASK_PASSTHROUGH_KEY] = task
-        else:
-            for input_data in job_state.inputs.values():
-                if isinstance(input_data, dict) and self.TASK_PASSTHROUGH_KEY in input_data:
-                    result[self.TASK_PASSTHROUGH_KEY] = input_data[self.TASK_PASSTHROUGH_KEY]
-                    break
+        # if isinstance(task, dict):
+        #     result[JobABC.TASK_PASSTHROUGH_KEY] = task
+        # else:
+        #     for input_data in job_state.inputs.values():
+        #         if isinstance(input_data, dict) and JobABC.TASK_PASSTHROUGH_KEY in input_data:
+        #             result[JobABC.TASK_PASSTHROUGH_KEY] = input_data[JobABC.TASK_PASSTHROUGH_KEY]
+        #             break
 
         # Clear state for potential reuse
         job_state.inputs.clear()
@@ -317,6 +330,8 @@ class JobABC(ABC, metaclass=JobMeta):
         # If this is a tail job, return immediately
         if not self.next_jobs:
             self.logger.debug(f"Tail Job {self.name} returning result: {result}")
+            task = self.get_context()[JobABC.TASK_PASSTHROUGH_KEY]
+            result[JobABC.TASK_PASSTHROUGH_KEY] = task
             return result
 
         # Execute child jobs
@@ -379,19 +394,34 @@ class JobABC(ABC, metaclass=JobMeta):
         """
         return len(self.expected_inputs) == 0
 
-    def get_task(self, inputs: Dict[str, Any]) -> Union[Dict[str, Any], Task]:
+    def get_context(self) -> Dict[str, Any]:
+        """A repository to store state across jobs in a graph for a single coroutine.
+           can only be used within a job_graph_context set up with:
+           ```python
+            async with job_graph_context_manager(job_set):
+                        result = await job._execute(task)
+            ```
+        """
+        job_state_dict:dict = job_graph_context.get()
+        context = job_state_dict[JobABC.CONTEXT]
+        return context
+
+    def get_task(self) -> Union[Dict[str, Any], Task]:
         """
         Get the task associated with this job.
 
         Returns:
             Union[Dict[str, Any], Task]: The task associated with this job.
         """
-        if not self.is_head_job(): 
-            first_parent_result = next(iter(inputs.values()))
-            task = first_parent_result[JobABC.TASK_PASSTHROUGH_KEY]
-        else:
-            task = inputs
+        task = self.get_context()[JobABC.TASK_PASSTHROUGH_KEY]
         return task
+        
+        # if not self.is_head_job(): 
+        #     first_parent_result = next(iter(inputs.values()))
+        #     task = first_parent_result[JobABC.TASK_PASSTHROUGH_KEY]
+        # else:
+        #     task = inputs
+        # return task
 
     @abstractmethod
     async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
