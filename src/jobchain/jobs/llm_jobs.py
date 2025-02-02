@@ -7,7 +7,10 @@ from openai import AsyncOpenAI
 
 import jobchain.jc_logging as logging
 from jobchain.job import JobABC
+from jobchain.utils.llm_utils import (check_response_errors,
+                                      validate_and_clean_prompt)
 
+logger = logging.getLogger(__name__)
 
 class OpenAIClient:
     """
@@ -26,7 +29,7 @@ class OpenAIClient:
 
             # Handle special parameters
             api_key = os.getenv(params.pop("api_key", None)) if "api_key" in params else os.getenv('OPENAI_API_KEY')
-            logging.info(f"Resolved API Key exists: {bool(api_key)}")
+            logger.info(f"Resolved API Key exists: {bool(api_key)}")
             
             # Optional: Check if the API key is not set and raise an error 
             if not api_key:
@@ -34,7 +37,7 @@ class OpenAIClient:
             
             # Create client with remaining params
             cls._client = AsyncOpenAI(api_key=api_key, **params)
-            logging.info(f"Created client with base_url: {params.get('base_url', 'default')}")
+            logger.info(f"Created client with base_url: {params.get('base_url', 'default')}")
         return cls._client
 
 class OpenAIJob(JobABC):
@@ -146,40 +149,47 @@ class OpenAIJob(JobABC):
         
         # Add API properties from initialization
         request_properties.update(self.api_properties)
-        
-        # Handle the task input
-        if isinstance(task, dict):
-            # If task has a prompt, convert it to messages format
-            if "prompt" in task:
-                request_properties["messages"] = [
-                    {"role": "system", "content": "You are a helpful assistant"},
-                    {"role": "user", "content": task["prompt"]}
-                ]
-            # If task already has messages, use those
-            elif "messages" in task:
-                request_properties["messages"] = task["messages"]
-            
-            # Add any other valid API parameters from task
-            # request_properties.update({k: v for k, v in task.items() if k not in ["prompt", "messages"]})
-        elif task:  # If task is not empty and not a dict
-            # If task is not a dict, treat it as the prompt
-            request_properties["messages"] = [
-                {"role": "system", "content": "You are a helpful assistant"},
-                {"role": "user", "content": str(task)}
-            ]
+
+        self.create_prompt(request_properties, task)
 
         # Acquire the rate limiter before making the request
         async with self.limiter:
             try:
-                logging.info(f"{self.name} is making an OpenAI API call.")
+                logger.info(f"{self.name} is making an OpenAI API call.")
                 response = await self.client.chat.completions.create(**request_properties)
-                logging.info(f"{self.name} received a response.")
+                logger.info(f"{self.name} received a response.")
                 
                 # Handle the response
                 if hasattr(response, 'choices') and response.choices:
-                    return {"response": response.choices[0].message.content}
+                    resp = {"response": response.choices[0].message.content}
+                    check_response_errors(resp)
+                    return resp
                 else:
                     return {"error": "No valid response content found"}
             except Exception as e:
-                logging.error(f"Error in {self.name}: {e}")
+                logger.error(f"Error in {self.name}: {e}")
                 return {"error": str(e)}
+
+    def create_prompt(self, request_properties, task):
+        # Handle the task input
+        if isinstance(task, dict):
+            # If task has a prompt, convert it to messages format
+            if "prompt" in task:
+                prompt = validate_and_clean_prompt(task["prompt"])
+                request_properties["messages"] = [
+                    {"role": "system", "content": "You are a helpful assistant"},
+                    {"role": "user", "content": prompt}
+                ]
+            # If task already has messages, use those
+            elif "messages" in task:
+                request_properties["messages"] = task["messages"]
+
+            # Add any other valid API parameters from task
+            # request_properties.update({k: v for k, v in task.items() if k not in ["prompt", "messages"]})
+        elif task:  # If task is not empty and not a dict
+            # If task is not a dict, treat it as the prompt
+            prompt = validate_and_clean_prompt(str(task))
+            request_properties["messages"] = [
+                {"role": "system", "content": "You are a helpful assistant"},
+                {"role": "user", "content": prompt}
+            ]
