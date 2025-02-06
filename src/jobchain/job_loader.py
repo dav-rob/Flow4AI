@@ -23,7 +23,7 @@ class ConfigurationError(Exception):
     pass
 
 
-class JobLoader:
+class PythonLoader:
 
     @staticmethod
     def validate_job_class(job_class: Type) -> bool:
@@ -122,7 +122,7 @@ class JobFactory:
             custom_jobs_dirs: List of config directory paths. Jobs will be loaded from the 'jobs' subdirectory
                             of each config directory.
         """
-        loader = JobLoader()
+        loader = PythonLoader()
         # Create an iterable of job directories, including the default and any custom directories
         jobs_dirs = [cls._default_jobs_dir]
         if custom_jobs_dirs:
