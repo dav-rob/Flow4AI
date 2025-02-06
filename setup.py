@@ -16,7 +16,8 @@ setup(
         'opentelemetry-exporter-otlp-proto-grpc>=1.28.1',
         'anyconfig>=0.14.0',
         'pyyaml>=6.0.2',
-        'contextvars>=2.4'
+        'contextvars>=2.4',
+        "pydantic>=2.10.4",
     ],
     extras_require={
         'test': [
