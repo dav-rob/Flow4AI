@@ -3,7 +3,8 @@ import inspect
 import os
 import sys
 from pathlib import Path
-from typing import Any, Collection, Dict, List, Type
+from typing import Any, Collection, Dict, List, Type, Union
+from pydantic import BaseModel
 
 import yaml
 
@@ -24,6 +25,15 @@ class ConfigurationError(Exception):
 
 
 class PythonLoader:
+    JOBS = "jobs"
+    PYDANTIC = "pydantic"
+
+    @staticmethod
+    def validate_pydantic_class(job_class: Type) -> bool:
+        """Validate that a class meets the requirements to be a valid pydantic model:
+        - Inherits from BaseModel
+        """
+        return inspect.isclass(job_class) and issubclass(job_class, BaseModel)
 
     @staticmethod
     def validate_job_class(job_class: Type) -> bool:
@@ -49,7 +59,7 @@ class PythonLoader:
         return True
 
     @classmethod
-    def load_jobs(cls, jobs_dir: str) -> Dict[str, Type[JobABC]]:
+    def load_python(cls, jobs_dir: str, type_name: str = JOBS) -> Dict[str, Union[Type[JobABC], Type[BaseModel]]]:
         """
         Load all custom job classes from the specified directory
         """
@@ -87,7 +97,8 @@ class PythonLoader:
                 for name, obj in inspect.getmembers(module):
                     if inspect.isclass(obj) and obj.__module__ == module.__name__:
                         try:
-                            if cls.validate_job_class(obj):
+                            if ((type_name == cls.JOBS and cls.validate_job_class(obj)) or
+                                (type_name == cls.PYDANTIC and cls.validate_pydantic_class(obj))):
                                 logger.info(f"Found valid job class: {name}")
                                 jobs[name] = obj
                         except Exception as e:
@@ -107,6 +118,7 @@ class PythonLoader:
 
 class JobFactory:
     _job_types: Dict[str, Type[JobABC]] = {}
+    _pydantic_types: Dict[str, Type[BaseModel]] = {}
     # Default jobs directory is always checked first
     _default_jobs_dir: str = os.path.join(os.path.dirname(__file__), "jobs") # site-package directory when this is a package
     _cached_job_graphs: List[JobABC] = None
@@ -134,13 +146,23 @@ class JobFactory:
             
         found_valid_jobs = False
         for jobs_dir in jobs_dirs:
-            custom_jobs = loader.load_jobs(jobs_dir)
+            # Load and register jobs
+            custom_jobs = loader.load_python(jobs_dir)
             if custom_jobs:
                 found_valid_jobs = True
                 # Register all valid custom jobs
                 for job_name, job_class in custom_jobs.items():
                     cls.register_job_type(job_name, job_class)
                     print(f"Registered custom job: {job_name}")
+            
+            # Load and register pydantic models
+            pydantic_models = loader.load_python(jobs_dir, PythonLoader.PYDANTIC)
+            if pydantic_models:
+                for model_name, model_class in pydantic_models.items():
+                    cls.register_pydantic_type(model_name, model_class)
+                    print(f"Registered pydantic model: {model_name}")
+            else:
+                logger.info("No pydantic classes found")
         
         if not found_valid_jobs:
             # This is a critical error as we need at least one valid job directory
@@ -161,6 +183,11 @@ class JobFactory:
     @classmethod
     def register_job_type(cls, type_name: str, job_class: Type[JobABC]):
         cls._job_types[type_name] = job_class
+
+    @classmethod
+    def register_pydantic_type(cls, type_name: str, model_class: Type[BaseModel]):
+        """Register a Pydantic model type with the factory"""
+        cls._pydantic_types[type_name] = model_class
 
     @classmethod
     def get_head_jobs_from_config(cls) -> Collection[JobABC]:

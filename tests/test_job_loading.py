@@ -36,6 +36,27 @@ def test_job_type_registration(job_factory):
     # Expected job type from real jobs directory
     assert "OpenAIJob" in job_types, "OpenAIJob should be registered"
 
+
+def test_pydantic_type_registration(job_factory):
+    """Test that all expected pydantic models are registered"""
+    # Configure JobFactory to use test_pydantic_config directory
+    test_config_dir = os.path.join(os.path.dirname(__file__), "test_configs/test_pydantic_config")
+    JobFactory.load_jobs_into_registry([test_config_dir])
+    
+    # Get all registered pydantic types
+    pydantic_types = job_factory._pydantic_types
+    
+    # Expected pydantic models from test directory
+    assert "UserProfile" in pydantic_types, "UserProfile model should be registered"
+    assert "JobMetadata" in pydantic_types, "JobMetadata model should be registered"
+    assert "TaskConfig" in pydantic_types, "TaskConfig model should be registered"
+    
+    # Verify the registered models are actually pydantic BaseModel subclasses
+    from pydantic import BaseModel
+    assert issubclass(pydantic_types["UserProfile"], BaseModel)
+    assert issubclass(pydantic_types["JobMetadata"], BaseModel)
+    assert issubclass(pydantic_types["TaskConfig"], BaseModel)
+
 @pytest.mark.asyncio
 async def test_job_instantiation_and_execution(job_factory):
     """Test that jobs can be instantiated and run"""
