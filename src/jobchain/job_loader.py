@@ -144,14 +144,14 @@ class JobFactory:
                 if os.path.exists(python_dir):
                     python_dirs.append(python_dir)
             
-        found_valid_python = False
+        found_valid_jobs = False
         for python_dir in python_dirs:
             # Load and register jobs
-            custom_python = loader.load_python(python_dir, PythonLoader.JOBS)
-            if custom_python:
-                found_valid_python = True
+            jobs = loader.load_python(python_dir, PythonLoader.JOBS)
+            if jobs:
+                found_valid_jobs = True
                 # Register all valid custom jobs
-                for job_name, job_class in custom_python.items():
+                for job_name, job_class in jobs.items():
                     cls.register_job_type(job_name, job_class)
                     print(f"Registered custom job: {job_name}")
             
@@ -164,7 +164,7 @@ class JobFactory:
             else:
                 logger.info("No pydantic classes found")
         
-        if not found_valid_python:
+        if not found_valid_jobs:
             # This is a critical error as we need at least one valid job directory
             raise FileNotFoundError(f"No valid jobs found in any of the directories: {python_dirs}")
 
