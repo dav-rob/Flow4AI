@@ -19,7 +19,7 @@ def job_factory():
     factory = JobFactory()
     # Load both the test jobs and the real jobs
     #  the real jobs are always loaded by the factory
-    factory.load_jobs_into_registry([TEST_CONFIG_DIR])
+    factory.load_python_into_registries([TEST_CONFIG_DIR])
     return factory
 
 def test_job_type_registration(job_factory):
@@ -41,7 +41,7 @@ def test_pydantic_type_registration(job_factory):
     """Test that all expected pydantic models are registered"""
     # Configure JobFactory to use test_pydantic_config directory
     test_config_dir = os.path.join(os.path.dirname(__file__), "test_configs/test_pydantic_config")
-    JobFactory.load_jobs_into_registry([test_config_dir])
+    JobFactory.load_python_into_registries([test_config_dir])
     
     # Get all registered pydantic types
     pydantic_types = job_factory._pydantic_types
@@ -306,7 +306,7 @@ async def test_job_execution_chain(caplog):
     """Test that all jobs in a graph are executed when _execute is called on the head job."""
     caplog.set_level('DEBUG')  # Set the logging level
     # Load custom job types
-    JobFactory.load_jobs_into_registry([TEST_CONFIG_DIR])
+    JobFactory.load_python_into_registries([TEST_CONFIG_DIR])
 
     # Set config directory for test
     ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config")])

@@ -4,9 +4,9 @@ import os
 import sys
 from pathlib import Path
 from typing import Any, Collection, Dict, List, Type, Union
-from pydantic import BaseModel
 
 import yaml
+from pydantic import BaseModel
 
 from . import jc_logging as logging
 from .job import JobABC, create_job_graph
@@ -59,29 +59,29 @@ class PythonLoader:
         return True
 
     @classmethod
-    def load_python(cls, jobs_dir: str, type_name: str = JOBS) -> Dict[str, Union[Type[JobABC], Type[BaseModel]]]:
+    def load_python(cls, python_dir: str, type_name: str = JOBS) -> Dict[str, Union[Type[JobABC], Type[BaseModel]]]:
         """
         Load all custom job classes from the specified directory
         """
-        jobs = {}
-        jobs_path = Path(jobs_dir)
+        python_classes = {}
+        python_path = Path(python_dir)
 
-        if not jobs_path.exists():
-            logger.info(f"Jobs directory not found: {jobs_dir}")
-            return jobs
+        if not python_path.exists():
+            logger.info(f"Python directory not found: {python_dir}")
+            return python_classes
 
         # Add the custom jobs directory to Python path
         logger.debug(f"Python path before: {sys.path}")
-        sys.path.append(str(jobs_path))
-        logger.info(f"Added {jobs_path} to Python path")
+        sys.path.append(str(python_path))
+        logger.info(f"Added {python_path} to Python path")
         logger.debug(f"Python path after: {sys.path}")
 
         # Scan for Python files
-        for file_path in jobs_path.glob("**/*.py"):
+        for file_path in python_path.glob("**/*.py"):
             if file_path.name.startswith("__"):
                 continue
 
-            logger.info(f"Loading jobs from {file_path}")
+            logger.info(f"Loading python classes from {file_path}")
             try:
                 # Load the module
                 module_name = file_path.stem
@@ -99,21 +99,21 @@ class PythonLoader:
                         try:
                             if ((type_name == cls.JOBS and cls.validate_job_class(obj)) or
                                 (type_name == cls.PYDANTIC and cls.validate_pydantic_class(obj))):
-                                logger.info(f"Found valid job class: {name}")
-                                jobs[name] = obj
+                                logger.info(f"Found valid python class: {name}")
+                                python_classes[name] = obj
                         except Exception as e:
-                            logger.error(f"Error validating job class {name} in {file_path}: {str(e)}")
+                            logger.error(f"Error validating python class {name} in {file_path}: {str(e)}")
                             raise JobValidationError(
-                                f"Error validating job class {name} in {file_path}: {str(e)}"
+                                f"Error validating python class {name} in {file_path}: {str(e)}"
                             )
 
             except Exception as e:
-                logger.error(f"Error loading custom job from {file_path}: {str(e)}")
+                logger.error(f"Error loading custom python class from {file_path}: {str(e)}")
                 raise ImportError(
-                    f"Error loading custom job from {file_path}: {str(e)}"
+                    f"Error loading custom python class from {file_path}: {str(e)}"
                 )
 
-        return jobs
+        return python_classes
 
 
 class JobFactory:
@@ -124,39 +124,39 @@ class JobFactory:
     _cached_job_graphs: List[JobABC] = None
 
     @classmethod
-    def load_jobs_into_registry(cls, custom_jobs_dirs: list[str] = None):
+    def load_python_into_registries(cls, custom_python_dirs: list[str] = None):
         """
         Load and register all custom jobs from specified config directories.
         Will look for jobs in the 'jobs' subdirectory of each config directory.
         Loads jobs from all directories.
 
         Args:
-            custom_jobs_dirs: List of config directory paths. Jobs will be loaded from the 'jobs' subdirectory
+            custom_python_dirs: List of config directory paths. Jobs will be loaded from the 'jobs' subdirectory
                             of each config directory.
         """
         loader = PythonLoader()
         # Create an iterable of job directories, including the default and any custom directories
-        jobs_dirs = [cls._default_jobs_dir]
-        if custom_jobs_dirs:
+        python_dirs = [cls._default_jobs_dir]
+        if custom_python_dirs:
             # Add local jobs directories from each config directory
-            for config_dir in custom_jobs_dirs:
-                jobs_dir = os.path.join(config_dir, "jobs")
-                if os.path.exists(jobs_dir):
-                    jobs_dirs.append(jobs_dir)
+            for config_dir in custom_python_dirs:
+                python_dir = os.path.join(config_dir, "jobs")
+                if os.path.exists(python_dir):
+                    python_dirs.append(python_dir)
             
-        found_valid_jobs = False
-        for jobs_dir in jobs_dirs:
+        found_valid_python = False
+        for python_dir in python_dirs:
             # Load and register jobs
-            custom_jobs = loader.load_python(jobs_dir)
-            if custom_jobs:
-                found_valid_jobs = True
+            custom_python = loader.load_python(python_dir, PythonLoader.JOBS)
+            if custom_python:
+                found_valid_python = True
                 # Register all valid custom jobs
-                for job_name, job_class in custom_jobs.items():
+                for job_name, job_class in custom_python.items():
                     cls.register_job_type(job_name, job_class)
                     print(f"Registered custom job: {job_name}")
             
             # Load and register pydantic models
-            pydantic_models = loader.load_python(jobs_dir, PythonLoader.PYDANTIC)
+            pydantic_models = loader.load_python(python_dir, PythonLoader.PYDANTIC)
             if pydantic_models:
                 for model_name, model_class in pydantic_models.items():
                     cls.register_pydantic_type(model_name, model_class)
@@ -164,9 +164,9 @@ class JobFactory:
             else:
                 logger.info("No pydantic classes found")
         
-        if not found_valid_jobs:
+        if not found_valid_python:
             # This is a critical error as we need at least one valid job directory
-            raise FileNotFoundError(f"No valid jobs found in any of the directories: {jobs_dirs}")
+            raise FileNotFoundError(f"No valid jobs found in any of the directories: {python_dirs}")
 
     @classmethod
     def create_job(cls, name: str, job_type: str, job_def: Dict[str, Any]) -> JobABC:

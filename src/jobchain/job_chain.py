@@ -357,7 +357,7 @@ class JobChain:
             # job_map = {job.name: job}
             logger.info("Creating job map from JobLoader")
             logger.info(f"Using directories from process: {directories}")
-            JobFactory.load_jobs_into_registry(directories)
+            JobFactory.load_python_into_registries(directories)
             ConfigLoader._set_directories(directories)
             ConfigLoader.reload_configs()
             head_jobs = JobFactory.get_head_jobs_from_config()
