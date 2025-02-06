@@ -95,7 +95,7 @@ class OpenAIJob(JobABC):
                     prediction: ChatCompletionPredictionContentParam | NotGiven | None = NOT_GIVEN,
                     presence_penalty: float | NotGiven | None = NOT_GIVEN,
                     reasoning_effort: ChatCompletionReasoningEffort | NotGiven = NOT_GIVEN,
-                    response_format: ResponseFormat | NotGiven = NOT_GIVEN,
+                    response_format: ResponseFormat | NotGiven | None = NOT_GIVEN,
                     seed: int | NotGiven | None = NOT_GIVEN,
                     service_tier: NotGiven | Literal['auto', 'default'] | None = NOT_GIVEN,
                     stop: str | List[str] | NotGiven | None = NOT_GIVEN,
@@ -149,6 +149,18 @@ class OpenAIJob(JobABC):
         
         # Add API properties from initialization
         request_properties.update(self.api_properties)
+
+        # Check if response_format is a string and replace with the Pydantic class
+        if "response_format" in request_properties and isinstance(request_properties["response_format"], str):
+            try:
+                from jobchain.job_loader import JobFactory
+                response_format_name = request_properties["response_format"]
+                request_properties["response_format"] = JobFactory.get_pydantic_class(response_format_name)
+                logger.info(f"Successfully replaced response_format string with Pydantic class: {response_format_name}")
+            except ValueError as e:
+                logger.error(f"Could not find Pydantic class for response_format: {request_properties['response_format']}. Error: {e}")
+            except Exception as e:
+                logger.error(f"An unexpected error occurred while trying to get the Pydantic class: {e}")
 
         self.create_prompt(request_properties, task)
 

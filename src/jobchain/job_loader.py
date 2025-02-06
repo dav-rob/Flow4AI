@@ -190,6 +190,13 @@ class JobFactory:
         cls._pydantic_types[type_name] = model_class
 
     @classmethod
+    def get_pydantic_class(cls, type_name: str) -> Type[BaseModel]:
+        """Retrieve a registered Pydantic model class by its type name."""
+        if type_name not in cls._pydantic_types:
+            raise ValueError(f"Pydantic type {type_name} not registered.")
+        return cls._pydantic_types[type_name]
+
+    @classmethod
     def get_head_jobs_from_config(cls) -> Collection[JobABC]:
         """Create job graphs from configuration, using cache if available"""
         if cls._cached_job_graphs is None:
