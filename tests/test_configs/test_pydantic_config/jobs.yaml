@@ -4,47 +4,7 @@ ask_llm:
     api:
       model: "$model"
       temperature: 0.7
+      response_format: "UserProfile"
     rate_limit:
-      max_rate: 1
-      time_period: 4
-
-read_file:
-  type: MockFileReadJob
-  properties:
-    filepath: "$filepath"
-
-save_to_db:
-  type: MockDatabaseWriteJob
-  properties:
-    database_url: "$database_url"
-    table_name: "$table_name"
-
-summarize:
-  type: DummyJob
-  properties: {}
-
-ask_llm_mini:
-  type: OpenAIJob
-  properties:
-    api:
-      model: "$model"
-      temperature: 0.7
-    rate_limit:
-      max_rate: 1
-      time_period: 4
-
-ask_llm_reasoning:
-  type: OpenAIJob
-  properties:
-    api:
-      model: "o1-mini"
-      temperature: 0.7
-    rate_limit:
-      max_rate: 1
-      time_period: 4
-
-save_to_db2:
-  type: MockDatabaseWriteJob
-  properties:
-    database_url: "sqlite://user2:pass2@db2/mydb"
-    table_name: "table_b"
+      max_rate: 4
+      time_period: 10

@@ -1,36 +1,4 @@
-four_stage_parameterized:
-    read_file:
-      next:
-        - ask_llm
-        - save_to_db
+simple_pydantic:
     ask_llm:
-      next:
-        - save_to_db
-        - summarize
-    save_to_db:
-      next:
-        - summarize
-    summarize:
       next: []
 
-three_stage:
-    ask_llm_mini:
-      next:
-        - save_to_db2
-        - summarize
-    save_to_db2:
-      next:
-        - summarize
-    summarize:
-      next: []
-
-three_stage_reasoning:
-    ask_llm_reasoning:
-      next:
-        - save_to_db2
-        - summarize
-    save_to_db2:
-      next:
-        - summarize
-    summarize:
-      next: []

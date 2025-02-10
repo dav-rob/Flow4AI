@@ -529,3 +529,47 @@ async def test_malformed_configuration():
     error_msg = str(excinfo.value)
     assert "Configuration is malformed" in error_msg
     assert "test_malformed_config_params/parameters.yaml" in error_msg
+
+@pytest.mark.asyncio
+async def test_pydantic_jobs_in_jobchain_serial():
+    """Test that head jobs from config can be executed in JobChain with serial processing"""
+    # Set config directory for test
+    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_pydantic_config")])
+
+   
+    results = []
+    
+    
+    def result_processor(result):
+        results.append(result)
+        logging.info(f"Processed result: {result}")
+    
+    # Create JobChain with serial processing to ensure deterministic results
+    job_chain = JobChain(job=None, result_processing_function=result_processor, serial_processing=True)
+    
+    # Get head jobs from config to know their names
+    head_jobs = job_chain.get_job_names()
+    
+    # Submit tasks for each job
+    for job in head_jobs:
+        job_chain.submit_task({"prompt": "Create a male user."}, job_name=job)
+        job_chain.submit_task({"prompt": "Create a female user."}, job_name=job)
+    
+    # Mark input as completed and wait for all tasks to finish
+    job_chain.mark_input_completed()
+    
+    # Convert shared list to regular list for sorting
+    results_list = list(results)
+    
+    # Verify results
+    # We expect one result per head job
+    assert len(results_list) == len(head_jobs)*2, f"Expected {len(head_jobs)} results, got {len(results_list)}"
+    
+    # Sort results by job name to ensure deterministic ordering
+    results_list.sort(key=lambda x: next(iter(x.keys())))
+    
+    # Each result should be a dictionary with job results
+    for result in results_list:
+        assert isinstance(result, dict), f"Expected dict result, got {type(result)}"
+        logging.info(f"Result: {result}")
+        
