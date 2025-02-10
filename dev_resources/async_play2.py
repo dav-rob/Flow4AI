@@ -7,7 +7,7 @@ from jobchain.taskmanager import TaskManager
 
 async def sample_task():
     """A simple async task that sleeps briefly and returns."""
-    await asyncio.sleep(0.1)  # Simulate light async work
+    await asyncio.sleep(0.1)  # Simulate  async work
     return "ok"
 
 def test_concurrency():
