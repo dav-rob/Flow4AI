@@ -7,6 +7,7 @@ from openai import AsyncOpenAI
 
 import jobchain.jc_logging as logging
 from jobchain.job import JobABC
+from jobchain.job_loader import JobFactory
 from jobchain.utils.llm_utils import (check_response_errors,
                                       validate_and_clean_prompt)
 
@@ -153,7 +154,6 @@ class OpenAIJob(JobABC):
         # Check if response_format is a string and replace with the Pydantic class
         if "response_format" in request_properties and isinstance(request_properties["response_format"], str):
             try:
-                from jobchain.job_loader import JobFactory
                 response_format_name = request_properties["response_format"]
                 request_properties["response_format"] = JobFactory.get_pydantic_class(response_format_name)
                 logger.info(f"Successfully replaced response_format string with Pydantic class: {response_format_name}")
@@ -168,14 +168,18 @@ class OpenAIJob(JobABC):
         async with self.limiter:
             try:
                 logger.info(f"{self.name} is making an OpenAI API call.")
-                response = await self.client.chat.completions.create(**request_properties)
+                if "response_format" in request_properties:
+                    response = await self.client.beta.chat.completions.parse(**request_properties)
+                else:
+                    response = await self.client.chat.completions.create(**request_properties)
                 logger.info(f"{self.name} received a response.")
                 
                 # Handle the response
                 if hasattr(response, 'choices') and response.choices:
-                    resp = {"response": response.choices[0].message.content}
-                    check_response_errors(resp)
-                    return resp
+                    if "response_format" in request_properties:
+                        return response.choices[0].message.parsed
+                    else:
+                        return {"response": response.choices[0].message.content}
                 else:
                     return {"error": "No valid response content found"}
             except Exception as e:
