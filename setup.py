@@ -17,13 +17,15 @@ setup(
         'anyconfig>=0.14.0',
         'pyyaml>=6.0.2',
         'contextvars>=2.4',
-        "pydantic>=2.10.4",
+        "pydantic>=2.10.4"
     ],
     extras_require={
         'test': [
             'pytest>=8.3.4',
             'psutil>=6.1.1',
             'pytest-asyncio>=0.25.1',
+        "aiofiles>=24.1.0",
+        "aiohttp>=3.11.12"
         ],
         'dev': [
         ],
