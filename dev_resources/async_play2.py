@@ -1,63 +1,58 @@
 import asyncio
-import sys
-from abc import ABC, abstractmethod
-from contextlib import asynccontextmanager
-from contextvars import ContextVar
-from typing import Any, Dict, Optional, Type, Union
+import time
+from collections import deque
 
-import jobchain.jc_logging as logging
-from jobchain.job import Task, create_job_graph
-from jobchain.utils import timing_decorator
+from jobchain.taskmanager import TaskManager
 
 
-class AsyncPlay:
+async def sample_task():
+    """A simple async task that sleeps briefly and returns."""
+    await asyncio.sleep(0.1)  # Simulate light async work
+    return "ok"
 
-    def __init__(self):
-      self.name:str = "AsyncPlay"
-      self.expected_inputs:set[str] = set()
-      self.next_jobs:list[JobABC] = [] 
-      self.timeout = 3000
-      self.input_event = asyncio.Event()
-      self.execution_started = False
-      self.inputs:dict = {}
-
-    async def receive_input(self, from_job: str, data: Dict[str, Any]) -> None:
+def test_concurrency():
+    task_manager = TaskManager()
+    concurrency_levels = [10, 50, 100, 500, 1000, 3000, 5000, 10000, 20000]
+    
+    print("Starting concurrency tests...")
+    
+    for n in concurrency_levels:
+        # Capture initial state before submitting new tasks
+        initial_counts = task_manager.get_counts()
+        initial_processed = initial_counts['completed'] + initial_counts['errors']
         
-        if self.expected_inputs.issubset(set(self.inputs.keys())):
-            self.input_event.set()
+        # Submit N tasks
+        submit_start = time.time()
+        for _ in range(n):
+            task_manager.submit(sample_task)
+        submit_time = time.time() - submit_start
+        
+        print(f"\nSubmitted {n} tasks in {submit_time:.3f}s. Waiting for completion...")
+        
+        # Track processing time
+        processing_start = time.time()
+        last_reported = time.time()
+        while True:
+            current = task_manager.get_counts()
+            current_processed = current['completed'] + current['errors']
+            target_processed = initial_processed + n
+            
+            # Periodically log progress to avoid appearing frozen
+            if time.time() - last_reported > 5:  # Log every 5 seconds
+                elapsed = time.time() - processing_start
+                print(f"  Waiting... {elapsed:.1f}s elapsed. Processed: {current_processed - initial_processed}/{n}")
+                last_reported = time.time()
+            
+            if current_processed >= target_processed:
+                total_time = time.time() - processing_start
+                # Calculate errors specific to this test batch
+                errors_in_test = current['errors'] - initial_counts['errors']
+                print(f"Concurrency {n}: Processed {n} tasks in {total_time:.3f}s. Errors: {errors_in_test}")
+                break
+            
+            time.sleep(0.1)  # Avoid high CPU usage while waiting
+    
+    print("\nConcurrency test completed.")
 
-    async def execute(self, task):
-      
-      result = await self.run(task)
-      return result
-  
-    async def run(self, task: dict) -> Dict:
-      await asyncio.sleep(1)
-      print(f"Finished {task}")
-      return {"task": task}
-
-# Using create_task() for concurrency
-
-async def run_tasks():
-    results = [None, "a string",None]
-    if any(results):
-        end_result = results[0]
-    return end_result
-
-# Using asyncio.run() as entry point
-@timing_decorator
-def main():
-    result = asyncio.run(run_tasks())
-    print(result)
-
-@timing_decorator
-def test():
-    asyncio.run(test_simple_graph())
-
-if __name__ == '__main__':
-  if len(sys.argv) > 1 and sys.argv[1] == 'main':
-    main()
-#   elif len(sys.argv) > 1 and sys.argv[1] == 'test':
-#     test()
-  else:
-    print("Usage: python async_play.py [main]")
+if __name__ == "__main__":
+    test_concurrency()
