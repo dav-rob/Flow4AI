@@ -198,6 +198,7 @@ class JobFactory:
 
     @classmethod
     def get_head_jobs_from_config(cls) -> Collection[JobABC]:
+        JobFactory.load_python_into_registries(ConfigLoader.directories)
         """Create job graphs from configuration, using cache if available"""
         if cls._cached_job_graphs is None:
             job_graphs: list[JobABC] = []
