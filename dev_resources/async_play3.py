@@ -6,6 +6,7 @@ import openai
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
+from jobchain.job_loader import ConfigLoader, JobFactory
 from jobchain.taskmanager import TaskManager
 
 
@@ -54,6 +55,8 @@ async def failing_db_query():
     raise ConnectionError("Database connection timed out")
 
 if __name__ == "__main__":
+    test_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../tests/test_configs/test_pydantic_config"))
+    ConfigLoader._set_directories([str(test_config_dir)])  # Convert to string for anyconfig
     manager = TaskManager()
     
     # Submit all tasks

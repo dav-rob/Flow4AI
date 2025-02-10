@@ -4,6 +4,8 @@ from collections import deque
 
 import jobchain.jc_logging as logging
 
+from .job_loader import JobFactory
+
 
 class TaskManager:
     _instance = None
@@ -28,6 +30,7 @@ class TaskManager:
         self.loop = asyncio.new_event_loop()
         self.thread = threading.Thread(target=self._run_loop, daemon=True)
         self.thread.start()
+        self.head_jobs = JobFactory.get_head_jobs_from_config()
 
         self.submitted_count = 0
         self.completed_count = 0
