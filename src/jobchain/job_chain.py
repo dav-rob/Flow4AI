@@ -384,10 +384,11 @@ class JobChain:
                     if not job_name:
                         raise ValueError("Task missing job_name when multiple jobs are present")
                     job = job_map[job_name]
-                job_set = JobABC.job_set(job)
+                job_set = JobABC.job_set(job) #TODO: create a map of job to jobset in _async_worker
                 async with job_graph_context_manager(job_set):
                     result = await job._execute(task)
                     logger.info(f"[TASK_TRACK] Completed task {task_id}, returned by job {result[JobABC.RETURN_JOB]}")
+
                     result_queue.put(result)
                     logger.debug(f"[TASK_TRACK] Result queued for task {task_id}")
             except Exception as e:
