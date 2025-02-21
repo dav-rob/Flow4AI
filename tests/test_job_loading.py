@@ -530,7 +530,7 @@ async def test_malformed_configuration():
     assert "Configuration is malformed" in error_msg
     assert "test_malformed_config_params/parameters.yaml" in error_msg
 
-@pytest.mark.skip("Skipping test due to working yet")
+#@pytest.mark.skip("Skipping test due to working yet")
 @pytest.mark.asyncio
 async def test_pydantic_jobs_in_jobchain_serial():
     """Test that head jobs from config can be executed in JobChain with serial processing"""

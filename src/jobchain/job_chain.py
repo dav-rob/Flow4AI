@@ -14,7 +14,7 @@ from .job import JobABC, SimpleJobFactory, Task, job_graph_context_manager
 from .job_loader import ConfigLoader, JobFactory
 from .utils.monitor_utils import should_log_task_stats
 from .utils.print_utils import printh
-
+from pydantic import BaseModel
 
 class JobChain:
     """
@@ -339,6 +339,21 @@ class JobChain:
                     break
                 continue
 
+    @staticmethod
+    def _replace_pydantic_models(data: Any) -> Any:
+        """Recursively replace pydantic.BaseModel instances with their JSON dumps."""
+        logger = logging.getLogger('JobChain')
+        logger.debug(f'Processing data type: {type(data)}')
+
+        if isinstance(data, dict):
+            return {k: JobChain._replace_pydantic_models(v) for k, v in data.items()}
+        elif isinstance(data, list):
+            return [JobChain._replace_pydantic_models(item) for item in data]
+        elif isinstance(data, BaseModel):
+            logger.info(f'Converting pydantic model {data.__class__.__name__}')
+            return data.model_dump_json()
+        return data
+
     # Must be static because it's passed as a target to multiprocessing.Process
     # Instance methods can't be pickled properly for multiprocessing
     @staticmethod
@@ -386,9 +401,10 @@ class JobChain:
                 job_set = JobABC.job_set(job) #TODO: create a map of job to jobset in _async_worker
                 async with job_graph_context_manager(job_set):
                     result = await job._execute(task)
-                    logger.info(f"[TASK_TRACK] Completed task {task_id}, returned by job {result[JobABC.RETURN_JOB]}")
+                    processed_result = JobChain._replace_pydantic_models(result)
+                    logger.info(f"[TASK_TRACK] Completed task {task_id}, returned by job {processed_result[JobABC.RETURN_JOB]}")
 
-                    result_queue.put(result)
+                    result_queue.put(processed_result)
                     logger.debug(f"[TASK_TRACK] Result queued for task {task_id}")
             except Exception as e:
                 logger.error(f"[TASK_TRACK] Failed task {task_id}: {e}")
