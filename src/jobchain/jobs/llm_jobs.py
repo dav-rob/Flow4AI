@@ -11,7 +11,7 @@ from jobchain.job_loader import JobFactory
 from jobchain.utils.llm_utils import (check_response_errors,
                                       validate_and_clean_prompt)
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("OpenAIJob")
 
 class OpenAIClient:
     """
