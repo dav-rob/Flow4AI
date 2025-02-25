@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from . import jc_logging as logging
 from .jc_graph import validate_graph
-from .job import JobABC, create_job_graph
+from .job import JobABC
 
 logger = logging.getLogger(__name__)
 
@@ -118,8 +118,8 @@ class PythonLoader:
 
 
 class JobFactory:
-    _job_types: Dict[str, Type[JobABC]] = {}
-    _pydantic_types: Dict[str, Type[BaseModel]] = {}
+    _job_types_registry: Dict[str, Type[JobABC]] = {}
+    _pydantic_types_registry: Dict[str, Type[BaseModel]] = {}
     # Default jobs directory is always checked first
     _default_jobs_dir: str = os.path.join(os.path.dirname(__file__), "jobs") # site-package directory when this is a package
     _cached_job_graphs: List[JobABC] = None
@@ -171,7 +171,7 @@ class JobFactory:
 
     @classmethod
     def create_job(cls, name: str, job_type: str, job_def: Dict[str, Any]) -> JobABC:
-        if job_type not in cls._job_types:
+        if job_type not in cls._job_types_registry:
             logger.error(f"*** Unknown job type: {job_type} ***")
             raise ValueError(f"Unknown job type: {job_type}")
         
@@ -179,23 +179,23 @@ class JobFactory:
         if not properties:
             logger.info(f"No properties specified for job {name} of type {job_type}")
             
-        return cls._job_types[job_type](name, properties)
+        return cls._job_types_registry[job_type](name, properties)
 
     @classmethod
     def register_job_type(cls, type_name: str, job_class: Type[JobABC]):
-        cls._job_types[type_name] = job_class
+        cls._job_types_registry[type_name] = job_class
 
     @classmethod
     def register_pydantic_type(cls, type_name: str, model_class: Type[BaseModel]):
         """Register a Pydantic model type with the factory"""
-        cls._pydantic_types[type_name] = model_class
+        cls._pydantic_types_registry[type_name] = model_class
 
     @classmethod
     def get_pydantic_class(cls, type_name: str) -> Type[BaseModel]:
         """Retrieve a registered Pydantic model class by its type name."""
-        if type_name not in cls._pydantic_types:
+        if type_name not in cls._pydantic_types_registry:
             raise ValueError(f"Pydantic type {type_name} not registered.")
-        return cls._pydantic_types[type_name]
+        return cls._pydantic_types_registry[type_name]
 
     @classmethod
     def get_head_jobs_from_config(cls) -> Collection[JobABC]:
@@ -225,20 +225,20 @@ class JobFactory:
     def create_job_graph_using_parameters(cls, graph_def, graph_name, param_groups_for_graph_name,
                                           job_names_in_graph) -> List[JobABC]:
         job_graphs: list[JobABC] = []
-        params_for_graph_name = list(param_groups_for_graph_name.keys())
-        for param_name in params_for_graph_name:
+        parameter_names_list = list(param_groups_for_graph_name.keys())
+        for parameter_name in parameter_names_list:
             job_instances: dict[str, JobABC] = {}
             for graph_job_name in job_names_in_graph:
                 raw_job_def: Dict[str, Any] = ConfigLoader.get_jobs_config()[graph_job_name]
                 if ConfigLoader.is_parameterized_job(raw_job_def):
-                    job_def: Dict[str, Any] = ConfigLoader.fill_job_with_parameters(raw_job_def, graph_name, param_name)
+                    job_def: Dict[str, Any] = ConfigLoader.fill_job_with_parameters(raw_job_def, graph_name, parameter_name)
                 else:
                     job_def = raw_job_def
-                unique_job_name = graph_name + "$$" + param_name + "$$" + graph_job_name + "$$"
+                unique_job_name = graph_name + "$$" + parameter_name + "$$" + graph_job_name + "$$"
                 job_type: str = job_def["type"]
                 job: JobABC = cls.create_job(unique_job_name, job_type, job_def)
                 job_instances[graph_job_name] = job
-            job_graph: JobABC = create_job_graph(graph_def, job_instances)
+            job_graph: JobABC = cls.create_job_graph(graph_def, job_instances)
             job_graphs.append(job_graph)
         return job_graphs
 
@@ -251,8 +251,67 @@ class JobFactory:
                 job_type: str = job_def["type"]
                 job: JobABC = cls.create_job(unique_job_name, job_type, job_def)
                 job_instances[graph_job_name] = job
-        job_graph: JobABC = create_job_graph(graph_def, job_instances)
+        job_graph: JobABC = cls.create_job_graph(graph_def, job_instances)
         return job_graph
+
+    @classmethod
+    def create_job_graph(cls, graph_definition: dict[str, dict], job_instances: dict[str, JobABC]) -> JobABC:
+        """
+        graph definition defines the job graph and looks like this:
+
+        graph_definition: dict[str, Any] = {
+            "A": {"next": ["B", "C"]},
+            "B": {"next": ["D"]},
+            "C": {"next": ["D"]},
+            "D": {"next": []},
+        }
+
+        job instances are a dictionary of job instances in the job graph and looks like this:
+
+        job_instances: dict[str, JobABC] = {
+            "A": SimpleJob("A"),
+            "B": SimpleJob("B"),
+            "C": SimpleJob("C"),
+            "D": SimpleJob("D"),
+        }
+        
+        """
+    
+        nodes:dict[str, JobABC] = {} # nodes holds Jobs which will be hydrated with next_jobs 
+                                    # and expected_inputs fields from the graph_definition.
+        for job_name in graph_definition:
+            job_obj = job_instances[job_name]
+            nodes[job_name] = job_obj
+
+        # determine the incoming edges i.e the Jobs that each Job depends on
+        # so we can determine the head node ( which depends on no Jobs) 
+        # and set the expected_inputs (i.e. the dependencies) for each Job.
+        incoming_edges: dict[str, set[str]] = {job_name: set() for job_name in graph_definition}
+        for job_name, config in graph_definition.items():
+            for next_job_name in config['next']:
+                incoming_edges[next_job_name].add(job_name)
+        
+        # 1) Find the head node (node with no incoming edges)
+        head_job_name = next(job_name for job_name, inputs in incoming_edges.items() 
+                        if not inputs)
+
+        # 2) Set next_jobs for each node
+        for job_name, config in graph_definition.items():
+            nodes[job_name].next_jobs = [nodes[next_name] for next_name in config['next']]
+
+        # 3) Set expected_inputs for each node using fully qualified names
+        for job_name, input_job_names_set in incoming_edges.items():
+            if input_job_names_set:  # if node has incoming edges
+                # Transform short names to fully qualified names using the job_instances dictionary
+                nodes[job_name].expected_inputs = {job_instances[input_name].name for input_name in input_job_names_set}
+
+        # 4) Set reference to final node in head node -- not needed!
+        # Find node with no next jobs
+        # final_job_name = next(job_name for job_name, config in graph_definition.items() 
+        #                    if not config['next'])
+        # nodes[head_job_name].final_node = nodes[final_job_name]
+
+        return nodes[head_job_name]
 
 
 class ConfigLoader:
@@ -263,7 +322,7 @@ class ConfigLoader:
     directories: List[str] = [
         os.path.join(os.getcwd(), "jobchain"),  # jobchain directory in current working directory
         os.path.join(os.path.expanduser("~"), "jobchain"),  # ~/jobchain
-        "/etc/jobchain"  
+        "/etc/jobchain"
     ]
     _cached_configs: Dict[str, dict] = None
 
@@ -615,14 +674,14 @@ class ConfigLoader:
         return len(params) > 0
 
     @classmethod
-    def fill_job_with_parameters(cls, job_config: dict, graph_name: str, param_group: str) -> dict:
+    def fill_job_with_parameters(cls, job_config: dict, graph_name: str, parameter_name: str) -> dict:
         """
         Fill a job configuration with parameters from parameters.yaml.
         
         Args:
             job_config: Raw job configuration from jobs.yaml
             graph_name: Name of the graph containing the job
-            param_group: Name of the parameter group to use
+            parameter_name: Name of the parameter group to use
             
         Returns:
             dict: Job configuration with parameters filled in
@@ -633,23 +692,23 @@ class ConfigLoader:
         
         # Get parameters for this job from parameters.yaml
         params_config = cls.get_parameters_config()
-        if graph_name not in params_config or param_group not in params_config[graph_name]:
-            raise ValueError(f"No parameters found for graph '{graph_name}' and group '{param_group}'")
+        if graph_name not in params_config or parameter_name not in params_config[graph_name]:
+            raise ValueError(f"No parameters found for graph '{graph_name}' and parameter group '{parameter_name}'")
             
         # Get the job name by finding which job in the parameters matches this config
         job_name = None
-        for job in params_config[graph_name][param_group].keys():
+        for job in params_config[graph_name][parameter_name].keys():
             if job_config == cls.get_jobs_config()[job]:
                 job_name = job
                 break
                 
         if job_name is None:
-            raise ValueError(f"Could not find job in parameters for graph '{graph_name}' and group '{param_group}'")
+            raise ValueError(f"Could not find job in parameters for graph '{graph_name}' and group '{parameter_name}'")
             
         # Get parameter values for this job
-        param_sets = params_config[graph_name][param_group][job_name]
+        param_sets = params_config[graph_name][parameter_name][job_name]
         if not param_sets or not isinstance(param_sets, list):
-            raise ValueError(f"Invalid parameter sets for job '{job_name}' in graph '{graph_name}', group '{param_group}'")
+            raise ValueError(f"Invalid parameter sets for job '{job_name}' in graph '{graph_name}', group '{parameter_name}'")
             
         # Use the first parameter set (as defined in the spec)
         param_values = param_sets[0]
