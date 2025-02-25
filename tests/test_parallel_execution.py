@@ -65,12 +65,11 @@ async def run_job_chain(time_delay: float, use_direct_job: bool = False) -> floa
     else:
         # Use traditional dictionary initialization
         job_chain_context = {
-            "job_context": {
                 "type": "file",
                 "params": {"time_delay": time_delay}
             }
-        }
-        job_chain = JobChain(job_chain_context, dummy_result_processor)
+        loaded_job = SimpleJobFactory.load_job(job_chain_context)
+        job_chain = JobChain(loaded_job, dummy_result_processor)
 
     # Feed 10 tasks with a delay between each to simulate data gathering
     for i in range(10):
@@ -136,13 +135,11 @@ async def run_batch_job_chain() -> float:
     start_time = time.perf_counter()
     
     job_chain_context = {
-        "job_context": {
-            "type": "file",
-            "params": {"time_delay": 0.70}
-        }
+        "type": "file",
+        "params": {"time_delay": 0.70}
     }
-
-    job_chain = JobChain(job_chain_context, dummy_result_processor)
+    loaded_job = SimpleJobFactory.load_job(job_chain_context)
+    job_chain = JobChain(loaded_job, dummy_result_processor)
 
     # Process 4 batches of 25 links each
     for batch in range(4):
@@ -198,12 +195,12 @@ async def run_traced_job_chain(time_delay: float) -> float:
     
     # Use traditional dictionary initialization
     job_chain_context = {
-        "job_context": {
-            "type": "file",
-            "params": {"time_delay": time_delay}
-        }
+        "type": "file",
+        "params": {"time_delay": time_delay}
     }
-    job_chain = JobChain(job_chain_context, dummy_result_processor)
+    # Load job from context
+    loaded_job = SimpleJobFactory.load_job(job_chain_context)
+    job_chain = JobChain(loaded_job, dummy_result_processor)
 
     # Feed 10 tasks with a delay between each to simulate data gathering
     for i in range(10):
