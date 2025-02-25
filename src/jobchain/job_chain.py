@@ -9,12 +9,13 @@ from collections import OrderedDict
 from multiprocessing import freeze_support, set_start_method
 from typing import Any, Callable, Collection, Dict, Optional, Union
 
+from pydantic import BaseModel
+
 from . import jc_logging as logging
-from .job import JobABC, SimpleJobFactory, Task, job_graph_context_manager
+from .job import JobABC, Task, job_graph_context_manager
 from .job_loader import ConfigLoader, JobFactory
 from .utils.monitor_utils import should_log_task_stats
-from .utils.print_utils import printh
-from pydantic import BaseModel
+
 
 class JobChain:
     """
@@ -78,10 +79,11 @@ class JobChain:
 
     def create_job_map(self, job):
         if isinstance(job, Dict):
-            job_context: Dict[str, Any] = job.get("job_context") or {}
-            loaded_job = SimpleJobFactory.load_job(job_context)
-            if isinstance(loaded_job, JobABC):
-                self.job_map[loaded_job.name] = loaded_job
+            pass # SimpleJobFactory is deprecated
+            # job_context: Dict[str, Any] = job.get("job_context") or {}
+            # loaded_job = SimpleJobFactory.load_job(job_context)
+            # if isinstance(loaded_job, JobABC):
+            #     self.job_map[loaded_job.name] = loaded_job
         elif isinstance(job, JobABC):
             self.job_map[job.name] = job
         elif isinstance(job, Collection) and not isinstance(job, (str, bytes, bytearray)):
