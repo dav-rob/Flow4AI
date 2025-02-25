@@ -8,9 +8,9 @@ import yaml
 
 from jobchain import jc_logging as logging
 from jobchain.job import JobABC
-from tests.test_utils.simple_job import SimpleJobFactory
 from jobchain.job_chain import JobChain
 from jobchain.utils.otel_wrapper import TracerFactory
+from tests.test_utils.simple_job import SimpleJobFactory
 
 # Configure logging
 logging.basicConfig(level=logging.INFO,
@@ -60,13 +60,11 @@ async def run_parallel_load_test(num_tasks: int) -> float:
     start_time = time.perf_counter()
     
     job_chain_context = {
-        "job_context": {
             "type": "file",
             "params": {"time_delay": 0.01}  # Very small delay for load testing
         }
-    }
-
-    job_chain = JobChain(job_chain_context, dummy_result_processor)
+    loaded_job = SimpleJobFactory.load_job(job_chain_context)
+    job_chain = JobChain(loaded_job, dummy_result_processor)
 
     # Submit all tasks immediately
     for i in range(num_tasks):
@@ -89,13 +87,11 @@ async def run_sustained_load_test(tasks_per_second: int, duration: int) -> tuple
         tuple[float, float]: (average_latency, max_latency) in seconds
     """
     job_chain_context = {
-        "job_context": {
-            "type": "file",
-            "params": {"time_delay": 0.05}  # 50ms baseline processing time
-        }
+        "type": "file",
+        "params": {"time_delay": 0.05}  # 50ms baseline processing time
     }
-
-    job_chain = JobChain(job_chain_context, dummy_result_processor)
+    loaded_job = SimpleJobFactory.load_job(job_chain_context)
+    job_chain = JobChain(loaded_job, dummy_result_processor)
     
     start_time = time.perf_counter()
     latencies = []
