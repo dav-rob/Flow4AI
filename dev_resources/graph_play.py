@@ -31,24 +31,31 @@ data = yaml.safe_load(yaml_data)
 
 print("Level 1: data.items()")
 for key, value in data.items():
-    print(f"  Key: {key}, Value: {value}")
+    print(f"  Key: {key}, \nValue: {value}")
+print()
+print("Level 1: data.keys()")
+print(data.keys())
 print()
 # --- Level 2:  Accessing 'four_stage_parameterized' dict and its items ---
 four_stage_params = data['four_stage_parameterized']
 print("Level 2: four_stage_params.items()")
 for key, value in four_stage_params.items():
-    print(f"  Key: {key}, Value: {value}")
+    print(f"  Key: {key}, \nValue: {value}")
 print()
-
+print("Level 2: four_stage_params.keys()")  
+print(four_stage_params.keys())
+print()
 
 # --- Level 3: Accessing 'params1' inside 'four_stage_parameterized'  ---
 
 params1 = four_stage_params['params1']
 print("Level 3: params1.items()")
 for key, value in params1.items():
-    print(f"  Key: {key}, Value: {value}")
+    print(f"  Key: {key}, \nValue: {value}")
 print()
-
+print("Level 3: params1.keys()")
+print(params1.keys())
+print()
 # --- Level 4: Accessing the inner dict for 'ask_llm' inside 'params1' (it contains a list) ---
 ask_llm = params1['ask_llm']
 print("Level 4: ask_llm (list). This is a list, not a dict.  Accessing the first element (a dict) directly.")
