@@ -25,7 +25,7 @@ def job_factory():
 def test_job_type_registration(job_factory):
     """Test that all expected job types are registered"""
     # Get all registered job types
-    job_types = job_factory._job_types
+    job_types = job_factory._job_types_registry
     
     # Expected job types from test directory
     assert "MockJob" in job_types, "MockJob should be registered"
@@ -44,7 +44,7 @@ def test_pydantic_type_registration(job_factory):
     JobFactory.load_python_into_registries([test_config_dir])
     
     # Get all registered pydantic types
-    pydantic_types = job_factory._pydantic_types
+    pydantic_types = job_factory._pydantic_types_registry
     
     # Expected pydantic models from test directory
     assert "UserProfile" in pydantic_types, "UserProfile model should be registered"
@@ -80,8 +80,8 @@ async def test_job_instantiation_and_execution(job_factory):
 async def test_openai_job_instantiation_and_execution(job_factory):
     """Test that OpenAIJob can be instantiated and run"""
     # Get the OpenAIJob class from the registry
-    assert "OpenAIJob" in job_factory._job_types, "OpenAIJob should be registered"
-    OpenAIJobClass = job_factory._job_types["OpenAIJob"]
+    assert "OpenAIJob" in job_factory._job_types_registry, "OpenAIJob should be registered"
+    OpenAIJobClass = job_factory._job_types_registry["OpenAIJob"]
     
     openai_job = job_factory.create_job(
         name="test_openai_job",
