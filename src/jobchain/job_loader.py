@@ -489,15 +489,15 @@ class ConfigLoader:
                     raise TypeError(f"Job '{job_name}' configuration must be a dictionary")
                 
             current_config = 'graphs'
-            for graph_name, graph_def in graphs_config.items():
+            for graph_name, graph_definition in graphs_config.items():
                 # Validate graph structure (no cycles, etc)
                 print(f"\nChecking {graph_name} for cycles...")
-                cls._validate_graph_structure(graph_def, defined_jobs, graph_name)
+                cls._validate_graph_structure(graph_definition, defined_jobs, graph_name)
                 print("No cycles detected")
 
                 # Find all parameterized jobs in this graph
                 graph_parameterized_jobs = {}
-                for job_name in graph_def.keys():
+                for job_name in graph_definition.keys():
                     job_config = jobs_config[job_name]
                     params = cls._find_parameterized_fields(job_config)
                     if params:
@@ -510,33 +510,33 @@ class ConfigLoader:
                         raise ValueError(
                             f"Graph '{graph_name}' contains parameterized jobs {list(graph_parameterized_jobs.keys())} but has no entry in parameters configuration")
 
-                    graph_params = parameters_config[graph_name]
+                    parameters_for_graph = parameters_config[graph_name]
 
                     # Validate parameter groups
-                    for group_name in graph_params.keys():
-                        if not group_name.startswith('params'):
+                    for param_name in parameters_for_graph.keys():
+                        if not param_name.startswith('params'):
                             raise ValueError(
-                                f"Invalid parameter group name '{group_name}' in graph '{graph_name}'. Parameter groups must start with 'params'")
+                                f"Invalid parameter group name '{param_name}' in graph '{graph_name}'. Parameter groups must start with 'params'")
 
                     # Validate that all parameters are filled for each group
-                    for group_name, group_params in graph_params.items():
+                    for param_name, parameterized_jobs in parameters_for_graph.items():
                         for job_name, required_params in graph_parameterized_jobs.items():
-                            if job_name not in group_params:
+                            if job_name not in parameterized_jobs:
                                 raise ValueError(
-                                    f"Job '{job_name}' in graph '{graph_name}' requires parameters {required_params} but has no entry in parameter group '{group_name}'")
+                                    f"Job '{job_name}' in graph '{graph_name}' requires parameters {required_params} but has no entry in parameter group '{param_name}'")
 
                             # Each job should have a list of parameter sets
-                            job_param_sets = group_params[job_name]
+                            job_param_sets = parameterized_jobs[job_name]
                             if not isinstance(job_param_sets, list):
                                 raise ValueError(
-                                    f"Parameters for job '{job_name}' in graph '{graph_name}', group '{group_name}' should be a list of parameter sets")
+                                    f"Parameters for job '{job_name}' in graph '{graph_name}', group '{param_name}' should be a list of parameter sets")
 
                             # Validate each parameter set
                             for param_set in job_param_sets:
                                 missing_params = required_params - set(param_set.keys())
                                 if missing_params:
                                     raise ValueError(
-                                        f"Parameter set for job '{job_name}' in graph '{graph_name}', group '{group_name}' is missing required parameters: {missing_params}")
+                                        f"Parameter set for job '{job_name}' in graph '{graph_name}', group '{param_name}' is missing required parameters: {missing_params}")
 
                 print(f"Graph {graph_name} passed all validations")
 
