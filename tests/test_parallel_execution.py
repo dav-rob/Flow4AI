@@ -14,7 +14,8 @@ import time
 import yaml
 
 from jobchain import jc_logging as logging
-from jobchain.job import JobABC, SimpleJobFactory
+from jobchain.job import JobABC
+from tests.test_utils.simple_job import SimpleJobFactory
 from jobchain.job_chain import JobChain
 from jobchain.utils.otel_wrapper import TracerFactory
 

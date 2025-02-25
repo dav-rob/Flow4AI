@@ -106,7 +106,7 @@ def test_decorator_preserves_method_signature():
 
 def test_job_factory_returns_untraced_jobs():
     """Test that JobFactory returns properly untraced Job instances"""
-    from jobchain.job import SimpleJobFactory
+    from tests.test_utils.simple_job import SimpleJobFactory
 
     # Test file-based job loading
     file_job = SimpleJobFactory.load_job({"type": "file", "params": {}})
@@ -197,7 +197,7 @@ def test_decorator_preserves_method_signature():
 
 def test_job_factory_returns_untraced_jobs():
     """Test that JobFactory returns properly untraced Job instances"""
-    from jobchain.job import SimpleJobFactory
+    from tests.test_utils.simple_job import SimpleJobFactory
 
     # Test file-based job loading
     file_job = SimpleJobFactory.load_job({"type": "file", "params": {}})
