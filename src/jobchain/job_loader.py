@@ -9,6 +9,7 @@ import yaml
 from pydantic import BaseModel
 
 from . import jc_logging as logging
+from .jc_graph import validate_graph
 from .job import JobABC, create_job_graph
 
 logger = logging.getLogger(__name__)
@@ -494,6 +495,7 @@ class ConfigLoader:
                 print(f"\nChecking {graph_name} for cycles...")
                 cls._validate_graph_structure(graph_definition, defined_jobs, graph_name)
                 print("No cycles detected")
+                validate_graph(graph_definition, graph_name)
 
                 # Find all parameterized jobs in this graph
                 graph_parameterized_jobs = {}
