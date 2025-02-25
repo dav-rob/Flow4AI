@@ -1,5 +1,6 @@
-from jobchain.job import JobABC, SimpleJob
+from jobchain.job import JobABC
 from jobchain.job_chain import JobChain
+from tests.test_utils.simple_job import SimpleJob
 
 
 class AsyncTestJob(JobABC):
