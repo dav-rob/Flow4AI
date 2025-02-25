@@ -8,10 +8,9 @@ from typing import Any, Dict
 import pytest
 
 import jobchain.jc_logging as logging
-from jobchain.job import (JobABC, Task, create_job_graph,
-                          job_graph_context_manager)
+from jobchain.job import JobABC, Task, job_graph_context_manager
 from jobchain.job_chain import JobChain
-from jobchain.job_loader import ConfigLoader
+from jobchain.job_loader import ConfigLoader, JobFactory
 
 
 def returns_collector(shared_results, result):
@@ -117,7 +116,7 @@ graph_definition1 = {
 
 @pytest.mark.asyncio
 async def test_simple_graph():
-    head_job:JobABC = create_job_graph(graph_definition1, jobs)
+    head_job:JobABC = JobFactory.create_job_graph(graph_definition1, jobs)
     job_set = JobABC.job_set(head_job)
     # Create 50 tasks to run concurrently
     tasks = []

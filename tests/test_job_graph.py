@@ -2,9 +2,9 @@ import asyncio
 import time
 from typing import Any, Dict
 
-from jobchain.job import (JobABC, Task, create_job_graph,
-                          job_graph_context_manager)
+from jobchain.job import JobABC, Task, job_graph_context_manager
 from jobchain.job_chain import JobChain
+from jobchain.job_loader import JobFactory
 
 
 class MockJob(JobABC):
@@ -223,7 +223,7 @@ graph_definition_complex = {
 }
 
 async def execute_graph(graph_definition: dict, jobs: dict, data: dict) -> Any:
-    head_job = create_job_graph(graph_definition, jobs)
+    head_job = JobFactory.create_job_graph(graph_definition, jobs)
     job_set = JobABC.job_set(head_job)
     async with job_graph_context_manager(job_set):
         final_result = await head_job._execute(Task(data))
@@ -239,7 +239,7 @@ def test_execute_graph1():
         }
 
 def test_job_set():
-    head_job = create_job_graph(graph_definition1, jobs)
+    head_job = JobFactory.create_job_graph(graph_definition1, jobs)
     job_set = head_job.job_set_str()
     assert job_set == {'A', 'B', 'C', 'D'}
 
@@ -276,7 +276,7 @@ def test_complex_job_set():
         \     /
           J
     """
-    head_job = create_job_graph(graph_definition_complex, jobs)
+    head_job = JobFactory.create_job_graph(graph_definition_complex, jobs)
     job_set = head_job.job_set_str()
     expected_jobs = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'}
     assert job_set == expected_jobs, f"Expected {expected_jobs}, but got {job_set}"
@@ -295,7 +295,7 @@ def test_complex_job_set_instances():
         \     /
           J
     """
-    head_job = create_job_graph(graph_definition_complex, jobs)
+    head_job = JobFactory.create_job_graph(graph_definition_complex, jobs)
     job_instances = JobABC.job_set(head_job)
     
     # Verify we got the correct number of instances
