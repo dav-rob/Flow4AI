@@ -8,8 +8,7 @@ from openai import AsyncOpenAI
 import jobchain.jc_logging as logging
 from jobchain.job import JobABC
 from jobchain.job_loader import JobFactory
-from jobchain.utils.llm_utils import (check_response_errors,
-                                      validate_and_clean_prompt)
+from jobchain.utils.llm_utils import check_response_errors, clean_prompt
 
 logger = logging.getLogger("OpenAIJob")
 
@@ -191,7 +190,7 @@ class OpenAIJob(JobABC):
         if isinstance(task, dict):
             # If task has a prompt, convert it to messages format
             if "prompt" in task:
-                prompt = validate_and_clean_prompt(task["prompt"])
+                prompt = clean_prompt(task["prompt"])
                 request_properties["messages"] = [
                     {"role": "system", "content": "You are a helpful assistant"},
                     {"role": "user", "content": prompt}
@@ -204,7 +203,7 @@ class OpenAIJob(JobABC):
             # request_properties.update({k: v for k, v in task.items() if k not in ["prompt", "messages"]})
         elif task:  # If task is not empty and not a dict
             # If task is not a dict, treat it as the prompt
-            prompt = validate_and_clean_prompt(str(task))
+            prompt = clean_prompt(str(task))
             request_properties["messages"] = [
                 {"role": "system", "content": "You are a helpful assistant"},
                 {"role": "user", "content": prompt}

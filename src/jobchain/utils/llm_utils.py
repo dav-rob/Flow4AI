@@ -10,7 +10,7 @@ def clean_prompt(text):
     return ''.join(char for char in text if char in string.printable)
 
 
-def validate_and_clean_prompt(text):
+def clean_prompt(text):
     if not isinstance(text, str):
         logger.error("Input must be a string")
         raise ValueError("Input must be a string")
