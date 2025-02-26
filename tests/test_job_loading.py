@@ -15,14 +15,14 @@ from jobchain.jobs.llm_jobs import OpenAIJob
 TEST_CONFIG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config"))
 
 @pytest.fixture
-def job_factory():
+def job_factory() -> JobFactory:
     factory = JobFactory()
     # Load both the test jobs and the real jobs
     #  the real jobs are always loaded by the factory
     factory.load_python_into_registries([TEST_CONFIG_DIR])
     return factory
 
-def test_job_type_registration(job_factory):
+def test_job_type_registration(job_factory: JobFactory):
     """Test that all expected job types are registered"""
     # Get all registered job types
     job_types = job_factory._job_types_registry
@@ -37,7 +37,7 @@ def test_job_type_registration(job_factory):
     assert "OpenAIJob" in job_types, "OpenAIJob should be registered"
 
 
-def test_pydantic_type_registration(job_factory):
+def test_pydantic_type_registration(job_factory: JobFactory):
     """Test that all expected pydantic models are registered"""
     # Configure JobFactory to use test_pydantic_config directory
     test_config_dir = os.path.join(os.path.dirname(__file__), "test_configs/test_pydantic_config")
@@ -58,7 +58,7 @@ def test_pydantic_type_registration(job_factory):
     assert issubclass(pydantic_types["TaskConfig"], BaseModel)
 
 @pytest.mark.asyncio
-async def test_job_instantiation_and_execution(job_factory):
+async def test_job_instantiation_and_execution(job_factory: JobFactory):
     """Test that jobs can be instantiated and run"""
     # Create a mock job instance
     mock_job = job_factory.create_job(
@@ -77,7 +77,7 @@ async def test_job_instantiation_and_execution(job_factory):
     assert mock_job.name in result
 
 @pytest.mark.asyncio
-async def test_openai_job_instantiation_and_execution(job_factory):
+async def test_openai_job_instantiation_and_execution(job_factory: JobFactory):
     """Test that OpenAIJob can be instantiated and run"""
     # Get the OpenAIJob class from the registry
     assert "OpenAIJob" in job_factory._job_types_registry, "OpenAIJob should be registered"
@@ -191,7 +191,7 @@ def test_config_loader_all():
     for graph_name, graph in graphs_config.items():
         validate_graph(graph, graph_name)
 
-def test_create_head_jobs_from_config(job_factory):
+def test_create_head_jobs_from_config(job_factory: JobFactory):
     """Test that create_head_jobs_from_config creates the correct number of graphs with correct structure"""
     # Set up test config directory
     test_config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config"))
