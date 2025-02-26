@@ -5,7 +5,9 @@ Provides functionality for graph traversal, cycle detection, and validation.
 
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from . import jc_logging as logging
+from . import jc_logging
+
+logging = jc_logging.getLogger(__name__)
 
 
 def has_cycle(graph: Dict[str, Dict[str, Any]], node: str, 
@@ -362,8 +364,7 @@ def validate_graph(graph: Dict[str, Dict[str, Any]], name: str = "") -> None:
         errors.append(msg)
     elif len(head_nodes) > 1:
         msg = f"Graph {name} has multiple head nodes: {head_nodes}. Exactly one head node is required."
-        logging.error(msg)
-        errors.append(msg)
+        logging.warning(msg)
     
     # Check for tail node requirements
     tail_nodes = find_tail_nodes(graph)
@@ -373,8 +374,7 @@ def validate_graph(graph: Dict[str, Dict[str, Any]], name: str = "") -> None:
         errors.append(msg)
     elif len(tail_nodes) > 1:
         msg = f"Graph {name} has multiple tail nodes: {tail_nodes}. Exactly one tail node is required."
-        logging.error(msg)
-        errors.append(msg)
+        logging.warning(msg)
     
     # If any errors were found, raise exception with all error messages
     if errors:

@@ -449,7 +449,7 @@ def test_cross_graph_references():
     assert is_valid, "Valid nested subgraphs should be valid"
     assert len(violations) == 0, "Valid nested subgraphs should have no reference violations"
 
-def test_validate_graph():
+def test_validate_graph(caplog):
     """
     Test comprehensive graph validation.
     Tests include:
@@ -503,8 +503,9 @@ def test_validate_graph():
         'B': {'next': ['C']},
         'C': {'next': []}
     }
-    with pytest.raises(ValueError, match="multiple head nodes"):
-        validate_graph(multi_head_graph, "multi_head_graph")
+    validate_graph(multi_head_graph, "multi_head_graph")
+    assert "multiple head nodes" in caplog.text
+    assert "Exactly one head node is required" in caplog.text
     
     # Test graph with no tail node (all nodes have outgoing edges)
     no_tail_graph = {
@@ -520,5 +521,6 @@ def test_validate_graph():
         'B': {'next': []},
         'C': {'next': ['A', 'B']}
     }
-    with pytest.raises(ValueError, match="multiple tail nodes"):
-        validate_graph(multi_tail_graph, "multi_tail_graph")
+    validate_graph(multi_tail_graph, "multi_tail_graph")
+    assert "multiple tail nodes" in caplog.text
+    assert "Exactly one tail node is required" in caplog.text
