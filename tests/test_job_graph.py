@@ -5,7 +5,7 @@ from typing import Any, Dict
 from jobchain.job import JobABC, Task, job_graph_context_manager
 from jobchain.job_chain import JobChain
 from jobchain.job_loader import JobFactory
-
+from jobchain.jobs.default_jobs import DefaultHeadJob
 
 class MockJob(JobABC):
     def run(self):
@@ -309,3 +309,68 @@ def test_complex_job_set_instances():
     job_names = {job.name for job in job_instances}
     expected_names = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'}
     assert job_names == expected_names, f"Expected jobs named {expected_names}, but got {job_names}"
+
+def test_multiple_head_nodes():
+    """Test that multiple head nodes are handled correctly by creating a DefaultHeadJob."""
+    # Test graph with two independent heads
+    graph_definition = {
+        "A": {"next": ["C"]},
+        "B": {"next": ["C"]},
+        "C": {"next": []}
+    }
+    
+    job_instances = {
+        "A": A("A"),
+        "B": B("B"), 
+        "C": C("C")
+    }
+    
+    # Create job graph
+    head_job = JobFactory.create_job_graph(graph_definition, job_instances)
+    
+    # Verify default head was created and is correct type
+    assert isinstance(head_job, DefaultHeadJob)
+    assert head_job.name in job_instances
+    
+    # Verify graph was updated correctly
+    assert head_job.name in graph_definition
+    assert set(graph_definition[head_job.name]["next"]) == {"A", "B"}
+    
+    # Verify next_jobs were set correctly
+    assert len(head_job.next_jobs) == 2
+    next_job_names = {job.name for job in head_job.next_jobs}
+    assert next_job_names == {"A", "B"}
+
+def test_execute_multiple_head_nodes():
+    """Test execution of a graph with multiple head nodes."""
+    # Create a graph with multiple head nodes
+    graph_definition = {
+        "A": {"next": ["D"]},
+        "B": {"next": ["D"]},
+        "C": {"next": ["D"]},
+        "D": {"next": []}
+    }
+    
+    # Create job instances
+    job_instances = {
+        "A": A("A"),
+        "B": B("B"),
+        "C": C("C"),
+        "D": D("D")
+    }
+    
+    # Execute the graph
+    data = {"input": "test"}
+    final_result = asyncio.run(execute_graph(graph_definition, job_instances, data))
+    
+    # Extract just the job result data, ignoring task_pass_through
+    result_data = {k: v for k, v in final_result.items() if k not in ['task_pass_through', 'RETURN_JOB']}
+    
+    # Verify final job data is returned (only D's data is in the final result)
+    assert result_data == {
+        'dataD1': {},
+        'dataD2': {}
+    }
+    
+    # Verify the RETURN_JOB is D
+    assert final_result['RETURN_JOB'] == 'D'

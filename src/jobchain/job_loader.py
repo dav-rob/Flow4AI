@@ -276,7 +276,7 @@ class JobFactory:
         }
         
         """
-    
+        from jobchain.jobs.default_jobs import DefaultHeadJob
         nodes:dict[str, JobABC] = {} # nodes holds Jobs which will be hydrated with next_jobs 
                                     # and expected_inputs fields from the graph_definition.
         for job_name in graph_definition:
@@ -292,8 +292,23 @@ class JobFactory:
                 incoming_edges[next_job_name].add(job_name)
         
         # 1) Find the head node (node with no incoming edges)
-        head_job_name = next(job_name for job_name, inputs in incoming_edges.items() 
-                        if not inputs)
+        head_jobs = [job_name for job_name, inputs in incoming_edges.items() if not inputs]
+        
+        if len(head_jobs) > 1:
+            # Create default head job with automatic name generation
+            logger.debug(f"Multiple head nodes detected: {head_jobs}. Creating DefaultHeadJob.")
+            default_head = DefaultHeadJob()
+            logger.debug(f"Created DefaultHeadJob with name: {default_head.name}")
+            job_instances[default_head.name] = default_head
+            graph_definition[default_head.name] = {"next": head_jobs}
+            head_job_name = default_head.name
+            
+            # Add the default head job to nodes dictionary
+            nodes[default_head.name] = default_head
+        elif len(head_jobs) == 1:
+            head_job_name = head_jobs[0]
+        else:
+            raise ValueError("No head nodes found in graph definition")
 
         # 2) Set next_jobs for each node
         for job_name, config in graph_definition.items():
