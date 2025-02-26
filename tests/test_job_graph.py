@@ -240,8 +240,8 @@ def test_execute_graph1():
 
 def test_job_set():
     head_job = JobFactory.create_job_graph(graph_definition1, jobs)
-    job_set = head_job.job_set_str()
-    assert job_set == {'A', 'B', 'C', 'D'}
+    job_name_set = head_job.job_set_str()
+    assert job_name_set == {'A', 'B', 'C', 'D'}
 
 def test_execute_graph2():
     final_result2 = asyncio.run(execute_graph(graph_definition2, jobs, data))
