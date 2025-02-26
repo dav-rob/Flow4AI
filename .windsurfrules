@@ -31,6 +31,18 @@ Always read the architecture document in the root folder: ARCHITECTURE.md, befor
 - structure code into functions and classes for modularity and reusability.
 - never delete any of the TODOs or comments that I have put in the code as explainers, unless the code logic or variable names have changed.
 
+## JobABC Implementation Rules
+- NEVER override the `_execute` method in custom job classes. This method is responsible for job graph execution and state management.
+- Always implement the required `run` method in custom job classes to define job-specific behavior.
+- The `run` method should accept a task parameter and return a dictionary with results.
+- Use properties to access configuration parameters rather than directly accessing them in the run method.
+
+## Debugging JobChain Timeout Errors
+When encountering "Timed out waiting for jobs to be loaded" errors in JobChain:
+- Check the stderr output from the JobExecutorProcess for underlying errors
+JobABC subclasses:
+- Always implement all required abstract methods from JobABC in custom job classes
+
 ## Logging
 For logging, use the jobchain.jc_logging module, not the standard logging module.
 - for external files, examples and tests use
@@ -40,4 +52,3 @@ then do
 - for internal files under /src use the relative path import of jc_logging
 - WINDSURF AI AGENT ONLY: set `WINDSURF_LOG_FLAG="DEBUG"` in jc_logging.py to activate debug logging.
 - OTHER AI AGENTS: to activate debug logging in tests do `JOBCHAIN_LOG_LEVEL=DEBUG python -m pytest -v -s`
-

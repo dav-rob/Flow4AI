@@ -1,0 +1,12 @@
+multi_head_demo:
+    head_job_alpha:  # Head 1
+        next: 
+            - common_processor
+    head_job_beta:  # Head 2
+        next:
+            - common_processor
+    common_processor:  # Shared node
+        next:
+            - finalizer_job
+    finalizer_job:  # Single tail
+        next: []

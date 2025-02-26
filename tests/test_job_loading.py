@@ -342,10 +342,9 @@ async def test_head_jobs_in_jobchain_serial():
     """Test that head jobs from config can be executed in JobChain with serial processing"""
     # Set config directory for test
     ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config")])
-
-   
-    results = []
     
+    # Initialize results tracking
+    results = []
     
     def result_processor(result):
         results.append(result)
@@ -574,3 +573,58 @@ async def test_pydantic_jobs_in_jobchain_serial():
         assert isinstance(result, dict), f"Expected dict result, got {type(result)}"
         logging.info(f"Result: {result}")
         
+
+@pytest.mark.asyncio
+async def test_multiple_head_jobs_in_jobchain_serial(caplog):
+    """Test that multiple head jobs from config can be executed in JobChain with serial processing"""
+    # Enable debug logging
+    caplog.set_level('DEBUG')
+    
+    # Set config directory for test
+    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_multiple_heads")])
+    ConfigLoader.reload_configs()
+    # Initialize results tracking
+    results = []
+    
+    def result_processor(result):
+        results.append(result)
+        logging.info(f"Processed result: {result}")
+    
+    # Create JobChain with serial processing to ensure deterministic results
+    job_chain = JobChain(job=None, result_processing_function=result_processor, serial_processing=True)
+    
+    # Get head jobs from config to know their names
+    head_jobs = job_chain.get_job_names()
+    logging.info(f"Identified head jobs: {head_jobs}")
+    
+    # Submit tasks for each job
+    for job in head_jobs:
+        logging.info(f"Submitting task for job: {job}")
+        job_chain.submit_task({"task": "Multi-head test task"}, job_name=job)
+    
+    # Mark input as completed and wait for all tasks to finish
+    logging.info("Marking input as completed")
+    job_chain.mark_input_completed()
+    # JobChain automatically waits for completion when mark_input_completed is called
+    logging.info("Job chain completed")
+    
+    # Log the results for debugging
+    logging.info(f"Results count: {len(results)}")
+    for i, result in enumerate(results):
+        logging.info(f"Result {i}: {result}")
+    
+    # Check if we have any results
+    if len(results) == 0:
+        logging.error("No results received from job execution")
+        assert False, "No results received from job execution"
+    
+    # Verify that multiple head nodes were detected
+    assert "multiple head nodes" in caplog.text.lower(), "Multiple head nodes not detected in log"
+    
+    # Verify we got at least one result
+    assert len(results) > 0, f"Expected at least one result, got {len(results)}"
+    
+    # Verify the result contains the expected data
+    assert "storage_url" in results[0], "Result missing storage_url field"
+    assert "status" in results[0], "Result missing status field"
+    assert results[0]["status"] == "success", f"Expected status 'success', got '{results[0].get('status')}'"

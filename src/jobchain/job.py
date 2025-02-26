@@ -268,6 +268,12 @@ class JobABC(ABC, metaclass=JobMeta):
         by updating the JobState object and propagating the tail results back up the graph
         when a tail job is reached.
 
+        WARNING: DO NOT OVERRIDE THIS METHOD IN CUSTOM JOB CLASSES.
+        This method is part of the core JobChain execution flow and handles critical operations
+        including job graph traversal, state management, and result propagation.
+        
+        Instead, implement the abstract 'run' method to define custom job behavior.
+
         Can only be used within a job_graph_context set up with:
            ```python
             async with job_graph_context_manager(job_set):

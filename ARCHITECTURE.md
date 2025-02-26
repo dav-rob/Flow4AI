@@ -40,6 +40,24 @@ This ensures all previous tasks are completed, and all processes are cleaned up.
 - Tracing and performance instrumentation
 - Automatic task metadata preservation throughout job chains
 
+#### Custom Job Implementation
+
+When creating custom job classes by extending `JobABC`, follow these guidelines:
+
+1. **Implement the `run` method**: This is the only abstract method that must be implemented. It defines the job-specific behavior.
+
+   ```python
+   async def run(self, task) -> Dict[str, Any]:
+       # Implement job-specific logic here
+       return {"result": "success"}
+   ```
+
+2. **NEVER override the `_execute` method**: This method is part of the core JobChain execution flow and handles critical operations including job graph traversal, state management, and result propagation.
+
+3. **Access configuration via properties**: Use `self.properties.get('property_name')` to access job configuration parameters.
+
+4. **Return results as dictionaries**: The `run` method should always return a dictionary with the job's results.
+
 #### Custom Job Implementation Requirements
 1. Job Class Structure:
    - Must inherit from JobABC
@@ -351,17 +369,6 @@ JobChain is designed to be easily extended:
 - Complex graphs may increase complexity
 
 ## TODO
-
-### Task Pass-Through Implementation
-- Implemented automatic task metadata preservation in JobChain core
-- No longer requires manual implementation of task_pass_through in jobs
-- This eliminates error-prone boilerplate code
-- Modified JobABC._execute to handle metadata preservation
-- Implementation plan:
-  - Store original task data in JobABC._execute
-  - Pass it through each job in the chain
-  - Merge it with job-specific results
-  - Return complete task context in final result
 
 ## Future Roadmap
 
