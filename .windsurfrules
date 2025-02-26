@@ -35,6 +35,8 @@ Always read the architecture document in the root folder: ARCHITECTURE.md, befor
 For logging, use the jobchain.jc_logging module, not the standard logging module.
 - for external files, examples and tests use
 `import jobchain.jc_logging as logging` 
+then do 
+`logger = logging.getLogger(__name__)`
 - for internal files under /src use the relative path import of jc_logging
 - WINDSURF AI AGENT ONLY: set `WINDSURF_LOG_FLAG="DEBUG"` in jc_logging.py to activate debug logging.
 - OTHER AI AGENTS: to activate debug logging in tests do `JOBCHAIN_LOG_LEVEL=DEBUG python -m pytest -v -s`
