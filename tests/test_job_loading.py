@@ -597,8 +597,19 @@ async def test_multiple_head_jobs_in_jobchain_serial(caplog):
     head_jobs = job_chain.get_job_names()
     logging.info(f"Identified head jobs: {head_jobs}")
     
-    # Verify that the head job name contains DefaultHeadJob
-    assert any("DefaultHeadJob" in job_name for job_name in head_jobs), "No DefaultHeadJob found in head jobs"
+    # Print head job name for debugging
+    if head_jobs:
+        logging.info(f"DEBUG - Head job name: {head_jobs[0]}")
+    
+    # Verify there is exactly one head job (the DefaultHeadJob)
+    assert len(head_jobs) == 1, f"Expected exactly one head job, got {len(head_jobs)}: {head_jobs}"
+    
+    # Get the head job name and verify it's correctly formatted
+    head_job_name = head_jobs[0]
+    logging.debug(f"Head job name: {head_job_name}")
+    parsed_name = JobABC.parse_job_name(head_job_name)
+    assert parsed_name == "DefaultHeadJob", \
+        f"Parsed name mismatch. Expected 'DefaultHeadJob' got {parsed_name}"
     
     # Submit tasks for each job
     for job in head_jobs:

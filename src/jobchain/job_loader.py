@@ -288,16 +288,32 @@ class JobFactory:
         # and set the expected_inputs (i.e. the dependencies) for each Job.
         incoming_edges: dict[str, set[str]] = {job_name: set() for job_name in graph_definition}
         for job_name, config in graph_definition.items():
-            for next_job_name in config['next']:
-                incoming_edges[next_job_name].add(job_name)
+            for next_job in config['next']:
+                incoming_edges[next_job].add(job_name)
         
         # 1) Find the head node (node with no incoming edges)
         head_jobs = [job_name for job_name, inputs in incoming_edges.items() if not inputs]
         
         if len(head_jobs) > 1:
-            # Create default head job with automatic name generation
-            logger.debug(f"Multiple head nodes detected: {head_jobs}. Creating DefaultHeadJob.")
-            default_head = DefaultHeadJob()
+            # Get naming from first job instance in job_instances
+            sample_job = next(iter(job_instances.values()))
+            sample_name = sample_job.name
+            parsed = JobABC.parse_job_name(sample_name)
+            
+            # Debug logging for sample name and parsed name
+            logger.debug(f"DEBUG - Sample name (long): {sample_name}")
+            logger.debug(f"DEBUG - Parsed name (short): {parsed}")
+            
+            if parsed != 'UNSUPPORTED NAME FORMAT':
+                # Replace the short job name with "DefaultHeadJob" while maintaining the $$ format
+                # Example: "multi_head_demo$$params1$$head_job_alpha$$" -> "multi_head_demo$$params1$$DefaultHeadJob$$"
+                new_name = sample_name.replace(parsed + "$$", "DefaultHeadJob$$")
+                default_head = DefaultHeadJob(name=new_name)
+                logger.debug(f"Constructed DefaultHeadJob name: {new_name}")
+            else:
+                default_head = DefaultHeadJob()
+                logger.warning("Falling back to default naming for head job")
+            
             logger.debug(f"Created DefaultHeadJob with name: {default_head.name}")
             job_instances[default_head.name] = default_head
             graph_definition[default_head.name] = {"next": head_jobs}
