@@ -38,3 +38,4 @@ htmlcov/
 temp/
 dev_resources/import_report.txt
 dev_resources/requirements_extracted.txt
+digest.txt

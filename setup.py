@@ -28,6 +28,7 @@ setup(
         "aiohttp>=3.11.12"
         ],
         'dev': [
+          "gitingest>=0.1.3"
         ],
     },
     python_requires='>=3.8.5',

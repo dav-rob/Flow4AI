@@ -1,5 +1,5 @@
 Directory structure:
-└── dav-rob-jobchain/
+└── JobChain/
     ├── src/
     │   ├── __init__.py
     │   └── jobchain/
