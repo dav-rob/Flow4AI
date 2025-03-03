@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from . import jc_logging as logging
 from .jc_graph import validate_graph
 from .job import JobABC
+from .jobs.default_jobs import DefaultHeadJob, DefaultTailJob
 
 logger = logging.getLogger(__name__)
 
@@ -295,32 +296,7 @@ class JobFactory:
         head_jobs = [job_name for job_name, inputs in incoming_edges.items() if not inputs]
         
         if len(head_jobs) > 1:
-            # Get naming from first job instance in job_instances
-            sample_job = next(iter(job_instances.values()))
-            sample_name = sample_job.name
-            parsed = JobABC.parse_job_name(sample_name)
-            
-            # Debug logging for sample name and parsed name
-            logger.debug(f"DEBUG - Sample name (long): {sample_name}")
-            logger.debug(f"DEBUG - Parsed name (short): {parsed}")
-            
-            if parsed != 'UNSUPPORTED NAME FORMAT':
-                # Replace the short job name with "DefaultHeadJob" while maintaining the $$ format
-                # Example: "multi_head_demo$$params1$$head_job_alpha$$" -> "multi_head_demo$$params1$$DefaultHeadJob$$"
-                new_name = sample_name.replace(parsed + "$$", "DefaultHeadJob$$")
-                default_head = DefaultHeadJob(name=new_name)
-                logger.debug(f"Constructed DefaultHeadJob name: {new_name}")
-            else:
-                default_head = DefaultHeadJob()
-                logger.warning("Falling back to default naming for head job")
-            
-            logger.debug(f"Created DefaultHeadJob with name: {default_head.name}")
-            job_instances[default_head.name] = default_head
-            graph_definition[default_head.name] = {"next": head_jobs}
-            head_job_name = default_head.name
-            
-            # Add the default head job to nodes dictionary
-            nodes[default_head.name] = default_head
+            head_job_name = cls.add_default_head(graph_definition, head_jobs, job_instances, nodes)
         elif len(head_jobs) == 1:
             head_job_name = head_jobs[0]
         else:
@@ -343,6 +319,32 @@ class JobFactory:
         # nodes[head_job_name].final_node = nodes[final_job_name]
 
         return nodes[head_job_name]
+
+    @classmethod
+    def add_default_head(cls, graph_definition, head_jobs, job_instances, nodes):
+        # Get naming from first job instance in job_instances
+        sample_job = next(iter(job_instances.values()))
+        sample_name = sample_job.name
+        parsed = JobABC.parse_job_name(sample_name)
+        # Debug logging for sample name and parsed name
+        logger.debug(f"DEBUG - Sample name (long): {sample_name}")
+        logger.debug(f"DEBUG - Parsed name (short): {parsed}")
+        if parsed != 'UNSUPPORTED NAME FORMAT':
+            # Replace the short job name with "DefaultHeadJob" while maintaining the $$ format
+            # Example: "multi_head_demo$$params1$$head_job_alpha$$" -> "multi_head_demo$$params1$$DefaultHeadJob$$"
+            new_name = sample_name.replace(parsed + "$$", "DefaultHeadJob$$")
+            default_head = DefaultHeadJob(name=new_name)
+            logger.debug(f"Constructed DefaultHeadJob name: {new_name}")
+        else:
+            default_head = DefaultHeadJob()
+            logger.warning("Falling back to default naming for head job")
+        logger.debug(f"Created DefaultHeadJob with name: {default_head.name}")
+        job_instances[default_head.name] = default_head
+        graph_definition[default_head.name] = {"next": head_jobs}
+        head_job_name = default_head.name
+        # Add the default head job to nodes dictionary
+        nodes[default_head.name] = default_head
+        return head_job_name
 
 
 class ConfigLoader:

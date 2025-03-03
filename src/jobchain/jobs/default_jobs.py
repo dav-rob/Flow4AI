@@ -13,3 +13,11 @@ class DefaultHeadJob(JobABC):
         """Run a simple job that logs and returns the task."""
         logger.info(f"Default head JOB for {task}")
         return {}
+
+class DefaultTailJob(JobABC):
+    """A Job implementation that provides a simple default behavior."""
+    
+    async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
+        """Run a simple job that logs and returns the task."""
+        logger.info(f"Default tail JOB for {task}")
+        return {}
