@@ -1,0 +1,16 @@
+source_job:
+    type: DataIngestionJob
+    properties:
+        source: "$input_path"
+        batch: "$batch_size"
+
+processor_alpha:
+    type: ModelProcessorJob
+    properties:
+        model: "$model_name_alpha"
+        validation_mode: "$validation_alpha"
+
+processor_beta:
+    type: ResultArchiverJob
+    properties:
+        storage_url: "$storage_url"

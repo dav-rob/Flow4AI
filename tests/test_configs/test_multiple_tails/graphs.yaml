@@ -1,0 +1,9 @@
+multi_tail_demo:
+    source_job:  # Single head
+        next: 
+            - processor_alpha
+            - processor_beta
+    processor_alpha:  # Tail 1
+        next: []
+    processor_beta:  # Tail 2
+        next: []

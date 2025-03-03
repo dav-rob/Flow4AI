@@ -1,0 +1,10 @@
+multi_tail_demo:
+    params1:
+        source_job:
+            - input_path: "/data/source_main"
+              batch_size: 500
+        processor_alpha:
+            - model_name_alpha: "ensemble_v3"
+              validation_alpha: "strict"
+        processor_beta:
+            - storage_url: "s3://results-bucket/prod"
