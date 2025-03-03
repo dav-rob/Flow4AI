@@ -341,6 +341,52 @@ def test_multiple_head_nodes():
     next_job_names = {job.name for job in head_job.next_jobs}
     assert next_job_names == {"A", "B"}
 
+
+def test_multiple_tail_nodes():
+    """Test that multiple tail nodes are handled correctly by creating a DefaultTailJob."""
+    # Test graph with two independent tails
+    graph_definition = {
+        "A": {"next": ["B", "C"]},
+        "B": {"next": []},
+        "C": {"next": []}
+    }
+    
+    job_instances = {
+        "A": A("A"),
+        "B": B("B"), 
+        "C": C("C")
+    }
+    
+    # Create job graph
+    head_job = JobFactory.create_job_graph(graph_definition, job_instances)
+    
+    # Find the default tail job in the job_instances
+    default_tail_jobs = [job for name, job in job_instances.items() 
+                        if "DefaultTailJob" in name]
+    assert len(default_tail_jobs) == 1, "Expected exactly one DefaultTailJob"
+    default_tail_job = default_tail_jobs[0]
+    
+    # Verify default tail was created and is correct type
+    from jobchain.jobs.default_jobs import DefaultTailJob
+    assert isinstance(default_tail_job, DefaultTailJob)
+    assert default_tail_job.name in job_instances
+    
+    # Verify graph was updated correctly
+    assert default_tail_job.name in graph_definition
+    assert graph_definition[default_tail_job.name]["next"] == []
+    
+    # Verify original tail nodes now point to the default tail
+    assert graph_definition["B"]["next"] == [default_tail_job.name]
+    assert graph_definition["C"]["next"] == [default_tail_job.name]
+    
+    # Verify next_jobs were set correctly for original tail nodes
+    b_job = job_instances["B"]
+    c_job = job_instances["C"]
+    assert len(b_job.next_jobs) == 1
+    assert len(c_job.next_jobs) == 1
+    assert b_job.next_jobs[0].name == default_tail_job.name
+    assert c_job.next_jobs[0].name == default_tail_job.name
+
 def test_execute_multiple_head_nodes():
     """Test execution of a graph with multiple head nodes."""
     # Create a graph with multiple head nodes

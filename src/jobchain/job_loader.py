@@ -299,6 +299,13 @@ class JobFactory:
             head_job_name = head_jobs[0]
         else:
             raise ValueError("No head nodes found in graph definition")
+            
+        # 1.5) Find the tail nodes (nodes with no outgoing edges)
+        tail_jobs = [job_name for job_name, config in graph_definition.items() if not config['next']]
+        
+        if len(tail_jobs) > 1:
+            # Add a default tail node if there are multiple tail nodes
+            cls.add_default_tail(graph_definition, tail_jobs, job_instances, nodes)
 
         # 2) Set next_jobs for each node
         for job_name, config in graph_definition.items():
@@ -345,6 +352,55 @@ class JobFactory:
         # Add the default head job to nodes dictionary
         nodes[default_head.name] = default_head
         return head_job_name
+        
+    @classmethod
+    def add_default_tail(cls, graph_definition, tail_jobs, job_instances, nodes):
+        """Add a default tail node to the graph when multiple tail nodes are detected.
+        
+        Args:
+            graph_definition: The graph definition dictionary to modify
+            tail_jobs: List of job names that are tail nodes (no 'next' nodes)
+            job_instances: Dictionary of job instances
+            nodes: Dictionary of nodes in the graph
+            
+        Returns:
+            The name of the default tail job
+        """
+        from jobchain.jobs.default_jobs import DefaultTailJob
+
+        # Get naming from first job instance in job_instances
+        sample_job = next(iter(job_instances.values()))
+        sample_name = sample_job.name
+        parsed = JobABC.parse_job_name(sample_name)
+        
+        # Debug logging for sample name and parsed name
+        logger.debug(f"DEBUG - Sample name (long): {sample_name}")
+        logger.debug(f"DEBUG - Parsed name (short): {parsed}")
+        
+        if parsed != 'UNSUPPORTED NAME FORMAT':
+            # Replace the short job name with "DefaultTailJob" while maintaining the $$ format
+            # Example: "multi_tail_demo$$params1$$tail_job_alpha$$" -> "multi_tail_demo$$params1$$DefaultTailJob$$"
+            new_name = sample_name.replace(parsed + "$$", "DefaultTailJob$$")
+            default_tail = DefaultTailJob(name=new_name)
+            logger.debug(f"Constructed DefaultTailJob name: {new_name}")
+        else:
+            default_tail = DefaultTailJob()
+            logger.warning("Falling back to default naming for tail job")
+            
+        logger.debug(f"Created DefaultTailJob with name: {default_tail.name}")
+        
+        # Add the default tail job to job_instances and nodes dictionaries
+        job_instances[default_tail.name] = default_tail
+        nodes[default_tail.name] = default_tail
+        
+        # Update the graph definition to make all tail nodes point to the default tail
+        graph_definition[default_tail.name] = {"next": []}
+        
+        # Update all tail nodes to point to the default tail
+        for tail_job in tail_jobs:
+            graph_definition[tail_job]["next"] = [default_tail.name]
+            
+        return default_tail.name
 
 
 class ConfigLoader:
