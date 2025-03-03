@@ -1,11 +1,7 @@
 multi_head_demo:
     params1:
-        head_job_alpha:
-            - input_path: "/data/source_a"
-              batch_size: 500
-        head_job_beta:
-            - input_path: "/data/source_b"
-              sampling_rate: 0.25
         common_processor:
-            - model_name: "ensemble_v3"
-              validation: "strict"
+            - validation: "strict"
+    params2:
+        common_processor:
+            - validation: "loose"

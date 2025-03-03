@@ -1,16 +1,16 @@
 job_a:
     type: DataIngestionJob
     properties:
-        source: "$input_path_a"
-        batch: "$batch_size_a"
+        source: "/data/source_a"
+        batch: 100
 
 job_b:
     type: DataSamplingJob
     properties:
-        sample_rate: "$sample_rate"
-        max_samples: "$max_samples"
+        sample_rate: 0.25
+        max_samples: 1000
 
 job_c:
     type: ResultArchiverJob
     properties:
-        storage_url: "$storage_url"
+        storage_url: "s3://results-bucket/parallel-test"

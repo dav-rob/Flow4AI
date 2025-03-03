@@ -1,19 +1,19 @@
 head_job_alpha:
     type: DataIngestionJob
     properties:
-        source: "$input_path"
-        batch: "$batch_size"
+        source: "/data/source_a"
+        batch: 500
 
 head_job_beta:
     type: DataSamplingJob 
     properties:
-        source: "$input_path"
-        rate: "$sampling_rate"
+        source: "/data/source_b"
+        rate: 0.25
 
 common_processor:
     type: ModelProcessorJob
     properties:
-        model: "$model_name"
+        model: "ensemble_v3"
         validation_mode: "$validation"
 
 finalizer_job:

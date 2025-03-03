@@ -1,16 +1,16 @@
 source_job:
     type: DataIngestionJob
     properties:
-        source: "$input_path"
-        batch: "$batch_size"
+        source: "/data/source_main"
+        batch: 500
 
 processor_alpha:
     type: ModelProcessorJob
     properties:
-        model: "$model_name_alpha"
-        validation_mode: "$validation_alpha"
+        model: "ensemble_v3"
+        validation_mode: "strict"
 
 processor_beta:
     type: ResultArchiverJob
     properties:
-        storage_url: "$storage_url"
+        storage_url: "s3://results-bucket/prod"
