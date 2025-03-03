@@ -1,0 +1,16 @@
+job_a:
+    type: DataIngestionJob
+    properties:
+        source: "$input_path_a"
+        batch: "$batch_size_a"
+
+job_b:
+    type: DataSamplingJob
+    properties:
+        sample_rate: "$sample_rate"
+        max_samples: "$max_samples"
+
+job_c:
+    type: ResultArchiverJob
+    properties:
+        storage_url: "$storage_url"

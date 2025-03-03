@@ -711,3 +711,70 @@ async def test_multiple_tail_jobs_in_jobchain_serial(caplog):
         assert "RETURN_JOB" in result, "Result missing RETURN_JOB field"
         assert "DefaultTailJob" in result["RETURN_JOB"], f"Expected DefaultTailJob in RETURN_JOB, got {result.get('RETURN_JOB')}"
         assert "task_pass_through" in result, "Result missing task_pass_through field"
+
+
+@pytest.mark.asyncio
+async def test_simple_parallel_jobs_in_jobchain_serial(caplog):
+    """Test that a simple parallel job graph with multiple independent jobs can be executed in JobChain"""
+    # Enable debug logging
+    caplog.set_level('DEBUG')
+    
+    # Set config directory for test
+    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_simple_parallel")])
+    ConfigLoader.reload_configs()
+    # Initialize results tracking
+    results = []
+    
+    def result_processor(result):
+        results.append(result)
+        logging.info(f"Processed result: {result}")
+    
+    # Create JobChain with serial processing to ensure deterministic results
+    job_chain = JobChain(job=None, result_processing_function=result_processor, serial_processing=True)
+    
+    # Get head jobs from config to know their names
+    head_jobs = job_chain.get_job_names()
+    logging.info(f"Identified head jobs: {head_jobs}")
+    
+    # Verify there is exactly one head job (the DefaultHeadJob)
+    assert len(head_jobs) == 1, f"Expected exactly one head job, got {len(head_jobs)}: {head_jobs}"
+    
+    # Get the head job name and verify it's correctly formatted
+    head_job_name = head_jobs[0]
+    logging.debug(f"Head job name: {head_job_name}")
+    parsed_name = JobABC.parse_job_name(head_job_name)
+    assert parsed_name == "DefaultHeadJob", \
+        f"Parsed name mismatch. Expected 'DefaultHeadJob' got {parsed_name}"
+    
+    # Submit tasks for the head job
+    logging.info(f"Submitting task for job: {head_job_name}")
+    job_chain.submit_task({"task": "Simple parallel test task"}, job_name=head_job_name)
+    
+    # Mark input as completed and wait for all tasks to finish
+    logging.info("Marking input as completed")
+    job_chain.mark_input_completed()
+    # JobChain automatically waits for completion when mark_input_completed is called
+    logging.info("Job chain completed")
+    
+    # Log the results for debugging
+    logging.info(f"Results count: {len(results)}")
+    for i, result in enumerate(results):
+        logging.info(f"Result {i}: {result}")
+    
+    # Check if we have any results
+    if len(results) == 0:
+        logging.error("No results received from job execution")
+        assert False, "No results received from job execution"
+    
+    # Verify that both multiple head nodes and multiple tail nodes were detected
+    assert "multiple head nodes" in caplog.text.lower(), "Multiple head nodes not detected in log"
+    assert "multiple tail nodes" in caplog.text.lower(), "Multiple tail nodes not detected in log"
+    
+    # Verify we got at least one result
+    assert len(results) > 0, f"Expected at least one result, got {len(results)}"
+    
+    # Verify the result contains the DefaultTailJob information
+    for result in results:
+        assert "RETURN_JOB" in result, "Result missing RETURN_JOB field"
+        assert "DefaultTailJob" in result["RETURN_JOB"], f"Expected DefaultTailJob in RETURN_JOB, got {result.get('RETURN_JOB')}"
+        assert "task_pass_through" in result, "Result missing task_pass_through field"

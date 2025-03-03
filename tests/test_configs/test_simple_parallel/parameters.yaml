@@ -1,0 +1,10 @@
+simple_parallel:
+    params1:
+        job_a:
+            - input_path_a: "/data/source_a"
+              batch_size_a: 100
+        job_b:
+            - sample_rate: 0.25
+              max_samples: 1000
+        job_c:
+            - storage_url: "s3://results-bucket/parallel-test"

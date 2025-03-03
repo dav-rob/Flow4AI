@@ -1,0 +1,7 @@
+simple_parallel:
+    job_a:  # Parallel job A
+        next: []
+    job_b:  # Parallel job B
+        next: []
+    job_c:  # Parallel job C
+        next: []
