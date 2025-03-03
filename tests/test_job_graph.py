@@ -387,6 +387,74 @@ def test_multiple_tail_nodes():
     assert b_job.next_jobs[0].name == default_tail_job.name
     assert c_job.next_jobs[0].name == default_tail_job.name
 
+def test_simple_parallel_jobs():
+    """Test that a graph with multiple head nodes and multiple tail nodes 
+    is handled correctly by creating both a DefaultHeadJob and a DefaultTailJob."""
+    # Test graph with three independent parallel jobs
+    graph_definition = {
+        "A": {"next": []},
+        "B": {"next": []},
+        "C": {"next": []}
+    }
+    
+    job_instances = {
+        "A": A("A"),
+        "B": B("B"), 
+        "C": C("C")
+    }
+    
+    # Create job graph
+    head_job = JobFactory.create_job_graph(graph_definition, job_instances)
+    
+    # Verify default head was created and is correct type
+    from jobchain.jobs.default_jobs import DefaultHeadJob, DefaultTailJob
+    assert isinstance(head_job, DefaultHeadJob)
+    assert head_job.name in job_instances
+    
+    # Find the default tail job in the job_instances
+    default_tail_jobs = [job for name, job in job_instances.items() 
+                        if "DefaultTailJob" in name]
+    assert len(default_tail_jobs) == 1, "Expected exactly one DefaultTailJob"
+    default_tail_job = default_tail_jobs[0]
+    
+    # Verify default tail was created and is correct type
+    assert isinstance(default_tail_job, DefaultTailJob)
+    assert default_tail_job.name in job_instances
+    
+    # Verify graph structure was updated correctly
+    # 1. DefaultHead points to A, B, C
+    assert head_job.name in graph_definition
+    assert set(graph_definition[head_job.name]["next"]) == {"A", "B", "C"}
+    
+    # 2. A, B, C point to DefaultTail
+    assert graph_definition["A"]["next"] == [default_tail_job.name]
+    assert graph_definition["B"]["next"] == [default_tail_job.name]
+    assert graph_definition["C"]["next"] == [default_tail_job.name]
+    
+    # 3. DefaultTail has no next nodes
+    assert graph_definition[default_tail_job.name]["next"] == []
+    
+    # Verify next_jobs were set correctly
+    # 1. DefaultHead has 3 next jobs: A, B, C
+    assert len(head_job.next_jobs) == 3
+    head_next_job_names = {job.name for job in head_job.next_jobs}
+    assert head_next_job_names == {"A", "B", "C"}
+    
+    # 2. A, B, C each have 1 next job: DefaultTail
+    a_job = job_instances["A"]
+    b_job = job_instances["B"]
+    c_job = job_instances["C"]
+    assert len(a_job.next_jobs) == 1
+    assert len(b_job.next_jobs) == 1
+    assert len(c_job.next_jobs) == 1
+    assert a_job.next_jobs[0].name == default_tail_job.name
+    assert b_job.next_jobs[0].name == default_tail_job.name
+    assert c_job.next_jobs[0].name == default_tail_job.name
+    
+    # 3. DefaultTail has no next jobs
+    assert len(default_tail_job.next_jobs) == 0
+
+
 def test_execute_multiple_head_nodes():
     """Test execution of a graph with multiple head nodes."""
     # Create a graph with multiple head nodes
