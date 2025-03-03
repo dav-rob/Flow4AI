@@ -1,3 +1,4 @@
+import copy
 import importlib.util
 import inspect
 import os
@@ -223,11 +224,16 @@ class JobFactory:
 
     @classmethod
     def create_job_graph_using_parameters(cls, graph_def, graph_name, param_groups_for_graph_name,
-                                          job_names_in_graph) -> List[JobABC]:
+                                           job_names_in_graph) -> List[JobABC]:
         job_graphs: list[JobABC] = []
         parameter_names_list = list(param_groups_for_graph_name.keys())
         for parameter_name in parameter_names_list:
             job_instances: dict[str, JobABC] = {}
+            # Create a copy of graph_def for this parameter group
+            # This ensures each parameter group has its own graph definition
+            param_graph_def = copy.deepcopy(graph_def)
+            
+            # Create job instances for this parameter group
             for graph_job_name in job_names_in_graph:
                 raw_job_def: Dict[str, Any] = ConfigLoader.get_jobs_config()[graph_job_name]
                 if ConfigLoader.is_parameterized_job(raw_job_def):
@@ -238,7 +244,9 @@ class JobFactory:
                 job_type: str = job_def["type"]
                 job: JobABC = cls.create_job(unique_job_name, job_type, job_def)
                 job_instances[graph_job_name] = job
-            job_graph: JobABC = cls.create_job_graph(graph_def, job_instances)
+                
+            # Create the job graph for this parameter group
+            job_graph: JobABC = cls.create_job_graph(param_graph_def, job_instances)
             job_graphs.append(job_graph)
         return job_graphs
 
@@ -278,10 +286,7 @@ class JobFactory:
         """
         nodes:dict[str, JobABC] = {} # nodes holds Jobs which will be hydrated with next_jobs 
                                     # and expected_inputs fields from the graph_definition.
-        for job_name in graph_definition:
-            job_obj = job_instances[job_name]
-            nodes[job_name] = job_obj
-
+        
         # determine the incoming edges i.e the Jobs that each Job depends on
         # so we can determine the head node ( which depends on no Jobs) 
         # and set the expected_inputs (i.e. the dependencies) for each Job.
@@ -293,12 +298,28 @@ class JobFactory:
         # 1) Find the head node (node with no incoming edges)
         head_jobs = [job_name for job_name, inputs in incoming_edges.items() if not inputs]
         
+        # Handle multiple head jobs before creating nodes dictionary
         if len(head_jobs) > 1:
             head_job_name = cls.add_default_head(graph_definition, head_jobs, job_instances, nodes)
         elif len(head_jobs) == 1:
             head_job_name = head_jobs[0]
         else:
             raise ValueError("No head nodes found in graph definition")
+            
+        # Now populate the nodes dictionary after potential DefaultHeadJob addition
+        for job_name in graph_definition:
+            try:
+                job_obj = job_instances[job_name]
+            except KeyError:
+                # Fallback mechanism for parameterized job names
+                # Try to find the job by parsing the job name and looking for the base job name
+                parsed_name = JobABC.parse_job_name(job_name)
+                if parsed_name != "UNSUPPORTED NAME FORMAT" and parsed_name in job_instances:
+                    job_obj = job_instances[parsed_name]
+                    logger.debug(f"Found job {job_name} using parsed name {parsed_name}")
+                else:
+                    raise KeyError(f"Job {job_name} not found in job_instances and no fallback available")
+            nodes[job_name] = job_obj
             
         # 1.5) Find the tail nodes (nodes with no outgoing edges)
         tail_jobs = [job_name for job_name, config in graph_definition.items() if not config['next']]
@@ -336,22 +357,43 @@ class JobFactory:
         # Debug logging for sample name and parsed name
         logger.debug(f"DEBUG - Sample name (long): {sample_name}")
         logger.debug(f"DEBUG - Parsed name (short): {parsed}")
-        if parsed != 'UNSUPPORTED NAME FORMAT':
-            # Replace the short job name with "DefaultHeadJob" while maintaining the $$ format
-            # Example: "multi_head_demo$$params1$$head_job_alpha$$" -> "multi_head_demo$$params1$$DefaultHeadJob$$"
-            new_name = sample_name.replace(parsed + "$$", "DefaultHeadJob$$")
-            default_head = DefaultHeadJob(name=new_name)
-            logger.debug(f"Constructed DefaultHeadJob name: {new_name}")
+        
+        # For each parameter group, we need to create a unique DefaultHeadJob
+        # Extract parameter group from sample name
+        parsed_parts = JobABC.parse_job_loader_name(sample_name)
+        graph_name = parsed_parts.get("graph_name", "")
+        param_name = parsed_parts.get("param_name", "")
+        
+        # Create a unique name for this DefaultHeadJob based on the parameter group
+        if graph_name and param_name:
+            # Use the same format as in create_job_graph_using_parameters
+            unique_job_name = f"{graph_name}$${param_name}$$DefaultHeadJob$$"
+            default_head = DefaultHeadJob(name=unique_job_name)
+            logger.debug(f"Constructed DefaultHeadJob name: {unique_job_name}")
+        elif graph_name:
+            unique_job_name = f"{graph_name}$$$$DefaultHeadJob$$"
+            default_head = DefaultHeadJob(name=unique_job_name)
+            logger.debug(f"Constructed DefaultHeadJob name: {unique_job_name}")
         else:
             default_head = DefaultHeadJob()
             logger.warning("Falling back to default naming for head job")
+        
         logger.debug(f"Created DefaultHeadJob with name: {default_head.name}")
-        job_instances[default_head.name] = default_head
-        graph_definition[default_head.name] = {"next": head_jobs}
-        head_job_name = default_head.name
+        
+        # Use 'DefaultHeadJob' as the key in graph_definition and job_instances
+        # This is the key that will be used in the graph definition
+        head_job_key = default_head.name #"DefaultHeadJob"
+        
+        # Add the job to job_instances with the DefaultHeadJob key
+        job_instances[head_job_key] = default_head
+        
+        # Add to graph_definition with the same key
+        graph_definition[head_job_key] = {"next": head_jobs}
+        
         # Add the default head job to nodes dictionary
-        nodes[default_head.name] = default_head
-        return head_job_name
+        nodes[head_job_key] = default_head
+        
+        return head_job_key
         
     @classmethod
     def add_default_tail(cls, graph_definition, tail_jobs, job_instances, nodes):
