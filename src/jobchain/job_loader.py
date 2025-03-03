@@ -11,7 +11,6 @@ from pydantic import BaseModel
 from . import jc_logging as logging
 from .jc_graph import validate_graph
 from .job import JobABC
-from .jobs.default_jobs import DefaultHeadJob, DefaultTailJob
 
 logger = logging.getLogger(__name__)
 
@@ -277,7 +276,6 @@ class JobFactory:
         }
         
         """
-        from jobchain.jobs.default_jobs import DefaultHeadJob
         nodes:dict[str, JobABC] = {} # nodes holds Jobs which will be hydrated with next_jobs 
                                     # and expected_inputs fields from the graph_definition.
         for job_name in graph_definition:
@@ -322,6 +320,8 @@ class JobFactory:
 
     @classmethod
     def add_default_head(cls, graph_definition, head_jobs, job_instances, nodes):
+        from jobchain.jobs.default_jobs import DefaultHeadJob
+
         # Get naming from first job instance in job_instances
         sample_job = next(iter(job_instances.values()))
         sample_name = sample_job.name
