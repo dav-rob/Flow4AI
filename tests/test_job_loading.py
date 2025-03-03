@@ -576,7 +576,10 @@ async def test_pydantic_jobs_in_jobchain_serial():
 
 @pytest.mark.asyncio
 async def test_multiple_head_jobs_in_jobchain_serial(caplog):
-    """Test that multiple head jobs from config can be executed in JobChain with serial processing"""
+    """Test that multiple head jobs from config can be executed in JobChain with serial processing
+       The test uses a configuration with multiple parameters which means that multiple DefaultHeadJobs
+       should be created.
+    """
     # Enable debug logging
     caplog.set_level('DEBUG')
     
@@ -597,22 +600,14 @@ async def test_multiple_head_jobs_in_jobchain_serial(caplog):
     head_jobs = job_chain.get_job_names()
     logging.info(f"Identified head jobs: {head_jobs}")
     
-    # Print head job name for debugging
-    if head_jobs:
-        logging.info(f"DEBUG - Head job name: {head_jobs[0]}")
-    
-    # Verify there is exactly one head job (the DefaultHeadJob)
-    assert len(head_jobs) == 1, f"Expected exactly one head job, got {len(head_jobs)}: {head_jobs}"
-    
-    # Get the head job name and verify it's correctly formatted
-    head_job_name = head_jobs[0]
-    logging.debug(f"Head job name: {head_job_name}")
-    parsed_name = JobABC.parse_job_name(head_job_name)
-    assert parsed_name == "DefaultHeadJob", \
-        f"Parsed name mismatch. Expected 'DefaultHeadJob' got {parsed_name}"
-    
-    # Submit tasks for each job
+    # Verify there is exactly two head job (the DefaultHeadJob), one for each parameter group
+    assert len(head_jobs) == 2, f"Expected exactly two head jobs, got {len(head_jobs)}: {head_jobs}"
+
     for job in head_jobs:
+        logging.info(f"DEBUG - Head job name: {job}")
+        parsed_name = JobABC.parse_job_name(job)
+        assert parsed_name == "DefaultHeadJob", \
+            f"Parsed name mismatch. Expected 'DefaultHeadJob' got {parsed_name}"
         logging.info(f"Submitting task for job: {job}")
         job_chain.submit_task({"task": "Multi-head test task"}, job_name=job)
     
@@ -636,12 +631,15 @@ async def test_multiple_head_jobs_in_jobchain_serial(caplog):
     assert "multiple head nodes" in caplog.text.lower(), "Multiple head nodes not detected in log"
     
     # Verify we got at least one result
-    assert len(results) > 0, f"Expected at least one result, got {len(results)}"
+    assert len(results) == 2, f"Expected two results, got {len(results)}"
     
-    # Verify the result contains the expected data
-    assert "storage_url" in results[0], "Result missing storage_url field"
-    assert "status" in results[0], "Result missing status field"
-    assert results[0]["status"] == "success", f"Expected status 'success', got '{results[0].get('status')}'"
+    for result in results:
+        logging.info(f"DEBUG - Result: {result}")
+        # Verify the result contains the expected data
+        assert "storage_url" in result, "Result missing storage_url field"
+        assert "status" in result, "Result missing status field"
+        assert result["status"] == "success", f"Expected status 'success', got '{result.get('status')}'"
+
 
 
 @pytest.mark.asyncio
