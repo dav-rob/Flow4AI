@@ -1,4 +1,0 @@
-multi_tail_demo:
-    params1:
-        processor_beta:
-            - storage_url: "s3://results-bucket/prod"

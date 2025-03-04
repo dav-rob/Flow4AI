@@ -1,0 +1,7 @@
+multi_tail_demo:
+    params1:
+        processor_beta:
+            - url: "s3://results-bucket/prod"
+    params2:
+        processor_beta:
+            - url: "s3://results-bucket/prod"

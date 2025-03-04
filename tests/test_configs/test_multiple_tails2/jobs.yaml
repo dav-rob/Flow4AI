@@ -1,0 +1,16 @@
+source_job:
+    type: DataIngestionJob
+    properties:
+        source: "/data/source_main"
+        batch: 500
+
+processor_alpha:
+    type: ModelProcessorJob
+    properties:
+        model: "ensemble_v3"
+        validation_mode: "strict"
+
+processor_beta:
+    type: ResultArchiverJob
+    properties:
+        storage_url: "$url"
