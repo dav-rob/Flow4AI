@@ -137,7 +137,7 @@ def g(obj):
     g(obj1) | g(obj2)  # For parallel composition
     g(obj1) >> g(obj2)  # For serial composition
     """
-    if isinstance(obj, (Component, Parallel, Serial)):
+    if isinstance(obj, Component):
         return obj  # Already has the operations we need
     return GraphOperableWrapper(obj)
 
@@ -256,3 +256,38 @@ if __name__ == "__main__":
     g12 = g(obj1) >> g(obj2) | g(obj3)  # Should be equivalent to (g(obj1) >> g(obj2)) | g(obj3)
     print(f"Graph structure: {g12}")
     print(f"Evaluation: {evaluate(g12)}")
+    
+    print("\n----- Example 13: Component subclasses don't need g() wrapping -----")
+    # Create a custom Component subclass
+    class ProcessorComponent(Component):
+        def __init__(self, name, process_type):
+            self.process_type = process_type
+            super().__init__(name)
+        
+        def __repr__(self):
+            return f"ProcessorComponent({self.obj}, {self.process_type})"
+    
+    # Create instances of the Component subclass
+    pc1 = ProcessorComponent("Processor1", "transform")
+    pc2 = ProcessorComponent("Processor2", "validate")
+    
+    # These don't need g() wrapping since they're already Component instances
+    g13 = pc1 | pc2
+    print(f"Direct Component subclass composition: {g13}")
+    print(f"Evaluation: {evaluate(g13)}")
+    
+    print("\n----- Example 14: Serial composition with Component subclasses -----")
+    g14 = pc1 >> pc2
+    print(f"Serial Component subclass composition: {g14}")
+    print(f"Evaluation: {evaluate(g14)}")
+    
+    print("\n----- Example 15: Mixing Component subclasses with g()-wrapped objects -----")
+    # Mix Component subclasses with g()-wrapped objects
+    g15 = pc1 | g(obj1) >> pc2
+    print(f"Mixed composition: {g15}")
+    print(f"Evaluation: {evaluate(g15)}")
+    
+    print("\n----- Example 16: Complex composition with Component subclasses and g()-wrapped objects -----")
+    g16 = (pc1 | g(obj1)) >> (pc2 | g(obj2))
+    print(f"Complex mixed composition: {g16}")
+    print(f"Evaluation: {evaluate(g16)}")
