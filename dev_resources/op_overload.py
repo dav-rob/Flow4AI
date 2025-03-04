@@ -1,3 +1,8 @@
+"""
+Improved operator overloading example for JobChain graph construction.
+This implementation allows for direct operator usage between wrapped objects.
+"""
+
 class Component:
     def __init__(self, obj):
         self.obj = obj
@@ -34,6 +39,24 @@ class Parallel(Component):
         self.components = components
         self.obj = None  # No direct object for this composite
 
+    def __or__(self, other):
+        """Support chaining with | operator"""
+        if isinstance(other, GraphOperableWrapper):
+            other = Component(other.obj)
+        elif not isinstance(other, (Component, Parallel, Serial)):
+            other = Component(other)
+        
+        return Parallel(*list(self.components) + [other])
+        
+    def __rshift__(self, other):
+        """Support chaining with >> operator"""
+        if isinstance(other, GraphOperableWrapper):
+            other = Component(other.obj)
+        elif not isinstance(other, (Component, Parallel, Serial)):
+            other = Component(other)
+            
+        return Serial(self, other)
+
     def __repr__(self):
         return f"parallel({', '.join(repr(c) for c in self.components)})"
 
@@ -42,43 +65,83 @@ class Serial(Component):
         self.components = components
         self.obj = None  # No direct object for this composite
         
+    def __or__(self, other):
+        """Support chaining with | operator"""
+        if isinstance(other, GraphOperableWrapper):
+            other = Component(other.obj)
+        elif not isinstance(other, (Component, Parallel, Serial)):
+            other = Component(other)
+            
+        return Parallel(self, other)
+        
+    def __rshift__(self, other):
+        """Support chaining with >> operator"""
+        if isinstance(other, GraphOperableWrapper):
+            other = Component(other.obj)
+        elif not isinstance(other, (Component, Parallel, Serial)):
+            other = Component(other)
+            
+        return Serial(*list(self.components) + [other])
+        
     def __repr__(self):
         return f"serial({', '.join(repr(c) for c in self.components)})"
 
-def wrap_component(obj):
-    """Wrap an object in a Component if it's not already a component type"""
-    if isinstance(obj, (Component, Parallel, Serial)):
-        return obj
-    return Component(obj)
+class GraphOperableWrapper:
+    """
+    Wrapper that adds operator overloading capabilities to any object.
+    This allows objects to be used with | and >> operators.
+    """
+    def __init__(self, obj):
+        self.obj = obj
+    
+    def __or__(self, other):
+        """Implements | for parallel composition"""
+        # Create Component versions of both objects
+        left = Component(self.obj)
+        
+        if isinstance(other, GraphOperableWrapper):
+            # If the other is also wrapped, unwrap it
+            right = Component(other.obj)
+        else:
+            # If it's already a Component/Parallel/Serial, use it directly
+            right = other if isinstance(other, (Component, Parallel, Serial)) else Component(other)
+        
+        # Return the parallel composition
+        return left | right
+    
+    def __rshift__(self, other):
+        """Implements >> for serial composition"""
+        # Create Component versions of both objects
+        left = Component(self.obj)
+        
+        if isinstance(other, GraphOperableWrapper):
+            # If the other is also wrapped, unwrap it
+            right = Component(other.obj)
+        else:
+            # If it's already a Component/Parallel/Serial, use it directly
+            right = other if isinstance(other, (Component, Parallel, Serial)) else Component(other)
+        
+        # Return the serial composition
+        return left >> right
+    
+    def __repr__(self):
+        if isinstance(self.obj, (str, int, float, bool)):
+            return f"g({repr(self.obj)})"
+        return f"g({self.obj.__class__.__name__})"
 
-def auto_component(func):
+def g(obj):
     """
-    Decorator that ensures the first argument to a function 
-    is wrapped as a Component, enabling operator overloading.
+    Wrap any object to enable direct graph operations with | and >> operators.
+    
+    This function is the key to enabling the clean syntax:
+    g(obj1) | g(obj2)  # For parallel composition
+    g(obj1) >> g(obj2)  # For serial composition
     """
-    def wrapper(*args, **kwargs):
-        if not args:
-            return func()
-        
-        # Wrap the first positional argument
-        first_arg = wrap_component(args[0])
-        rest_args = args[1:]
-        
-        return func(first_arg, *rest_args, **kwargs)
-    return wrapper
+    if isinstance(obj, (Component, Parallel, Serial)):
+        return obj  # Already has the operations we need
+    return GraphOperableWrapper(obj)
 
 class GraphCreator:
-    @staticmethod
-    @auto_component
-    def graph(composition=None):
-        """
-        Create a graph from the given composition structure.
-        The @auto_component decorator ensures the first object is properly wrapped.
-        """
-        # Return the composition structure as is, since it's already been 
-        # processed by the auto_component decorator
-        return composition
-    
     @staticmethod
     def evaluate(graph_obj):
         """
@@ -101,20 +164,23 @@ class GraphCreator:
             # Raw object (shouldn't normally happen)
             return f"Executed {graph_obj}"
 
-# Create a more convenient access to the graph method
-graph = GraphCreator.graph
+# Create a convenient access to the evaluation method
 evaluate = GraphCreator.evaluate
 
 class AnyObject:
+    """
+    Example class that represents any user-defined object.
+    No operator overloading is needed in this class.
+    """
     def __init__(self, obj):
         self.obj = obj
+    
+    def __repr__(self):
+        return f"AnyObject({self.obj})"
 
 # ------------------- DEMO CODE -------------------
 if __name__ == "__main__":
-
-
-
-    # Create some sample objects (these could be any Python objects)
+    # Create some sample objects
     obj1 = AnyObject("Object 1")
     obj2 = AnyObject("Object 2")
     obj3 = AnyObject("Object 3")
@@ -122,32 +188,49 @@ if __name__ == "__main__":
     
     # Test different graph compositions
     print("\n----- Example 1: Simple parallel -----")
-    g1 = graph(obj1 | obj2)
+    g1 = g(obj1) | g(obj2)
     print(f"Graph structure: {g1}")
     print(f"Evaluation: {evaluate(g1)}")
     
     print("\n----- Example 2: Simple serial -----")
-    g2 = graph(obj1 >> obj2)
+    g2 = g(obj1) >> g(obj2)
     print(f"Graph structure: {g2}")
     print(f"Evaluation: {evaluate(g2)}")
     
-    print("\n----- Example 3: Complex composition -----")
-    # This should produce serial(parallel(serial(obj1,obj2), obj3), obj4)
-    g3 = graph(obj1 >> obj2 | obj3 >> obj4)
+    print("\n----- Example 3: Multiple parallel -----")
+    g3 = g(obj1) | g(obj2) | g(obj3)
     print(f"Graph structure: {g3}")
     print(f"Evaluation: {evaluate(g3)}")
-
-    print("\n----- Example 4: Another complex composition -----")
-    # This creates parrallel(obj1, serial(obj2, obj3))
-    g4 = graph(obj1 | obj2 >> obj3)
+    
+    print("\n----- Example 4: Multiple serial -----")
+    g4 = g(obj1) >> g(obj2) >> g(obj3)
     print(f"Graph structure: {g4}")
     print(f"Evaluation: {evaluate(g4)}")
     
-    print("\n----- Example 5: Using parentheses to control order -----")
-    # This creates serial(obj1, parallel(obj2, obj3))
-    g5 = graph(obj1 >> (obj2 | obj3))
+    print("\n----- Example 5: Parallel then serial -----")
+    g5 = (g(obj1) | g(obj2)) >> g(obj3)
     print(f"Graph structure: {g5}")
     print(f"Evaluation: {evaluate(g5)}")
+    
+    print("\n----- Example 6: Serial then parallel -----")
+    g6 = (g(obj1) >> g(obj2)) | g(obj3)
+    print(f"Graph structure: {g6}")
+    print(f"Evaluation: {evaluate(g6)}")
+    
+    print("\n----- Example 7: Multiple parallel then serial -----")
+    g7 = (g(obj1) | g(obj2) | g(obj3)) >> g(obj4)
+    print(f"Graph structure: {g7}")
+    print(f"Evaluation: {evaluate(g7)}")
+    
+    print("\n----- Example 8: Complex composition -----")
+    g8 = (g(obj1) >> g(obj2)) | g(obj3) >> g(obj4)
+    print(f"Graph structure: {g8}")
+    print(f"Evaluation: {evaluate(g8)}")
+    
+    print("\n----- Example 9: Using parentheses to control order -----")
+    g9 = g(obj1) >> (g(obj2) | g(obj3))
+    print(f"Graph structure: {g9}")
+    print(f"Evaluation: {evaluate(g9)}")
     
     # Non-string objects also work
     class CustomProcessor:
@@ -156,9 +239,20 @@ if __name__ == "__main__":
         def __repr__(self):
             return f"Processor({self.name})"
     
-    print("\n----- Example 6: Using custom objects -----")
+    print("\n----- Example 10: Using custom objects -----")
     p1 = CustomProcessor("Processor1")
     p2 = CustomProcessor("Processor2")
-    g6 = graph(p1 >> p2)
-    print(f"Graph structure: {g6}")
-    print(f"Evaluation: {evaluate(g6)}")
+    g10 = g(p1) >> g(p2)
+    print(f"Graph structure: {g10}")
+    print(f"Evaluation: {evaluate(g10)}")
+    
+    # Compare with regular object notation
+    print("\n----- Example 11: Testing operator precedence without parentheses -----")
+    g11 = g(obj1) | g(obj2) >> g(obj3)  # Should be equivalent to (g(obj1) | g(obj2)) >> g(obj3)
+    print(f"Graph structure: {g11}")
+    print(f"Evaluation: {evaluate(g11)}")
+    
+    print("\n----- Example 12: Testing operator precedence without parentheses (2) -----")
+    g12 = g(obj1) >> g(obj2) | g(obj3)  # Should be equivalent to (g(obj1) >> g(obj2)) | g(obj3)
+    print(f"Graph structure: {g12}")
+    print(f"Evaluation: {evaluate(g12)}")
