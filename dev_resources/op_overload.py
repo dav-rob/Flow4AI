@@ -141,6 +141,44 @@ def g(obj):
         return obj  # Already has the operations we need
     return GraphOperableWrapper(obj)
 
+
+from functools import reduce
+
+def all_p(objects):
+    """
+    Create a parallel composition from a list of objects.
+    
+    This utility function takes a list of objects (which can be a mix of Component
+    instances and regular objects) and creates a parallel composition of all of them.
+    
+    Example:
+        objects = [obj1, obj2, obj3]
+        graph = all_p(objects)  # Equivalent to g(obj1) | g(obj2) | g(obj3)
+    """
+    if not objects:
+        raise ValueError("Cannot create a parallel composition from an empty list")
+    if len(objects) == 1:
+        return g(objects[0])
+    return reduce(lambda acc, obj: acc | g(obj), objects[1:], g(objects[0]))
+
+
+def all_s(objects):
+    """
+    Create a serial composition from a list of objects.
+    
+    This utility function takes a list of objects (which can be a mix of Component
+    instances and regular objects) and creates a serial composition of all of them.
+    
+    Example:
+        objects = [obj1, obj2, obj3]
+        graph = all_s(objects)  # Equivalent to g(obj1) >> g(obj2) >> g(obj3)
+    """
+    if not objects:
+        raise ValueError("Cannot create a serial composition from an empty list")
+    if len(objects) == 1:
+        return g(objects[0])
+    return reduce(lambda acc, obj: acc >> g(obj), objects[1:], g(objects[0]))
+
 class GraphCreator:
     @staticmethod
     def evaluate(graph_obj):
@@ -291,3 +329,43 @@ if __name__ == "__main__":
     g16 = (pc1 | g(obj1)) >> (pc2 | g(obj2))
     print(f"Complex mixed composition: {g16}")
     print(f"Evaluation: {evaluate(g16)}")
+
+    print("\n----- Example 17: Working with mixed object lists -----")
+    # Create a mixed list of Component instances and regular objects
+    mixed_objects = [pc1, obj1, pc2, obj2]
+    
+    # g() already handles both Component and non-Component objects correctly
+    # Create the same complex expression using g() directly
+    g17 = (g(mixed_objects[0]) | g(mixed_objects[1])) >> (g(mixed_objects[2]) | g(mixed_objects[3]))
+    print(f"Mixed list composition: {g17}")
+    print(f"Evaluation: {evaluate(g17)}")
+
+    # Create more objects for demonstration
+    pc3 = ProcessorComponent("Processor3", "analyze")
+    obj4 = AnyObject("Object 4")
+    
+    # A list with mixed object types
+    objects = [pc1, obj1, pc2, obj2, pc3, obj4]
+
+    print("\n----- Example 18: Using all_p() utility function -----")
+    # Create a parallel composition from all objects in the list using all_p()
+    g18 = all_p(objects)
+    print(f"Parallel composition using all_p(): {g18}")
+    print(f"Evaluation: {evaluate(g18)}")
+
+    print("\n----- Example 19: Using all_s() utility function -----")
+    # Create a serial composition from all objects in the list using all_s()
+    g19 = all_s(objects)
+    print(f"Serial composition using all_s(): {g19}")
+    print(f"Evaluation: {evaluate(g19)}")
+    
+    print("\n----- Example 20: Combining all_p() and all_s() for complex patterns -----")
+    # Split list into two groups
+    group1 = objects[:3]  # First three objects
+    group2 = objects[3:]  # Last three objects
+    
+    # Create parallel compositions for each group, then connect them in series
+    g20 = all_p(group1) >> all_p(group2)
+    print(f"Complex pattern with utility functions: {g20}")
+    print(f"Evaluation: {evaluate(g20)}")
+    
