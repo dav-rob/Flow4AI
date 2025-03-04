@@ -709,6 +709,10 @@ async def test_multiple_tail_jobs_in_jobchain_serial(caplog):
         assert "RETURN_JOB" in result, "Result missing RETURN_JOB field"
         assert "DefaultTailJob" in result["RETURN_JOB"], f"Expected DefaultTailJob in RETURN_JOB, got {result.get('RETURN_JOB')}"
         assert "task_pass_through" in result, "Result missing task_pass_through field"
+        assert "processor_alpha" in result, "Result missing processor_alpha field"
+        assert "processor_beta" in result, "Result missing processor_beta field"
+        assert "accuracy" in result["processor_alpha"], "processor_alpha should contain returned values"
+        assert "archived_items" in result["processor_beta"], "processor_beta should contain returned values"
 
 @pytest.mark.asyncio
 async def test_multiple_tail_jobs_2_parameters(caplog):
@@ -771,6 +775,10 @@ async def test_multiple_tail_jobs_2_parameters(caplog):
         assert "RETURN_JOB" in result, "Result missing RETURN_JOB field"
         assert "DefaultTailJob" in result["RETURN_JOB"], f"Expected DefaultTailJob in RETURN_JOB, got {result.get('RETURN_JOB')}"
         assert "task_pass_through" in result, "Result missing task_pass_through field"
+        assert "processor_alpha" in result, "Result missing processor_alpha field"
+        assert "processor_beta" in result, "Result missing processor_beta field"
+        assert "accuracy" in result["processor_alpha"], "processor_alpha should contain returned values"
+        assert "archived_items" in result["processor_beta"], "processor_beta should contain returned values"
 
 
 @pytest.mark.asyncio

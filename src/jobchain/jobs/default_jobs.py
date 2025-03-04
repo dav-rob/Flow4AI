@@ -1,3 +1,4 @@
+import copy
 from typing import Any, Dict, Union
 
 from jobchain import jc_logging as logging
@@ -20,4 +21,7 @@ class DefaultTailJob(JobABC):
     async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
         """Run a simple job that logs and returns the task."""
         logger.info(f"Default tail JOB for {task}")
-        return {}
+        inputs: Dict[str, Dict[str, Any]] = self._get_inputs()
+        inputs_with_short_job_name = {JobABC.parse_job_name(k): v for k, v in inputs.items()}
+        logger.debug(f"Returning inputs: {inputs_with_short_job_name}")
+        return inputs_with_short_job_name

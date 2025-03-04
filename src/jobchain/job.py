@@ -401,16 +401,28 @@ class JobABC(ABC, metaclass=JobMeta):
         return len(self.expected_inputs) == 0
 
     def get_context(self) -> Dict[str, Any]:
-        """A repository to store state across jobs in a graph for a single coroutine.
+        """
+        Returns an object that can be used to store context across jobs in a graph for a single coroutine.
            can only be used within a job_graph_context set up with:
            ```python
             async with job_graph_context_manager(job_set):
                         result = await job._execute(task)
-            ```
         """
         job_state_dict:dict = job_graph_context.get()
         context = job_state_dict[JobABC.CONTEXT]
         return context
+
+    def _get_inputs(self) -> Dict[str, Any]:
+        """
+        Returns the inputs for this job.
+
+        Returns:
+            Dict[str, Any]: The inputs for this job.
+        """
+        job_state_dict:dict = job_graph_context.get()
+        jobstate:JobState = job_state_dict[self.name]
+        inputs: Dict[str, Dict[str, Any]] = jobstate.inputs
+        return inputs    
 
     def get_task(self) -> Union[Dict[str, Any], Task]:
         """
