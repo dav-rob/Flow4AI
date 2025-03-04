@@ -1,3 +1,3 @@
-from jobchain.jobs.llm_jobs import OpenAIJob
+from jobchain.jobs.openai_jobs import OpenAIJob
 
 __all__ = ['OpenAIJob']

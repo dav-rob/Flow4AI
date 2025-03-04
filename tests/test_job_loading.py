@@ -9,7 +9,6 @@ from jobchain.jc_graph import validate_graph
 from jobchain.job import JobABC, Task, job_graph_context_manager
 from jobchain.job_chain import JobChain  # Import JobChain
 from jobchain.job_loader import ConfigLoader, ConfigurationError, JobFactory
-from jobchain.jobs.llm_jobs import OpenAIJob
 
 # Test configuration
 TEST_CONFIG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config"))
