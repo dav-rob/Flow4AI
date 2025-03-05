@@ -110,7 +110,6 @@ async def job_graph_context_manager(job_set: set['JobABC']):
   for job in job_set:
       new_state[job.name] = JobState()
   new_state[JobABC.CONTEXT] = {}
-  new_state[JobABC.SAVED_RESULTS] = {}
   token = job_graph_context.set(new_state)
   try:
       yield new_state
@@ -342,7 +341,7 @@ class JobABC(ABC, metaclass=JobMeta):
             self.logger.debug(f"Tail Job {self.name} returning result: {result}")
             task = self.get_context()[JobABC.TASK_PASSTHROUGH_KEY]
             result[JobABC.TASK_PASSTHROUGH_KEY] = task
-            saved_results = self.get_context()[JobABC.SAVED_RESULTS]
+            saved_results = self.get_context().get(JobABC.SAVED_RESULTS, {})
             result.update(saved_results)
             return result
 
