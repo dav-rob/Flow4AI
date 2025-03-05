@@ -140,6 +140,7 @@ class JobABC(ABC, metaclass=JobMeta):
             properties (Dict[str, Any], optional): configuration properties passed in by jobs.yaml
         """
         self.name:str = self._getUniqueName() if name is None else name
+        self.save_result: bool = bool(properties.get("save_result", False))
         self.properties:Dict[str, Any] = properties
         self.expected_inputs:set[str] = set()
         self.next_jobs:list[JobABC] = [] 
@@ -319,16 +320,11 @@ class JobABC(ABC, metaclass=JobMeta):
         result = await self.run(job_state.inputs)
         self.logger.debug(f"Job {self.name} finished running")
 
+        if self.save_result:
+            pass
+
         if not isinstance(result, dict):
             result = {'result': result}
-
-        # if isinstance(task, dict):
-        #     result[JobABC.TASK_PASSTHROUGH_KEY] = task
-        # else:
-        #     for input_data in job_state.inputs.values():
-        #         if isinstance(input_data, dict) and JobABC.TASK_PASSTHROUGH_KEY in input_data:
-        #             result[JobABC.TASK_PASSTHROUGH_KEY] = input_data[JobABC.TASK_PASSTHROUGH_KEY]
-        #             break
 
         # Clear state for potential reuse
         job_state.inputs.clear()
