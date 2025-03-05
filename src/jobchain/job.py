@@ -268,6 +268,9 @@ class JobABC(ABC, metaclass=JobMeta):
         by updating the JobState object and propagating the tail results back up the graph
         when a tail job is reached.
 
+        This is a classic dataflow execution model, where computation proceeds based on data 
+        availability rather than a predetermined sequence.
+
         WARNING: DO NOT OVERRIDE THIS METHOD IN CUSTOM JOB CLASSES.
         This method is part of the core JobChain execution flow and handles critical operations
         including job graph traversal, state management, and result propagation.
@@ -279,6 +282,8 @@ class JobABC(ABC, metaclass=JobMeta):
             async with job_graph_context_manager(job_set):
                         result = await job._execute(task)
             ```
+        The recursive nature of the algorithm means that results flow upwards, with the head job appearing
+        to return the result of the tail job.
 
         Args:
             task (Union[Task, None]): the input to the first (head) job of the job graph, is None in child jobs.
@@ -340,22 +345,29 @@ class JobABC(ABC, metaclass=JobMeta):
             result[JobABC.TASK_PASSTHROUGH_KEY] = task
             return result
 
-        # Execute child jobs
+        # Check if any child jobs are ready to execute once given this result as input
         executing_jobs = []
         for next_job in self.next_jobs:
             input_data = result.copy()
+            # add result data from this job as an input to the next job
             await next_job.receive_input(self.name, input_data)
             next_job_inputs = job_state_dict.get(next_job.name).inputs
+            # if the next job has all its inputs add coroutine to list to execute
             if next_job.expected_inputs.issubset(set(next_job_inputs.keys())):
                 executing_jobs.append(next_job._execute(task=None))
 
+        # If there are any child jobs ready to execute, execute them, else return None 
         if executing_jobs:
+            # await for all futures to return results
             child_results = await asyncio.gather(*executing_jobs)
             not_none_results = [r for r in child_results if r is not None]
             if not_none_results:
-                # return the first valid result
+                # Return the first valid result.
+                # The recursive nature of the algorithm means that results flow upwards, with the head job appearing
+                # to return the result of the tail job, so returning the first valid result will return the tail job
+                # result up the stack.
                 first_valid_result = not_none_results[0]
-                self.logger.debug(f"Job {self.name} propagating tail result: {first_valid_result}")
+                self.logger.debug(f"Job {self.name} propagating first valid result: {first_valid_result}")
                 return first_valid_result
 
         # If no child jobs executed or no valid result found, return None
