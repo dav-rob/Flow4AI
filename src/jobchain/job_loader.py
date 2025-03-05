@@ -234,16 +234,16 @@ class JobFactory:
             param_graph_def = copy.deepcopy(graph_def)
             
             # Create job instances for this parameter group
-            for graph_job_name in job_names_in_graph:
-                raw_job_def: Dict[str, Any] = ConfigLoader.get_jobs_config()[graph_job_name]
+            for short_graph_job_name in job_names_in_graph:
+                raw_job_def: Dict[str, Any] = ConfigLoader.get_jobs_config()[short_graph_job_name]
                 if ConfigLoader.is_parameterized_job(raw_job_def):
                     job_def: Dict[str, Any] = ConfigLoader.fill_job_with_parameters(raw_job_def, graph_name, parameter_name)
                 else:
                     job_def = raw_job_def
-                unique_job_name = graph_name + "$$" + parameter_name + "$$" + graph_job_name + "$$"
+                unique_job_name = graph_name + "$$" + parameter_name + "$$" + short_graph_job_name + "$$"
                 job_type: str = job_def["type"]
                 job: JobABC = cls.create_job(unique_job_name, job_type, job_def)
-                job_instances[graph_job_name] = job
+                job_instances[short_graph_job_name] = job
                 
             # Create the job graph for this parameter group
             job_graph: JobABC = cls.create_job_graph(param_graph_def, job_instances)
@@ -253,12 +253,12 @@ class JobFactory:
     @classmethod
     def create_job_graph_no_params(cls, graph_def, graph_name, job_names_in_graph)-> JobABC:
         job_instances: dict[str, JobABC] = {}
-        for graph_job_name in job_names_in_graph:
-                job_def: Dict[str, Any] = ConfigLoader.get_jobs_config()[graph_job_name]
-                unique_job_name = graph_name + "$$" + "$$" + graph_job_name +"$$"
+        for short_graph_job_name in job_names_in_graph:
+                job_def: Dict[str, Any] = ConfigLoader.get_jobs_config()[short_graph_job_name]
+                unique_job_name = graph_name + "$$" + "$$" + short_graph_job_name +"$$"
                 job_type: str = job_def["type"]
                 job: JobABC = cls.create_job(unique_job_name, job_type, job_def)
-                job_instances[graph_job_name] = job
+                job_instances[short_graph_job_name] = job
         job_graph: JobABC = cls.create_job_graph(graph_def, job_instances)
         return job_graph
 

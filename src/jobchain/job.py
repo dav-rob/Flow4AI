@@ -351,16 +351,14 @@ class JobABC(ABC, metaclass=JobMeta):
 
         if executing_jobs:
             child_results = await asyncio.gather(*executing_jobs)
-            # Find the tail job result (the one that has no next_jobs)
-            tail_results = [r for r in child_results if r is not None]
-            if tail_results:
-                # Always return the first valid tail result
-                tail_result = tail_results[0]
-                self.logger.debug(f"Job {self.name} propagating tail result: {tail_result}")
-                # Preserve the original tail job that generated the result
-                return tail_result
+            not_none_results = [r for r in child_results if r is not None]
+            if not_none_results:
+                # return the first valid result
+                first_valid_result = not_none_results[0]
+                self.logger.debug(f"Job {self.name} propagating tail result: {first_valid_result}")
+                return first_valid_result
 
-        # If no child jobs executed or no tail result found, return None
+        # If no child jobs executed or no valid result found, return None
         return None
 
     async def receive_input(self, from_job: str, data: Dict[str, Any]) -> None:
