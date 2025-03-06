@@ -845,3 +845,69 @@ async def test_simple_parallel_jobs_in_jobchain_serial(caplog):
         assert "RETURN_JOB" in result, "Result missing RETURN_JOB field"
         assert "DefaultTailJob" in result["RETURN_JOB"], f"Expected DefaultTailJob in RETURN_JOB, got {result.get('RETURN_JOB')}"
         assert "task_pass_through" in result, "Result missing task_pass_through field"
+
+@pytest.mark.asyncio
+async def test_save_result():
+    """Test that head jobs from config can be executed in JobChain with serial processing"""
+    # Set config directory for test
+    ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_save_result")])
+    
+    # Initialize results tracking
+    results = []
+    
+    def result_processor(result):
+        results.append(result)
+        logging.info(f"Processed result: {result}")
+    
+    # Create JobChain with serial processing to ensure deterministic results
+    job_chain = JobChain(job=None, result_processing_function=result_processor, serial_processing=True)
+    
+    # Get head jobs from config to know their names
+    head_jobs = job_chain.get_job_names()
+    
+    # Submit tasks for each job
+    for job in head_jobs:
+        job_chain.submit_task({"task": "Test task"}, job_name=job)
+    
+    # Mark input as completed and wait for all tasks to finish
+    job_chain.mark_input_completed()
+    
+    # Convert shared list to regular list for sorting
+    results_list = list(results)
+    
+    # Verify results
+    # We expect one result per head job
+    assert len(results_list) == len(head_jobs), f"Expected {len(head_jobs)} results, got {len(results_list)}"
+    
+    # Sort results by job name to ensure deterministic ordering
+    results_list.sort(key=lambda x: next(iter(x.keys())))
+    
+    # Each result should be a dictionary with job results
+    for result in results_list:
+        assert isinstance(result, dict), f"Expected dict result, got {type(result)}"
+        tail_job_name = result.get('RETURN_JOB')
+        tail_job_value = result.get("dummy_job_result")
+        # Verify parameter substitution for each graph type
+        if 'four_stage_parameterized$$params1$$summarize$$' == tail_job_name:
+            # Verify save_to_db parameters
+            assert 'postgres://user1:pass1@db1/mydb' in tail_job_value, "Database URL not correctly substituted"
+            assert 'table_a' in tail_job_value, "Table name not correctly substituted"
+            # Verify read_file parameters
+            assert './file1.txt' in tail_job_value, "Filepath not correctly substituted"
+            assert JobABC.SAVED_RESULTS not in result, f"{JobABC.SAVED_RESULTS} should not be in {result}"
+
+        elif 'four_stage_parameterized$$params2$$summarize$$' == tail_job_name:
+            saved_result_str = str(result[JobABC.SAVED_RESULTS]['save_to_db'])
+            assert 'sqlite://user2:pass2@db2/mydb' in saved_result_str, "Database URL not correctly saved"
+            assert 'table_b' in saved_result_str, "Table name not correctly saved"
+            
+        elif 'three_stage$$params1$$summarize$$' == tail_job_name:
+            # Verify save_to_db2 parameters are from the job definition
+            assert 'sqlite://user2:pass2@db2/mydb' in tail_job_value, "Database URL not correctly set"
+            assert 'table_b' in tail_job_value, "Table name not correctly set"
+            assert JobABC.SAVED_RESULTS not in result, f"{JobABC.SAVED_RESULTS} should not be in {result}"
+            
+        elif 'three_stage_reasoning$$params1$$summarize$$' == tail_job_name:
+            saved_result_str = str(result[JobABC.SAVED_RESULTS]['save_to_db'])
+            assert 'sqlite://user2:pass2@db2/mydb' in saved_result_str, "Database URL not correctly saved"
+            assert 'table_b' in saved_result_str, "Table name not correctly saved"

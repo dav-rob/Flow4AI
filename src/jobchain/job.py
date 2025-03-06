@@ -110,6 +110,7 @@ async def job_graph_context_manager(job_set: set['JobABC']):
   for job in job_set:
       new_state[job.name] = JobState()
   new_state[JobABC.CONTEXT] = {}
+  new_state[JobABC.CONTEXT][JobABC.SAVED_RESULTS] = {}
   token = job_graph_context.set(new_state)
   try:
       yield new_state
@@ -342,7 +343,8 @@ class JobABC(ABC, metaclass=JobMeta):
             task = self.get_context()[JobABC.TASK_PASSTHROUGH_KEY]
             result[JobABC.TASK_PASSTHROUGH_KEY] = task
             saved_results = self.get_context().get(JobABC.SAVED_RESULTS, {})
-            result.update(saved_results)
+            if saved_results:
+                result[JobABC.SAVED_RESULTS] = {JobABC.parse_job_name(k): v for k, v in saved_results.items()}
             return result
 
         # Check if any child jobs are ready to execute once given this result as input
