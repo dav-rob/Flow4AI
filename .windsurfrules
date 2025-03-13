@@ -13,24 +13,6 @@ Always read the architecture document in the root folder: ARCHITECTURE.md, befor
 - use pytest's --full-suite flag to run all tests, including performance tests.
 - when running tests that are logging in order to investigate causes the use `python -m pytest -s` to see the logs. Just using "-v" will not show the logs.
 
-## Code Editing Disciplines
-- NEVER jump to conclusions, always confirm for yourself what the facts are, even if I have told you what my understanding is, confirm for yourself your assumptions with direct observations from logging or prints, before making changes.
-- add logging or prints freely to help you confirm what the facts are before making changes.
-- Base decisions on the evidence you see in command outputs and results or tests.
-- Use straightforward approaches first.
-- Break complex problems into simpler pieces.
-- Test each piece separately.
-
-## Code Style and Structure
-- write clean, efficient, and well-documented Python code.
-- DRY (Don't Repeat Yourself), factor out common code into functions and classes.
-- test code for correctness and performance. 
-- prioritize readability,simplicity, and performance.
-- use type hints and annotations where possible.
-- use appropriate error handling and input validation.
-- structure code into functions and classes for modularity and reusability.
-- never delete any of the TODOs or comments that I have put in the code as explainers, unless the code logic or variable names have changed.
-
 ## JobABC Implementation Rules
 - NEVER override the `_execute` method in custom job classes. This method is responsible for job graph execution and state management.
 - Always implement the required `run` method in custom job classes to define job-specific behavior.
