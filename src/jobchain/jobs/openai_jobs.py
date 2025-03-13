@@ -2,12 +2,12 @@ import os
 from typing import Any, Dict, Optional, Union
 
 from aiolimiter import AsyncLimiter
-from dotenv import load_dotenv
 from openai import AsyncOpenAI
 
 import jobchain.jc_logging as logging
 from jobchain.job import JobABC
 from jobchain.job_loader import JobFactory
+from jobchain.utils.api_utils import get_api_key
 from jobchain.utils.llm_utils import check_response_errors, clean_prompt
 
 logger = logging.getLogger("OpenAIJob")
@@ -21,19 +21,11 @@ class OpenAIClient:
     @classmethod
     def get_client(cls, params: Dict[str, Any] = None):
         if cls._client is None:
-            # Load environment variables from api.env file
-            load_dotenv("api.env")
-
             # Initialize params if None
             params = params or {}
-
-            # Handle special parameters
-            api_key = os.getenv(params.pop("api_key", None)) if "api_key" in params else os.getenv('OPENAI_API_KEY')
-            logger.info(f"Resolved API Key exists: {bool(api_key)}")
             
-            # Optional: Check if the API key is not set and raise an error 
-            if not api_key:
-                raise ValueError("API key is not set. Please provide an API key.")
+            # Get API key using our utility function
+            api_key = get_api_key(params, key_name='OPENAI_API_KEY')
             
             # Create client with remaining params
             cls._client = AsyncOpenAI(api_key=api_key, **params)
