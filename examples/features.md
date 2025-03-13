@@ -1,10 +1,10 @@
-# <task> Features
+# <project> Features Implementation Tracking List
 
-This document tracks the implementation status of <task> features in our features.
+This document tracks the implementation status of <project> features in our features.
 
-## Working Process ##
+## Working Process
 
-Create the <task> features in small chunks, 
+Create the <project> features in small chunks, 
 1) Create each feature one at a time,
 2) then run the feature, to check that it works, 
 3) then fix the feature
@@ -19,7 +19,7 @@ Create the <task> features in small chunks,
 - [ ] Feature not implemented
 - [~] Feature skipped (see explanation)
 
-## <task> Features
+## <project> Features
 
 1. **Multiple Provider Support**
    - [x] OpenAI (feature_1)
@@ -107,8 +107,7 @@ Create the <task> features in small chunks,
     - [~] Webhooks - *Skipped: Requires external service integration*
 
 ## Implementation Notes
-- Features marked with [x] are fully implemented and working correctly in the features.
-- Features marked with [!] are implemented but have known issues (like missing API keys) that need to be addressed.
-- Features marked with [~] are skipped due to complexity, external dependencies, or infrastructure requirements.
-- The implemented features cover the core functionalities of <task> that can be demonstrated in standalone features.
+Create notes here to remember what you have done and what you need to do.
+
+- The implemented features cover the core functionalities of <project> that can be demonstrated in standalone features.
 - To use features with [!] status, add the required API keys to the api.env file.
