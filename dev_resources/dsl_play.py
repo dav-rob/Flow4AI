@@ -1,13 +1,28 @@
+from abc import ABC, abstractmethod
 from functools import reduce
+from typing import Any, Dict, Optional, Type, Union
 
 """
 Improved operator overloading example for JobChain graph construction.
 This implementation allows for direct operator usage between wrapped objects.
 """
 
-class JobABC:
-    def __init__(self, obj):
-        self.obj = obj
+class Task(dict):
+    def __init__(self, data: Union[Dict[str, Any], str], job_name: Optional[str] = None):
+        # Convert string input to dict
+        if isinstance(data, str):
+            data = {'task': data}
+        elif isinstance(data, dict):
+            data = data.copy()  # Create a copy to avoid modifying the original
+        else:
+            data = {'task': str(data)}
+        
+        super().__init__(data)
+        self.task_id:str = str(uuid.uuid4())
+        if job_name is not None:
+            self['job_name'] = job_name
+
+class JobABC(ABC):
     
     def __or__(self, other):
         """Implements the | operator for parallel composition"""
@@ -18,7 +33,7 @@ class JobABC:
             return Parallel(self, other)
         else:
             # If other is a raw object, wrap it first
-            return Parallel(self, JobABC(other))
+            return Parallel(self, WrappingJob(other))
     
     def __rshift__(self, other):
         """Implements the >> operator for serial composition"""
@@ -29,14 +44,16 @@ class JobABC:
             return Serial(self, other)
         else:
             # If other is a raw object, wrap it first
-            return Serial(self, JobABC(other))
+            return Serial(self, WrappingJob(other))
     
-    def __repr__(self):
-        if isinstance(self.obj, (str, int, float, bool)):
-            return f"JobABC({repr(self.obj)})"
-        return f"JobABC({self.obj.__class__.__name__})"
 
-class Parallel(JobABC):
+
+    @abstractmethod
+    async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
+        """Execute the job on the given task. Must be implemented by subclasses."""
+        pass
+
+class Parallel:
     def __init__(self, *components):
         self.components = components
         self.obj = None  # No direct object for this composite
@@ -44,21 +61,21 @@ class Parallel(JobABC):
     def __or__(self, other):
         """Support chaining with | operator"""
         if not isinstance(other, (JobABC, Parallel, Serial)):
-            other = JobABC(other)
+            other = WrappingJob(other)
         
         return Parallel(*list(self.components) + [other])
         
     def __rshift__(self, other):
         """Support chaining with >> operator"""
         if not isinstance(other, (JobABC, Parallel, Serial)):
-            other = JobABC(other)
+            other = WrappingJob(other)
             
         return Serial(self, other)
 
     def __repr__(self):
         return f"parallel({', '.join(repr(c) for c in self.components)})"
 
-class Serial(JobABC):
+class Serial:
     def __init__(self, *components):
         self.components = components
         self.obj = None  # No direct object for this composite
@@ -66,19 +83,31 @@ class Serial(JobABC):
     def __or__(self, other):
         """Support chaining with | operator"""
         if not isinstance(other, (JobABC, Parallel, Serial)):
-            other = JobABC(other)
+            other = WrappingJob(other)
             
         return Parallel(self, other)
         
     def __rshift__(self, other):
         """Support chaining with >> operator"""
         if not isinstance(other, (JobABC, Parallel, Serial)):
-            other = JobABC(other)
+            other = WrappingJob(other)
             
         return Serial(*list(self.components) + [other])
         
     def __repr__(self):
         return f"serial({', '.join(repr(c) for c in self.components)})"
+
+class WrappingJob(JobABC):
+    def __init__(self, wrapped_object: Any):
+        self.wrapped_object = wrapped_object
+
+    def __repr__(self):
+        if isinstance(self.wrapped_object, (str, int, float, bool)):
+            return f"WrappingJob({repr(self.wrapped_object)})"
+        return f"WrappingJob({self.wrapped_object.__class__.__name__})"
+
+    async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
+        return self.wrapped_object
 
 def wrap(obj):
     """
@@ -90,7 +119,7 @@ def wrap(obj):
     """
     if isinstance(obj, JobABC):
         return obj  # Already has the operations we need
-    return JobABC(obj)
+    return WrappingJob(obj)
 
 # Synonym for wrap
 w = wrap
@@ -152,7 +181,7 @@ class GraphCreator:
         
         elif isinstance(graph_obj, JobABC):
             # Simple case - just a single component
-            return f"Executed {graph_obj.obj}"
+            return f"Executed {graph_obj.wrapped_object}"
         
         else:
             # Raw object (shouldn't normally happen)

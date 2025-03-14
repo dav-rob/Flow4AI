@@ -61,7 +61,7 @@ if __name__ == "__main__":
     print("Evaluated:", evaluate(g7))
 
     # Example 8: Using direct Component instances
-    c1 = JobABC("Direct Component")
+    c1 = WrappingJob("Direct Component")
     g8 = w("Task C") >> c1
     print("\n----- Example 8: Using direct Component instances -----")
     print(g8)
@@ -86,12 +86,12 @@ if __name__ == "__main__":
     print(g10)
     print("Evaluated:", evaluate(g10))
 
-    class ProcessorComponent(JobABC):
+    class ProcessorComponent:
         def __init__(self, name, process_type):
             self.process_type = process_type
-            super().__init__(name)
+            self.name = name
         def __repr__(self):
-            return f"ProcessorComponent(name={self.obj}, type={self.process_type})"
+            return f"ProcessorComponent(name={self.name}, type={self.process_type})"
     
     # Create instances of the Component subclass
     pc1 = ProcessorComponent("Processor1", "transform")
