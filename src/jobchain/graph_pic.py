@@ -213,11 +213,40 @@ def custom_hierarchical_layout(G: nx.DiGraph) -> Dict[str, Tuple[float, float]]:
     # Sort nodes within each level by various criteria for better layout
     for level, nodes in x_groups.items():
         def node_sort_key(node):
-            # Consider the number of connections for better placement
-            pred_count = len(list(G.predecessors(node)))
-            succ_count = len(list(G.successors(node)))
-            # Sort by connection counts, then by node name for consistency
-            return (pred_count, succ_count, str(node))
+            # Get predecessors and successors
+            preds = list(G.predecessors(node))
+            succs = list(G.successors(node))
+            pred_count = len(preds)
+            succ_count = len(succs)
+            
+            # Calculate average index of connected nodes in adjacent levels
+            # This helps position nodes to minimize edge crossings
+            pred_indices = []
+            for p in preds:
+                if p in pos and pos[p][0] < pos[node][0]:  # Only consider nodes in previous levels
+                    p_level = pos[p][0]
+                    if p_level in x_groups:
+                        p_idx = x_groups[p_level].index(p) if p in x_groups[p_level] else 0
+                        pred_indices.append(p_idx)
+            
+            succ_indices = []
+            for s in succs:
+                if s in pos and pos[s][0] > pos[node][0]:  # Only consider nodes in following levels
+                    s_level = pos[s][0]
+                    if s_level in x_groups:
+                        s_idx = x_groups[s_level].index(s) if s in x_groups[s_level] else 0
+                        succ_indices.append(s_idx)
+            
+            # Calculate average indices (use default if no connections)
+            avg_pred_idx = sum(pred_indices) / len(pred_indices) if pred_indices else 0
+            avg_succ_idx = sum(succ_indices) / len(succ_indices) if succ_indices else 0
+            
+            # Cross-reduction: prioritize placement based on connection patterns
+            # Nodes with more connections to higher-indexed nodes should be placed higher
+            cross_reduction_score = avg_succ_idx - avg_pred_idx
+            
+            # Return a tuple of sorting criteria
+            return (cross_reduction_score, pred_count, succ_count, str(node))
         
         # Sort the nodes in this level
         x_groups[level] = sorted(nodes, key=node_sort_key)
