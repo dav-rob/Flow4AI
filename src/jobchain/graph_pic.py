@@ -169,6 +169,11 @@ def custom_hierarchical_layout(G: nx.DiGraph) -> Dict[str, Tuple[float, float]]:
     A custom hierarchical layout that arranges nodes in levels based on topology,
     with special attention to maintaining straight paths and vertical alignment.
     
+    Key features:
+    - Head nodes are positioned equidistant between their child nodes
+    - Tail nodes are positioned at the rightmost side
+    - Nodes that belong to the same path are vertically aligned when possible
+    
     Args:
         G: A NetworkX DiGraph object
         
@@ -178,20 +183,26 @@ def custom_hierarchical_layout(G: nx.DiGraph) -> Dict[str, Tuple[float, float]]:
     # Get nodes arranged in topological generations
     generations = get_topological_generations(G)
     
-    # Analyze paths in the graph to maintain alignment
-    node_paths = identify_paths(G)
+    # Identify source nodes (no incoming edges) and sink nodes (no outgoing edges)
+    source_nodes = [n for n, d in G.in_degree() if d == 0]
+    sink_nodes = [n for n, d in G.out_degree() if d == 0]
     
     # Calculate positions
     pos = {}
     
-    # First, assign x positions based on generation
+    # First pass: assign x positions based on generation
     for i, gen in enumerate(generations):
         for node in gen:
-            # X position is determined by generation index (level)
+            # Standard x position is determined by generation index (level)
             x = i
+            
+            # Special case: ensure sink nodes are positioned at the rightmost side
+            # by adding a small offset to their x position
+            if node in sink_nodes:
+                x = len(generations) # Put at the far right
+                
             pos[node] = (x, 0)  # Y will be assigned later
     
-    # Now, assign y positions with path preservation
     # Group nodes by their x position
     x_groups = {}
     for node, (x, _) in pos.items():
@@ -199,34 +210,55 @@ def custom_hierarchical_layout(G: nx.DiGraph) -> Dict[str, Tuple[float, float]]:
             x_groups[x] = []
         x_groups[x].append(node)
     
+    # Sort nodes within each level by various criteria for better layout
+    for level, nodes in x_groups.items():
+        def node_sort_key(node):
+            # Consider the number of connections for better placement
+            pred_count = len(list(G.predecessors(node)))
+            succ_count = len(list(G.successors(node)))
+            # Sort by connection counts, then by node name for consistency
+            return (pred_count, succ_count, str(node))
+        
+        # Sort the nodes in this level
+        x_groups[level] = sorted(nodes, key=node_sort_key)
+    
+    # Second pass: assign y positions
     # Track vertical slots for each column to prevent overlap
     x_slots = {x: set() for x in x_groups}
     
-    # Function to find direct predecessors and successors in the next/prev level
-    def get_direct_connections(node, direction='pred'):
-        if direction == 'pred':
-            return [p for p in G.predecessors(node) 
-                    if pos[p][0] == pos[node][0] - 1]
-        else:  # 'succ'
-            return [s for s in G.successors(node) 
-                    if pos[s][0] == pos[node][0] + 1]
+    # Process source nodes specially to center them between their children
+    for node in source_nodes:
+        # Find direct children
+        children = list(G.successors(node))
+        if children:
+            # If this source node has children, we position it equidistant from them
+            # First, make sure the children have y-positions assigned
+            child_level = pos[children[0]][0]  # All children should be at the same level
+            
+            # Get existing y-positions of the children, if any
+            child_ys = [pos[child][1] for child in children if pos[child][1] != 0]
+            
+            if child_ys:
+                # Center the source node between its children
+                center_y = sum(child_ys) / len(child_ys)
+            else:
+                # If children don't have positions yet, use a centered position
+                # This will be adjusted later when child positions are calculated
+                center_y = 0
+                
+            # Assign the position
+            x, _ = pos[node]
+            pos[node] = (x, center_y)
     
-    # Process nodes level by level
+    # Process remaining nodes level by level
     for level in sorted(x_groups.keys()):
-        # Sort nodes within this level by their connectivity
-        nodes = x_groups[level]
-        
-        # Sort by number of predecessors and successors for better placement
-        def node_sort_key(node):
-            pred_count = len(list(G.predecessors(node)))
-            succ_count = len(list(G.successors(node)))
-            return (pred_count, succ_count, str(node))
-        
-        nodes.sort(key=node_sort_key)
-        
-        # Assign y positions
+        # Assign y positions for nodes in this level
         slot_counter = 0
-        for node in nodes:
+        for node in x_groups[level]:
+            # Skip nodes that already have a y position (source nodes)
+            if pos[node][1] != 0 and node in source_nodes:
+                continue
+                
             # Try to align with predecessors or successors if possible
             aligned_y = None
             
@@ -239,9 +271,9 @@ def custom_hierarchical_layout(G: nx.DiGraph) -> Dict[str, Tuple[float, float]]:
                     aligned_y = sum(pred_ys) / len(pred_ys)
             
             # If no alignment from predecessors, check successors
-            if aligned_y is None and level < max(x_groups.keys()):
+            if aligned_y is None:
                 succs = list(G.successors(node))
-                succ_ys = [pos[s][1] for s in succs if s in pos]
+                succ_ys = [pos[s][1] for s in succs if s in pos and pos[s][1] != 0]
                 if succ_ys:
                     aligned_y = sum(succ_ys) / len(succ_ys)
             
@@ -262,6 +294,17 @@ def custom_hierarchical_layout(G: nx.DiGraph) -> Dict[str, Tuple[float, float]]:
             # Assign the position
             x, _ = pos[node]
             pos[node] = (x, aligned_y)
+    
+    # Third pass: adjust source node positions based on final positions of children
+    for node in source_nodes:
+        children = list(G.successors(node))
+        if children:
+            child_ys = [pos[child][1] for child in children]
+            if child_ys:
+                # Center the source node between its children's final positions
+                center_y = sum(child_ys) / len(child_ys)
+                x, _ = pos[node]
+                pos[node] = (x, center_y)
     
     # Normalize the positions
     x_values = [p[0] for p in pos.values()]
