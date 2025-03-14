@@ -402,19 +402,94 @@ def custom_hierarchical_layout(G: nx.DiGraph) -> Dict[str, Tuple[float, float]]:
     return normalized_pos
 
 
-def visualize_graph(graph_definition: Dict[str, Any], 
-                   layout: str = "hierarchical", 
-                   color_scheme: str = "default",
-                   node_size: int = 1500,
+def visualize_graph(graph_definition: Dict[str, Any],
                    title: Optional[str] = None,
-                   figsize: Tuple[int, int] = (12, 8),
-                   dpi: int = 100,
-                   node_shape: str = 'o',
-                   show_labels: bool = True,
-                   font_size: int = 12,
-                   edge_width: float = 1.5,
-                   save_path: Optional[str] = None,
-                   show: bool = True) -> Union[plt.Figure, str]:
+                   save_path: Optional[str] = None) -> Union[plt.Figure, str]:
+    """
+    Visualize a graph with automatically tuned parameters based on graph characteristics.
+    This function analyzes the graph structure and selects optimal visualization parameters.
+    
+    Key features:
+    - Automatically selects appropriate node size, edge width, and font size based on graph size
+    - Uses the hierarchical layout by default for clear visualization of process flow
+    - Adjusts figure size based on graph complexity and node count
+    
+    Args:
+        graph_definition: Dictionary representing the graph as an adjacency list.
+                         Format: {node_id: {"next": [list_of_next_node_ids]}}
+        title: Optional title for the plot
+        save_path: Optional path to save the figure
+        
+    Returns:
+        If show is True, returns the figure. If save_path is provided, returns the save path.
+    """
+    # Create a NetworkX graph to analyze structure
+    G = adjacency_to_nx_graph(graph_definition)
+    
+    # Analyze graph characteristics to determine optimal parameters
+    node_count = len(G.nodes())
+    edge_count = len(G.edges())
+    max_connections = max([max(G.out_degree(n), G.in_degree(n)) for n in G.nodes()]) if G.nodes() else 0
+    
+    # Auto-tune parameters based on graph size and complexity
+    if node_count <= 5:  # Small graph
+        node_size = 1800
+        edge_width = 2.0
+        font_size = 14
+        figsize = (10, 7)
+    elif node_count <= 10:  # Medium graph
+        node_size = 1500
+        edge_width = 1.8
+        font_size = 12
+        figsize = (12, 8)
+    elif node_count <= 20:  # Large graph
+        node_size = 1200
+        edge_width = 1.5
+        font_size = 11
+        figsize = (14, 9)
+    else:  # Very large graph
+        node_size = 800
+        edge_width = 1.0
+        font_size = 10
+        figsize = (16, 10)
+    
+    # Adjust for graphs with many connections
+    if max_connections > 5:
+        node_size = max(600, node_size - 200)  # Reduce node size for highly connected graphs
+        figsize = (figsize[0] + 2, figsize[1] + 1)  # Increase figure size
+    
+    # For single-level graphs with no connections, adjust layout
+    if edge_count == 0:
+        node_size = 1500  # Larger nodes for better visibility
+        figsize = (10, 6)  # Smaller figure (less space needed)
+    
+    # Call the detailed function with optimized parameters
+    return visualize_graph_detail(
+        graph_definition=graph_definition,
+        layout="hierarchical",  # Always use hierarchical layout for best results
+        node_size=node_size,
+        edge_width=edge_width,
+        font_size=font_size,
+        figsize=figsize,
+        title=title,
+        save_path=save_path,
+        show=True  # Always show by default
+    )
+
+
+def visualize_graph_detail(graph_definition: Dict[str, Any], 
+                        layout: str = "hierarchical", 
+                        color_scheme: str = "default",
+                        node_size: int = 1500,
+                        title: Optional[str] = None,
+                        figsize: Tuple[int, int] = (12, 8),
+                        dpi: int = 100,
+                        node_shape: str = 'o',
+                        show_labels: bool = True,
+                        font_size: int = 12,
+                        edge_width: float = 1.5,
+                        save_path: Optional[str] = None,
+                        show: bool = True) -> Union[plt.Figure, str]:
     """
     Visualize a graph defined by an adjacency list using NetworkX and Matplotlib.
     

@@ -47,16 +47,23 @@ def example_1_basic_precedence():
     
     print_graph_definition(graph_definition)
     
-    print("Creating visualization with hierarchical layout...")
+    print("Creating visualization with auto-tuned parameters...")
+    # Auto-tuned visualization that determines optimal parameters based on graph structure
     visualize_graph(
-        graph_definition, 
-        layout='hierarchical',
-        title='Basic Precedence Graph',
-        node_size=1200,
-        edge_width=2.0,
-        font_size=12,
-        show=True
+        graph_definition,
+        title='Basic Precedence Graph'
     )
+    
+    # Original detailed call with manual parameters (for reference)
+    # visualize_graph_detail(
+    #     graph_definition, 
+    #     layout='hierarchical',
+    #     title='Basic Precedence Graph',
+    #     node_size=1200,
+    #     edge_width=2.0,
+    #     font_size=12,
+    #     show=True
+    # )
 
 
 def example_2_diamond_dependency():
@@ -71,16 +78,23 @@ def example_2_diamond_dependency():
     
     print_graph_definition(graph_definition)
     
-    print("Creating visualization with hierarchical layout...")
+    print("Creating visualization with auto-tuned parameters...")
+    # Auto-tuned visualization that determines optimal parameters based on graph structure
     visualize_graph(
-        graph_definition, 
-        layout='hierarchical',
-        title='Diamond Dependency Graph',
-        node_size=1200,
-        edge_width=2.0,
-        font_size=12,
-        show=True
+        graph_definition,
+        title='Diamond Dependency Graph'
     )
+    
+    # Original detailed call with manual parameters (for reference)
+    # visualize_graph_detail(
+    #     graph_definition, 
+    #     layout='hierarchical',
+    #     title='Diamond Dependency Graph',
+    #     node_size=1200,
+    #     edge_width=2.0,
+    #     font_size=12,
+    #     show=True
+    # )
 
 
 def example_3_multi_path():
@@ -97,16 +111,23 @@ def example_3_multi_path():
     
     print_graph_definition(graph_definition)
     
-    print("Creating visualization with hierarchical layout...")
+    print("Creating visualization with auto-tuned parameters...")
+    # Auto-tuned visualization that determines optimal parameters based on graph structure
     visualize_graph(
-        graph_definition, 
-        layout='hierarchical',
-        title='Multi-Path Graph',
-        node_size=1200,
-        edge_width=2.0,
-        font_size=12,
-        show=True
+        graph_definition,
+        title='Multi-Path Graph'
     )
+    
+    # Original detailed call with manual parameters (for reference)
+    # visualize_graph_detail(
+    #     graph_definition, 
+    #     layout='hierarchical',
+    #     title='Multi-Path Graph',
+    #     node_size=1200,
+    #     edge_width=2.0,
+    #     font_size=12,
+    #     show=True
+    # )
 
 
 def example_4_large_scale():
@@ -157,14 +178,8 @@ def example_4_large_scale():
     print_graph_definition(graph_definition)
 
     visualize_graph(
-        graph_definition, 
-        layout='hierarchical',
-        title='Large-Scale Data Pipeline',
-        node_size=800,  # Smaller nodes to fit more in view
-        edge_width=1.0,
-        font_size=10,
-        figsize=(15, 10),  # Larger figure to accommodate more nodes
-        show=True
+        graph_definition,
+        title='Large-Scale Data Pipeline'
     )
 
 
@@ -178,15 +193,10 @@ def example_5_single_level():
     
     print_graph_definition(graph_definition)
     
-    print("Creating visualization with hierarchical layout...")
+    print("Simple one-level graph where nodes are both head and tail nodes.")
     visualize_graph(
-        graph_definition, 
-        layout='hierarchical',
-        title='Single-Level Graph',
-        node_size=1500,
-        edge_width=2.0,
-        font_size=12,
-        show=True
+        graph_definition,
+        title='Single-Level Graph'
     )
 
 
