@@ -107,7 +107,7 @@ class WrappingJob(JobABC):
         return f"WrappingJob({self.wrapped_object.__class__.__name__})"
 
     async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
-        return self.wrapped_object
+        return f"Executed {self.wrapped_object}"
 
 def wrap(obj):
     """
@@ -166,22 +166,23 @@ s = serial
 
 class GraphCreator:
     @staticmethod
-    def evaluate(graph_obj):
+    async def evaluate(graph_obj):
         """
         Process/evaluate the graph object and return the result.
         This is where you would implement the actual graph processing logic.
         """
         if isinstance(graph_obj, Parallel):
-            results = [GraphCreator.evaluate(c) for c in graph_obj.components]
+            results = [await GraphCreator.evaluate(c) for c in graph_obj.components]
             return f"Executed in parallel: [{', '.join(results)}]"
         
         elif isinstance(graph_obj, Serial):
-            results = [GraphCreator.evaluate(c) for c in graph_obj.components]
+            results = [await GraphCreator.evaluate(c) for c in graph_obj.components]
             return f"Executed in series: [{', '.join(results)}]"
         
         elif isinstance(graph_obj, JobABC):
             # Simple case - just a single component
-            return f"Executed {graph_obj.wrapped_object}"
+            result = await graph_obj.run({})
+            return result
         
         else:
             # Raw object (shouldn't normally happen)
