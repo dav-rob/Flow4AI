@@ -6,42 +6,8 @@ It takes graph definitions in the form of adjacency lists and renders them
 as ASCII art, similar to tree structures.
 """
 
-from typing import Dict, List, Any, Tuple, Set
 import math
-
-
-def visualize_graph(graph_definition: Dict[str, Any], prefix: str = "T") -> str:
-    """
-    Visualize a graph defined by an adjacency list as ASCII art.
-    
-    Args:
-        graph_definition: Dictionary representing the graph as an adjacency list.
-                          Format: {node_id: {"next": [list_of_next_node_ids]}}
-        prefix: Optional prefix to add before each node ID (default: "T")
-        
-    Returns:
-        String containing the ASCII art representation of the graph
-    """
-    if not graph_definition:
-        return "Empty graph"
-    
-    # Find root nodes (nodes with no incoming edges)
-    all_nodes = set(graph_definition.keys())
-    child_nodes = set()
-    for node, edges in graph_definition.items():
-        child_nodes.update(edges.get("next", []))
-    
-    root_nodes = all_nodes - child_nodes
-    
-    if not root_nodes:
-        # If no root found, just pick the first node
-        root_nodes = [list(graph_definition.keys())[0]]
-    
-    # Compute node depths and positions
-    positions = _calculate_node_positions(graph_definition, list(root_nodes)[0])
-    
-    # Generate the ASCII art
-    return _generate_ascii_art(graph_definition, positions, prefix)
+from typing import Any, Dict, List, Set, Tuple
 
 
 def _calculate_node_positions(graph_definition: Dict[str, Any], 
