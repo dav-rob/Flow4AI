@@ -109,6 +109,63 @@ def example_3_multi_path():
     )
 
 
+def example_4_large_scale():
+    """Large-scale graph with 25+ nodes to test visualization scalability."""
+    # Create a large graph with multiple paths and dependencies
+    graph_definition = {
+        # Data ingestion layer
+        "input1": {"next": ["parse1", "parse2"]},
+        "input2": {"next": ["parse3"]},
+        "input3": {"next": ["parse4", "parse5"]},
+        
+        # Parsing layer
+        "parse1": {"next": ["transform1"]},
+        "parse2": {"next": ["transform1", "transform2"]},
+        "parse3": {"next": ["transform3"]},
+        "parse4": {"next": ["transform3", "transform4"]},
+        "parse5": {"next": ["transform5"]},
+        
+        # Transformation layer
+        "transform1": {"next": ["validate1", "validate2"]},
+        "transform2": {"next": ["validate2"]},
+        "transform3": {"next": ["validate3"]},
+        "transform4": {"next": ["validate4"]},
+        "transform5": {"next": ["validate4", "validate5"]},
+        
+        # Validation layer
+        "validate1": {"next": ["aggregate1"]},
+        "validate2": {"next": ["aggregate1"]},
+        "validate3": {"next": ["aggregate2"]},
+        "validate4": {"next": ["aggregate2"]},
+        "validate5": {"next": ["aggregate3"]},
+        
+        # Aggregation layer
+        "aggregate1": {"next": ["store1"]},
+        "aggregate2": {"next": ["store1", "store2"]},
+        "aggregate3": {"next": ["store2"]},
+        
+        # Storage layer
+        "store1": {"next": ["output1"]},
+        "store2": {"next": ["output2"]},
+        
+        # Output layer
+        "output1": {"next": []},
+        "output2": {"next": []}
+    }
+    
+    print("Creating visualization of large-scale graph...")
+    visualize_graph(
+        graph_definition, 
+        layout='hierarchical',
+        title='Large-Scale Data Pipeline',
+        node_size=800,  # Smaller nodes to fit more in view
+        edge_width=1.0,
+        font_size=10,
+        figsize=(15, 10),  # Larger figure to accommodate more nodes
+        show=True
+    )
+
+
 def main():
     """
     Run examples based on command-line arguments.
@@ -119,7 +176,8 @@ def main():
     examples = {
         1: example_1_basic_precedence,
         2: example_2_diamond_dependency,
-        3: example_3_multi_path
+        3: example_3_multi_path,
+        4: example_4_large_scale
     }
     
     # Parse command line arguments
