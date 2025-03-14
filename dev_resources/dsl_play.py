@@ -33,8 +33,8 @@ class JobABC:
     
     def __repr__(self):
         if isinstance(self.obj, (str, int, float, bool)):
-            return f"Component({repr(self.obj)})"
-        return f"Component({self.obj.__class__.__name__})"
+            return f"JobABC({repr(self.obj)})"
+        return f"JobABC({self.obj.__class__.__name__})"
 
 class Parallel(JobABC):
     def __init__(self, *components):
@@ -98,14 +98,14 @@ class ObjectWrapper:
     
     def __or__(self, other):
         """Implements | for parallel composition"""
-        # Create Component versions of both objects
+        # Create JobABC versions of both objects
         left = JobABC(self.obj)
         
         if isinstance(other, ObjectWrapper):
             # If the other is also wrapped, unwrap it
             right = JobABC(other.obj)
         else:
-            # If it's already a Component/Parallel/Serial, use it directly
+            # If it's already a JobABC/Parallel/Serial, use it directly
             right = other if isinstance(other, (JobABC, Parallel, Serial)) else JobABC(other)
         
         # Return the parallel composition
@@ -113,14 +113,14 @@ class ObjectWrapper:
     
     def __rshift__(self, other):
         """Implements >> for serial composition"""
-        # Create Component versions of both objects
+        # Create JobABC versions of both objects
         left = JobABC(self.obj)
         
         if isinstance(other, ObjectWrapper):
             # If the other is also wrapped, unwrap it
             right = JobABC(other.obj)
         else:
-            # If it's already a Component/Parallel/Serial, use it directly
+            # If it's already a JobABC/Parallel/Serial, use it directly
             right = other if isinstance(other, (JobABC, Parallel, Serial)) else JobABC(other)
         
         # Return the serial composition
@@ -154,7 +154,7 @@ def parallel(objects):
     """
     Create a parallel composition from a list of objects.
     
-    This utility function takes a list of objects (which can be a mix of Component
+    This utility function takes a list of objects (which can be a mix of JobABC
     instances and regular objects) and creates a parallel composition of all of them.
     
     Example:
@@ -175,7 +175,7 @@ def serial(objects):
     """
     Create a serial composition from a list of objects.
     
-    This utility function takes a list of objects (which can be a mix of Component
+    This utility function takes a list of objects (which can be a mix of JobABC
     instances and regular objects) and creates a serial composition of all of them.
     
     Example:
