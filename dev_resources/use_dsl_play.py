@@ -1,15 +1,16 @@
-# ------------------- DEMO CODE -------------------
-
 from dsl_play import *
 
 
 class AnyObject:
-	"""Example class that represents any user-defined object.
+    """Example class that represents any user-defined object.
     No operator overloading is needed in this class."""
-	def __init__(self, obj):
-	        self.obj = obj
-	def __repr__(self):
-		return f"AnyObject({self.obj})"
+    def __init__(self, obj):
+        self.obj = obj
+    def __repr__(self):
+        return f"AnyObject({self.obj})"
+    
+
+    
 
 if __name__ == "__main__":
     # Create some sample objects
