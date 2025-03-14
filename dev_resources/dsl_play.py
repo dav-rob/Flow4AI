@@ -131,23 +131,26 @@ class ObjectWrapper:
             return f"g({repr(self.obj)})"
         return f"g({self.obj.__class__.__name__})"
 
-def w(obj):
+def wrap(obj):
     """
     Wrap any object to enable direct graph operations with | and >> operators.
     
     This function is the key to enabling the clean syntax:
-    w(obj1) | w(obj2)  # For parallel composition
-    w(obj1) >> w(obj2)  # For serial composition
+    wrap(obj1) | wrap(obj2)  # For parallel composition
+    wrap(obj1) >> wrap(obj2)  # For serial composition
     """
     if isinstance(obj, JobABC):
         return obj  # Already has the operations we need
     return ObjectWrapper(obj)
 
+# Synonym for wrap
+w = wrap
 
 
 
 
-def p(objects):
+
+def parallel(objects):
     """
     Create a parallel composition from a list of objects.
     
@@ -156,16 +159,19 @@ def p(objects):
     
     Example:
         objects = [obj1, obj2, obj3]
-        graph = all_p(objects)  # Equivalent to g(obj1) | g(obj2) | g(obj3)
+        graph = all_parallel(objects)  # Equivalent to wrap(obj1) | wrap(obj2) | wrap(obj3)
     """
     if not objects:
         raise ValueError("Cannot create a parallel composition from an empty list")
     if len(objects) == 1:
-        return w(objects[0])
-    return reduce(lambda acc, obj: acc | w(obj), objects[1:], w(objects[0]))
+        return wrap(objects[0])
+    return reduce(lambda acc, obj: acc | wrap(obj), objects[1:], wrap(objects[0]))
+
+# Synonym for parallel
+p = parallel
 
 
-def s(objects):
+def serial(objects):
     """
     Create a serial composition from a list of objects.
     
@@ -174,13 +180,16 @@ def s(objects):
     
     Example:
         objects = [obj1, obj2, obj3]
-        graph = all_s(objects)  # Equivalent to g(obj1) >> g(obj2) >> g(obj3)
+        graph = all_serial(objects)  # Equivalent to wrap(obj1) >> wrap(obj2) >> wrap(obj3)
     """
     if not objects:
         raise ValueError("Cannot create a serial composition from an empty list")
     if len(objects) == 1:
-        return w(objects[0])
-    return reduce(lambda acc, obj: acc >> w(obj), objects[1:], w(objects[0]))
+        return wrap(objects[0])
+    return reduce(lambda acc, obj: acc >> wrap(obj), objects[1:], wrap(objects[0]))
+
+# Synonym for serial
+s = serial
 
 class GraphCreator:
     @staticmethod
