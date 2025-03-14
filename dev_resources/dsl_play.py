@@ -43,18 +43,14 @@ class Parallel(JobABC):
 
     def __or__(self, other):
         """Support chaining with | operator"""
-        if isinstance(other, ObjectWrapper):
-            other = JobABC(other.obj)
-        elif not isinstance(other, (JobABC, Parallel, Serial)):
+        if not isinstance(other, (JobABC, Parallel, Serial)):
             other = JobABC(other)
         
         return Parallel(*list(self.components) + [other])
         
     def __rshift__(self, other):
         """Support chaining with >> operator"""
-        if isinstance(other, ObjectWrapper):
-            other = JobABC(other.obj)
-        elif not isinstance(other, (JobABC, Parallel, Serial)):
+        if not isinstance(other, (JobABC, Parallel, Serial)):
             other = JobABC(other)
             
         return Serial(self, other)
@@ -69,67 +65,20 @@ class Serial(JobABC):
         
     def __or__(self, other):
         """Support chaining with | operator"""
-        if isinstance(other, ObjectWrapper):
-            other = JobABC(other.obj)
-        elif not isinstance(other, (JobABC, Parallel, Serial)):
+        if not isinstance(other, (JobABC, Parallel, Serial)):
             other = JobABC(other)
             
         return Parallel(self, other)
         
     def __rshift__(self, other):
         """Support chaining with >> operator"""
-        if isinstance(other, ObjectWrapper):
-            other = JobABC(other.obj)
-        elif not isinstance(other, (JobABC, Parallel, Serial)):
+        if not isinstance(other, (JobABC, Parallel, Serial)):
             other = JobABC(other)
             
         return Serial(*list(self.components) + [other])
         
     def __repr__(self):
         return f"serial({', '.join(repr(c) for c in self.components)})"
-
-class ObjectWrapper:
-    """
-    Wrapper that adds operator overloading capabilities to any object.
-    This allows objects to be used with | and >> operators.
-    """
-    def __init__(self, obj):
-        self.obj = obj
-    
-    def __or__(self, other):
-        """Implements | for parallel composition"""
-        # Create JobABC versions of both objects
-        left = JobABC(self.obj)
-        
-        if isinstance(other, ObjectWrapper):
-            # If the other is also wrapped, unwrap it
-            right = JobABC(other.obj)
-        else:
-            # If it's already a JobABC/Parallel/Serial, use it directly
-            right = other if isinstance(other, (JobABC, Parallel, Serial)) else JobABC(other)
-        
-        # Return the parallel composition
-        return left | right
-    
-    def __rshift__(self, other):
-        """Implements >> for serial composition"""
-        # Create JobABC versions of both objects
-        left = JobABC(self.obj)
-        
-        if isinstance(other, ObjectWrapper):
-            # If the other is also wrapped, unwrap it
-            right = JobABC(other.obj)
-        else:
-            # If it's already a JobABC/Parallel/Serial, use it directly
-            right = other if isinstance(other, (JobABC, Parallel, Serial)) else JobABC(other)
-        
-        # Return the serial composition
-        return left >> right
-    
-    def __repr__(self):
-        if isinstance(self.obj, (str, int, float, bool)):
-            return f"g({repr(self.obj)})"
-        return f"g({self.obj.__class__.__name__})"
 
 def wrap(obj):
     """
@@ -141,14 +90,10 @@ def wrap(obj):
     """
     if isinstance(obj, JobABC):
         return obj  # Already has the operations we need
-    return ObjectWrapper(obj)
+    return JobABC(obj)
 
 # Synonym for wrap
 w = wrap
-
-
-
-
 
 def parallel(objects):
     """
@@ -169,7 +114,6 @@ def parallel(objects):
 
 # Synonym for parallel
 p = parallel
-
 
 def serial(objects):
     """
