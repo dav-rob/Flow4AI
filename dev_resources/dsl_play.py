@@ -1,9 +1,11 @@
+from functools import reduce
+
 """
 Improved operator overloading example for JobChain graph construction.
 This implementation allows for direct operator usage between wrapped objects.
 """
 
-class Component:
+class JobABC:
     def __init__(self, obj):
         self.obj = obj
     
@@ -12,81 +14,81 @@ class Component:
         if isinstance(other, Parallel):
             # If right side is already a parallel component, add to its components
             return Parallel(*([self] + other.components))
-        elif isinstance(other, Component):
+        elif isinstance(other, JobABC):
             return Parallel(self, other)
         else:
             # If other is a raw object, wrap it first
-            return Parallel(self, Component(other))
+            return Parallel(self, JobABC(other))
     
     def __rshift__(self, other):
         """Implements the >> operator for serial composition"""
         if isinstance(other, Serial):
             # If right side is already a serial component, add to its components
             return Serial(*([self] + other.components))
-        elif isinstance(other, Component):
+        elif isinstance(other, JobABC):
             return Serial(self, other)
         else:
             # If other is a raw object, wrap it first
-            return Serial(self, Component(other))
+            return Serial(self, JobABC(other))
     
     def __repr__(self):
         if isinstance(self.obj, (str, int, float, bool)):
             return f"Component({repr(self.obj)})"
         return f"Component({self.obj.__class__.__name__})"
 
-class Parallel(Component):
+class Parallel(JobABC):
     def __init__(self, *components):
         self.components = components
         self.obj = None  # No direct object for this composite
 
     def __or__(self, other):
         """Support chaining with | operator"""
-        if isinstance(other, GraphOperableWrapper):
-            other = Component(other.obj)
-        elif not isinstance(other, (Component, Parallel, Serial)):
-            other = Component(other)
+        if isinstance(other, ObjectWrapper):
+            other = JobABC(other.obj)
+        elif not isinstance(other, (JobABC, Parallel, Serial)):
+            other = JobABC(other)
         
         return Parallel(*list(self.components) + [other])
         
     def __rshift__(self, other):
         """Support chaining with >> operator"""
-        if isinstance(other, GraphOperableWrapper):
-            other = Component(other.obj)
-        elif not isinstance(other, (Component, Parallel, Serial)):
-            other = Component(other)
+        if isinstance(other, ObjectWrapper):
+            other = JobABC(other.obj)
+        elif not isinstance(other, (JobABC, Parallel, Serial)):
+            other = JobABC(other)
             
         return Serial(self, other)
 
     def __repr__(self):
         return f"parallel({', '.join(repr(c) for c in self.components)})"
 
-class Serial(Component):
+class Serial(JobABC):
     def __init__(self, *components):
         self.components = components
         self.obj = None  # No direct object for this composite
         
     def __or__(self, other):
         """Support chaining with | operator"""
-        if isinstance(other, GraphOperableWrapper):
-            other = Component(other.obj)
-        elif not isinstance(other, (Component, Parallel, Serial)):
-            other = Component(other)
+        if isinstance(other, ObjectWrapper):
+            other = JobABC(other.obj)
+        elif not isinstance(other, (JobABC, Parallel, Serial)):
+            other = JobABC(other)
             
         return Parallel(self, other)
         
     def __rshift__(self, other):
         """Support chaining with >> operator"""
-        if isinstance(other, GraphOperableWrapper):
-            other = Component(other.obj)
-        elif not isinstance(other, (Component, Parallel, Serial)):
-            other = Component(other)
+        if isinstance(other, ObjectWrapper):
+            other = JobABC(other.obj)
+        elif not isinstance(other, (JobABC, Parallel, Serial)):
+            other = JobABC(other)
             
         return Serial(*list(self.components) + [other])
         
     def __repr__(self):
         return f"serial({', '.join(repr(c) for c in self.components)})"
 
-class GraphOperableWrapper:
+class ObjectWrapper:
     """
     Wrapper that adds operator overloading capabilities to any object.
     This allows objects to be used with | and >> operators.
@@ -97,14 +99,14 @@ class GraphOperableWrapper:
     def __or__(self, other):
         """Implements | for parallel composition"""
         # Create Component versions of both objects
-        left = Component(self.obj)
+        left = JobABC(self.obj)
         
-        if isinstance(other, GraphOperableWrapper):
+        if isinstance(other, ObjectWrapper):
             # If the other is also wrapped, unwrap it
-            right = Component(other.obj)
+            right = JobABC(other.obj)
         else:
             # If it's already a Component/Parallel/Serial, use it directly
-            right = other if isinstance(other, (Component, Parallel, Serial)) else Component(other)
+            right = other if isinstance(other, (JobABC, Parallel, Serial)) else JobABC(other)
         
         # Return the parallel composition
         return left | right
@@ -112,14 +114,14 @@ class GraphOperableWrapper:
     def __rshift__(self, other):
         """Implements >> for serial composition"""
         # Create Component versions of both objects
-        left = Component(self.obj)
+        left = JobABC(self.obj)
         
-        if isinstance(other, GraphOperableWrapper):
+        if isinstance(other, ObjectWrapper):
             # If the other is also wrapped, unwrap it
-            right = Component(other.obj)
+            right = JobABC(other.obj)
         else:
             # If it's already a Component/Parallel/Serial, use it directly
-            right = other if isinstance(other, (Component, Parallel, Serial)) else Component(other)
+            right = other if isinstance(other, (JobABC, Parallel, Serial)) else JobABC(other)
         
         # Return the serial composition
         return left >> right
@@ -137,12 +139,12 @@ def w(obj):
     w(obj1) | w(obj2)  # For parallel composition
     w(obj1) >> w(obj2)  # For serial composition
     """
-    if isinstance(obj, Component):
+    if isinstance(obj, JobABC):
         return obj  # Already has the operations we need
-    return GraphOperableWrapper(obj)
+    return ObjectWrapper(obj)
 
 
-from functools import reduce
+
 
 
 def p(objects):
@@ -195,7 +197,7 @@ class GraphCreator:
             results = [GraphCreator.evaluate(c) for c in graph_obj.components]
             return f"Executed in series: [{', '.join(results)}]"
         
-        elif isinstance(graph_obj, Component):
+        elif isinstance(graph_obj, JobABC):
             # Simple case - just a single component
             return f"Executed {graph_obj.obj}"
         

@@ -61,7 +61,7 @@ if __name__ == "__main__":
     print("Evaluated:", evaluate(g7))
 
     # Example 8: Using direct Component instances
-    c1 = Component("Direct Component")
+    c1 = JobABC("Direct Component")
     g8 = w("Task C") >> c1
     print("\n----- Example 8: Using direct Component instances -----")
     print(g8)
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     print(g10)
     print("Evaluated:", evaluate(g10))
 
-    class ProcessorComponent(Component):
+    class ProcessorComponent(JobABC):
         def __init__(self, name, process_type):
             self.process_type = process_type
             super().__init__(name)
