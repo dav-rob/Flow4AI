@@ -123,10 +123,51 @@ def get_topological_generations(G: nx.DiGraph) -> List[List[str]]:
     return generations
 
 
+def identify_paths(G: nx.DiGraph) -> Dict[str, List[List[str]]]:
+    """
+    Identify all paths from source nodes to sink nodes in the graph.
+    This helps in maintaining straight-line paths in the visualization.
+    
+    Args:
+        G: A NetworkX DiGraph object
+        
+    Returns:
+        Dictionary mapping node IDs to the paths they belong to
+    """
+    # Find source nodes (nodes with no incoming edges)
+    sources = [n for n, d in G.in_degree() if d == 0]
+    # Find sink nodes (nodes with no outgoing edges)
+    sinks = [n for n, d in G.out_degree() if d == 0]
+    
+    # Get all paths from each source to each sink
+    all_paths = []
+    for source in sources:
+        for sink in sinks:
+            try:
+                # Find all simple paths between source and sink
+                paths = list(nx.all_simple_paths(G, source, sink))
+                all_paths.extend(paths)
+            except nx.NetworkXNoPath:
+                continue
+    
+    # If we couldn't find any paths, return an empty dictionary
+    if not all_paths:
+        return {}
+    
+    # Map each node to the paths it belongs to
+    node_paths = {}
+    for i, path in enumerate(all_paths):
+        for node in path:
+            if node not in node_paths:
+                node_paths[node] = []
+            node_paths[node].append((i, path))
+    
+    return node_paths
+
 def custom_hierarchical_layout(G: nx.DiGraph) -> Dict[str, Tuple[float, float]]:
     """
-    A custom hierarchical layout that arranges nodes in levels based on topology.
-    This is designed to create a cleaner left-to-right flow similar to Graphviz's dot layout.
+    A custom hierarchical layout that arranges nodes in levels based on topology,
+    with special attention to maintaining straight paths and vertical alignment.
     
     Args:
         G: A NetworkX DiGraph object
@@ -137,32 +178,111 @@ def custom_hierarchical_layout(G: nx.DiGraph) -> Dict[str, Tuple[float, float]]:
     # Get nodes arranged in topological generations
     generations = get_topological_generations(G)
     
+    # Analyze paths in the graph to maintain alignment
+    node_paths = identify_paths(G)
+    
     # Calculate positions
     pos = {}
-    max_nodes_per_level = max(len(gen) for gen in generations)
     
-    # Place each node
+    # First, assign x positions based on generation
     for i, gen in enumerate(generations):
-        # Sort nodes within a generation to maintain consistency
-        gen.sort(key=str)
-        
-        # Calculate y-coordinates for this generation
-        y_positions = np.linspace(0, 1, len(gen) + 2)[1:-1]
-        if len(gen) == 1:
-            y_positions = [0.5]  # Center a single node
-        
-        # Assign positions
-        for j, node in enumerate(gen):
-            x = i / max(1, len(generations) - 1)  # Normalize x to [0, 1]
-            y = y_positions[j]  # Evenly spaced along y-axis
-            pos[node] = (x, y)
+        for node in gen:
+            # X position is determined by generation index (level)
+            x = i
+            pos[node] = (x, 0)  # Y will be assigned later
     
-    # Apply additional spacing for clarity
-    for node in pos:
-        x, y = pos[node]
-        pos[node] = (x * 1.5, y * 1.5)  # Scale for better spacing
+    # Now, assign y positions with path preservation
+    # Group nodes by their x position
+    x_groups = {}
+    for node, (x, _) in pos.items():
+        if x not in x_groups:
+            x_groups[x] = []
+        x_groups[x].append(node)
     
-    return pos
+    # Track vertical slots for each column to prevent overlap
+    x_slots = {x: set() for x in x_groups}
+    
+    # Function to find direct predecessors and successors in the next/prev level
+    def get_direct_connections(node, direction='pred'):
+        if direction == 'pred':
+            return [p for p in G.predecessors(node) 
+                    if pos[p][0] == pos[node][0] - 1]
+        else:  # 'succ'
+            return [s for s in G.successors(node) 
+                    if pos[s][0] == pos[node][0] + 1]
+    
+    # Process nodes level by level
+    for level in sorted(x_groups.keys()):
+        # Sort nodes within this level by their connectivity
+        nodes = x_groups[level]
+        
+        # Sort by number of predecessors and successors for better placement
+        def node_sort_key(node):
+            pred_count = len(list(G.predecessors(node)))
+            succ_count = len(list(G.successors(node)))
+            return (pred_count, succ_count, str(node))
+        
+        nodes.sort(key=node_sort_key)
+        
+        # Assign y positions
+        slot_counter = 0
+        for node in nodes:
+            # Try to align with predecessors or successors if possible
+            aligned_y = None
+            
+            # Check predecessors for alignment first
+            preds = list(G.predecessors(node))
+            if preds:
+                # Try to use the average y position of predecessors
+                pred_ys = [pos[p][1] for p in preds if p in pos]
+                if pred_ys:
+                    aligned_y = sum(pred_ys) / len(pred_ys)
+            
+            # If no alignment from predecessors, check successors
+            if aligned_y is None and level < max(x_groups.keys()):
+                succs = list(G.successors(node))
+                succ_ys = [pos[s][1] for s in succs if s in pos]
+                if succ_ys:
+                    aligned_y = sum(succ_ys) / len(succ_ys)
+            
+            # If we couldn't align, find a free slot
+            if aligned_y is None:
+                while slot_counter in x_slots[level]:
+                    slot_counter += 1
+                aligned_y = slot_counter
+                slot_counter += 1
+            
+            # Make sure this slot isn't too close to an existing one
+            while any(abs(aligned_y - existing) < 0.8 for existing in x_slots[level]):
+                aligned_y += 0.8
+            
+            # Mark this slot as used
+            x_slots[level].add(aligned_y)
+            
+            # Assign the position
+            x, _ = pos[node]
+            pos[node] = (x, aligned_y)
+    
+    # Normalize the positions
+    x_values = [p[0] for p in pos.values()]
+    y_values = [p[1] for p in pos.values()]
+    
+    # Get min/max for normalization
+    x_min, x_max = min(x_values), max(x_values)
+    y_min, y_max = min(y_values), max(y_values)
+    
+    # Avoid division by zero
+    x_range = x_max - x_min if x_max > x_min else 1
+    y_range = y_max - y_min if y_max > y_min else 1
+    
+    # Normalize to [0,1] range and apply spacing
+    normalized_pos = {}
+    for node, (x, y) in pos.items():
+        norm_x = (x - x_min) / x_range if x_range else 0.5
+        norm_y = (y - y_min) / y_range if y_range else 0.5
+        normalized_pos[node] = (norm_x * 1.5, norm_y * 1.5)  # Add scaling for clarity
+    
+    return normalized_pos
 
 
 def visualize_graph(graph_definition: Dict[str, Any], 
