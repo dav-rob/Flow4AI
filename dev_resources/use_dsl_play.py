@@ -59,10 +59,10 @@ async def main():
     print(g7)
     print("Evaluated:", await evaluate(g7))
 
-    # Example 8: Using direct Component instances
-    c1 = WrappingJob("Direct Component")
+    # Example 8: Using direct WrappingJob instances
+    c1 = WrappingJob("Direct WrappingJob")
     g8 = w("Task C") >> c1
-    print("\n----- Example 8: Using direct Component instances -----")
+    print("\n----- Example 8: Using direct WrappingJob instances -----")
     print(g8)
     print("Evaluated:", await evaluate(g8))
 
