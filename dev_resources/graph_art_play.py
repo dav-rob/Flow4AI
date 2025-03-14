@@ -19,6 +19,15 @@ def display_graph(title, graph_definition):
     print(f"\n{'='*50}")
     print(f"{title}:")
     print(f"{'='*50}")
+    
+    # Print the adjacency list representation
+    print("Adjacency List:")
+    import json
+    for node, edges in graph_definition.items():
+        print(f"    \"{node}\": {json.dumps(edges)},")
+    print("\nASCII Visualization:")
+    
+    # Print the ASCII visualization
     print(improved_visualize_graph(graph_definition))
     print("\n")
 
