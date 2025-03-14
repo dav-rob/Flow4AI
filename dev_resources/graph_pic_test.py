@@ -113,16 +113,16 @@ def example_4_large_scale():
     """Large-scale graph with 25+ nodes to test visualization scalability."""
     # Create a large graph with multiple paths and dependencies
     graph_definition = {
-        # Data ingestion layer
+        # Data ingestion layer - explicitly ordered from top to bottom
         "input1": {"next": ["parse1", "parse2"]},
+        "input3": {"next": ["parse4", "parse5"]},  # Input3 moved before input2 for ordering
         "input2": {"next": ["parse3"]},
-        "input3": {"next": ["parse4", "parse5"]},
         
-        # Parsing layer
+        # Parsing layer - explicitly ordered to control vertical positioning
         "parse1": {"next": ["transform1"]},
         "parse2": {"next": ["transform1", "transform2"]},
+        "parse4": {"next": ["transform3", "transform4"]},  # Parse4 moved before parse3
         "parse3": {"next": ["transform3"]},
-        "parse4": {"next": ["transform3", "transform4"]},
         "parse5": {"next": ["transform5"]},
         
         # Transformation layer
