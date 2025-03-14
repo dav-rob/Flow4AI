@@ -5,8 +5,11 @@ Every time you choose to apply a rule(s), explicitly state the rule(s) in the ou
 ## Project Context
 JobChain allows users to execute AI and IO Job graphs in parallel.
 
+## Working process
+
+
 ## Architecture
-Always read the architecture document in the root folder: ARCHITECTURE.md, before undertaking any task.  You are allowed to update this document with any observations you have made. If you do upate the ARCHITECTURE.md, then put *** ARCHITECTURE UPDATE *** in the output.
+Always read the [architecture document](ARCHITECTURE.md) before undertaking any task. You are allowed to update this document with any observations you have made. If you do update the ARCHITECTURE.md, then put *** ARCHITECTURE UPDATE *** in the output.
 
 ## Tests
 - execute unit tests in the root directory using pytest using the command `python -m pytest` as the root of your test commands.
