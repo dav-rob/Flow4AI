@@ -32,7 +32,8 @@ Implement graph visualization features in small chunks:
    - [ ] Diamond-shaped dependency example
    - [ ] Multi-path example with branches and merges
    - [ ] Large-scale graph example (20+ nodes)
-   - [ ] Disconnected sub-graphs example
+   - [ ] Two or more source (head) nodes
+   - [ ] Two or more sink (tail) nodes
 
 ### Great-to-Have Features
 
