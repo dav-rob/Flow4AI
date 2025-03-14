@@ -167,12 +167,15 @@ def identify_paths(G: nx.DiGraph) -> Dict[str, List[List[str]]]:
 def custom_hierarchical_layout(G: nx.DiGraph) -> Dict[str, Tuple[float, float]]:
     """
     A custom hierarchical layout that arranges nodes in levels based on topology,
-    with special attention to maintaining straight paths and vertical alignment.
+    with special attention to maintaining straight paths, minimizing edge crossings,
+    and creating visually balanced layouts.
     
     Key features:
     - Head nodes are positioned equidistant between their child nodes
     - Tail nodes are positioned at the rightmost side
+    - The algorithm minimizes edge crossings using node relationships and path analysis
     - Nodes that belong to the same path are vertically aligned when possible
+    - Nodes are positioned based on the graph structure, not the arbitrary dict order
     
     Args:
         G: A NetworkX DiGraph object
@@ -197,60 +200,89 @@ def custom_hierarchical_layout(G: nx.DiGraph) -> Dict[str, Tuple[float, float]]:
             x = i
             
             # Special case: ensure sink nodes are positioned at the rightmost side
-            # by adding a small offset to their x position
             if node in sink_nodes:
                 x = len(generations) # Put at the far right
                 
             pos[node] = (x, 0)  # Y will be assigned later
-            
-    # Special handling for source nodes to ensure proper ordering and spacing
-    # Sort source nodes based on their name/ID to maintain consistency
-    source_nodes.sort(key=lambda n: str(n))
     
-    # Group nodes by their x position
+    # Group nodes by their x position/level
     x_groups = {}
     for node, (x, _) in pos.items():
         if x not in x_groups:
             x_groups[x] = []
         x_groups[x].append(node)
     
-    # Sort nodes within each level by various criteria for better layout
-    for level, nodes in x_groups.items():
+    # Calculate the longest path through each node (used for vertical ordering)
+    path_lengths = {}
+    for node in G.nodes():
+        # Calculate distance from source
+        if node in source_nodes:
+            path_lengths[node] = 0
+        else:
+            # Find the maximum path length from any source to this node
+            pred_lengths = [path_lengths.get(p, 0) + 1 for p in G.predecessors(node) if p in path_lengths]
+            path_lengths[node] = max(pred_lengths) if pred_lengths else 0
+    
+    # Sort nodes within each level based on their network position and connectivity patterns
+    for level in sorted(x_groups.keys()):
+        nodes = x_groups[level]
+        
+        # For the first level (source nodes), use a special ordering to create visual balance
+        if level == 0:
+            # Sort by number of outgoing connections (more central nodes in the middle)
+            source_nodes_sorted = sorted(source_nodes, key=lambda n: (len(list(G.successors(n))), str(n)))
+            
+            # Apply a more balanced ordering - place nodes with more connections in the middle
+            # This creates a more aesthetically pleasing and balanced layout
+            balanced_nodes = []
+            left = 0
+            right = len(source_nodes_sorted) - 1
+            position = 0  # 0 = middle, 1 = left, 2 = right, and alternating
+            
+            while left <= right:
+                if position == 0:  # Middle, take from right (higher connection count)
+                    balanced_nodes.append(source_nodes_sorted[right])
+                    right -= 1
+                    position = 1
+                elif position == 1:  # Left
+                    balanced_nodes.append(source_nodes_sorted[left])
+                    left += 1
+                    position = 2
+                else:  # Right
+                    balanced_nodes.append(source_nodes_sorted[right])
+                    right -= 1
+                    position = 1
+            
+            # Update the nodes in this level with the balanced ordering
+            x_groups[level] = balanced_nodes
+            continue
+            
+        # For other levels, use a more sophisticated sorting approach to minimize crossings
         def node_sort_key(node):
             # Get predecessors and successors
             preds = list(G.predecessors(node))
             succs = list(G.successors(node))
-            pred_count = len(preds)
-            succ_count = len(succs)
             
-            # Calculate average index of connected nodes in adjacent levels
-            # This helps position nodes to minimize edge crossings
-            pred_indices = []
+            # Calculate average positions of predecessors (for vertical alignment)
+            pred_positions = []
             for p in preds:
-                if p in pos and pos[p][0] < pos[node][0]:  # Only consider nodes in previous levels
+                if p in pos:
+                    # Get position of predecessor in its group
                     p_level = pos[p][0]
-                    if p_level in x_groups:
-                        p_idx = x_groups[p_level].index(p) if p in x_groups[p_level] else 0
-                        pred_indices.append(p_idx)
+                    if p_level in x_groups and p in x_groups[p_level]:
+                        # Use normalized position (0 to 1 range)
+                        p_idx = x_groups[p_level].index(p) 
+                        p_norm_pos = p_idx / max(1, len(x_groups[p_level]) - 1)
+                        pred_positions.append(p_norm_pos)
             
-            succ_indices = []
-            for s in succs:
-                if s in pos and pos[s][0] > pos[node][0]:  # Only consider nodes in following levels
-                    s_level = pos[s][0]
-                    if s_level in x_groups:
-                        s_idx = x_groups[s_level].index(s) if s in x_groups[s_level] else 0
-                        succ_indices.append(s_idx)
-            
-            # Calculate average indices (use default if no connections)
-            avg_pred_idx = sum(pred_indices) / len(pred_indices) if pred_indices else 0
-            avg_succ_idx = sum(succ_indices) / len(succ_indices) if succ_indices else 0
-            
-            # Cross-reduction: prioritize placement based on connection patterns
-            # Nodes with more connections to higher-indexed nodes should be placed higher
-            cross_reduction_score = avg_succ_idx - avg_pred_idx
-            
-            # Return a tuple of sorting criteria
-            return (cross_reduction_score, pred_count, succ_count, str(node))
+            # If no predecessor positions, use path length for ordering
+            if not pred_positions:
+                pred_position = path_lengths.get(node, 0) / max(path_lengths.values()) if path_lengths else 0
+            else:
+                pred_position = sum(pred_positions) / len(pred_positions)
+                
+            # Return sorting criteria tuple
+            return (pred_position, path_lengths.get(node, 0), len(succs), len(preds), str(node))
         
         # Sort the nodes in this level
         x_groups[level] = sorted(nodes, key=node_sort_key)
@@ -283,58 +315,65 @@ def custom_hierarchical_layout(G: nx.DiGraph) -> Dict[str, Tuple[float, float]]:
             x, _ = pos[node]
             pos[node] = (x, center_y)
     
-    # Process remaining nodes level by level
+    # Assign y positions to nodes based on sorted order within levels
+    for level, nodes in x_groups.items():
+        # Set y-coordinates based on the index within sorted nodes
+        for i, node in enumerate(nodes):
+            x, _ = pos[node]
+            pos[node] = (x, i)
+    
+    # Refine positions to create better vertical alignment and distribution
+    # Create a map to track used Y positions in each column
+    x_slots = {x: set() for x in x_groups}
+    
+    # Second pass: refine y positions to create better alignment
     for level in sorted(x_groups.keys()):
-        # Assign y positions for nodes in this level
-        slot_counter = 0
         for node in x_groups[level]:
-            # Skip nodes that already have a y position (source nodes)
-            if pos[node][1] != 0 and node in source_nodes:
+            # Skip nodes that already have been processed
+            if node in source_nodes and level == 0:
                 continue
-                
-            # Try to align with predecessors or successors if possible
-            aligned_y = None
             
-            # Check predecessors for alignment first
+            # Try to align with predecessors
+            aligned_y = None
             preds = list(G.predecessors(node))
+            
             if preds:
                 # Try to use the average y position of predecessors
                 pred_ys = [pos[p][1] for p in preds if p in pos]
                 if pred_ys:
                     aligned_y = sum(pred_ys) / len(pred_ys)
             
-            # If no alignment from predecessors, check successors
+            # If unable to align with predecessors, try with successors
             if aligned_y is None:
                 succs = list(G.successors(node))
                 succ_ys = [pos[s][1] for s in succs if s in pos and pos[s][1] != 0]
                 if succ_ys:
                     aligned_y = sum(succ_ys) / len(succ_ys)
             
-            # If we couldn't align, find a free slot
+            # If we still don't have a position, keep the original one
             if aligned_y is None:
-                while slot_counter in x_slots[level]:
-                    slot_counter += 1
-                aligned_y = slot_counter
-                slot_counter += 1
+                aligned_y = pos[node][1]
             
-            # Make sure this slot isn't too close to an existing one
+            # Check for conflicts with existing positions and adjust
             while any(abs(aligned_y - existing) < 0.8 for existing in x_slots[level]):
                 aligned_y += 0.8
             
-            # Mark this slot as used
+            # Mark this position as used
             x_slots[level].add(aligned_y)
             
-            # Assign the position
+            # Update the position
             x, _ = pos[node]
             pos[node] = (x, aligned_y)
     
-    # Third pass: adjust source node positions based on final positions of children
+    # Special pass for source nodes: center them between their children
     for node in source_nodes:
         children = list(G.successors(node))
         if children:
-            child_ys = [pos[child][1] for child in children]
+            # Get positions of all children with valid y-coordinates
+            child_ys = [pos[child][1] for child in children if child in pos]
+            
             if child_ys:
-                # Center the source node between its children's final positions
+                # Center the source node between its children
                 center_y = sum(child_ys) / len(child_ys)
                 x, _ = pos[node]
                 pos[node] = (x, center_y)
