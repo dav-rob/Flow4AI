@@ -277,7 +277,9 @@ def custom_hierarchical_layout(G: nx.DiGraph) -> Dict[str, Tuple[float, float]]:
             
             # If no predecessor positions, use path length for ordering
             if not pred_positions:
-                pred_position = path_lengths.get(node, 0) / max(path_lengths.values()) if path_lengths else 0
+                # Handle edge case where all nodes are both source and sink (all path lengths are 0)
+                max_path_value = max(path_lengths.values()) if path_lengths else 0
+                pred_position = 0 if max_path_value == 0 else path_lengths.get(node, 0) / max_path_value
             else:
                 pred_position = sum(pred_positions) / len(pred_positions)
                 

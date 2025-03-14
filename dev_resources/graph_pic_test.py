@@ -168,6 +168,28 @@ def example_4_large_scale():
     )
 
 
+def example_5_single_level():
+    """Simple one-level graph where nodes are both head and tail nodes."""
+    graph_definition = {
+        "input_output1": {"next": []},
+        "input_output2": {"next": []},
+        "input_output3": {"next": []}
+    }
+    
+    print_graph_definition(graph_definition)
+    
+    print("Creating visualization with hierarchical layout...")
+    visualize_graph(
+        graph_definition, 
+        layout='hierarchical',
+        title='Single-Level Graph',
+        node_size=1500,
+        edge_width=2.0,
+        font_size=12,
+        show=True
+    )
+
+
 def main():
     """
     Run examples based on command-line arguments.
@@ -179,7 +201,8 @@ def main():
         1: example_1_basic_precedence,
         2: example_2_diamond_dependency,
         3: example_3_multi_path,
-        4: example_4_large_scale
+        4: example_4_large_scale,
+        5: example_5_single_level
     }
     
     # Parse command line arguments
