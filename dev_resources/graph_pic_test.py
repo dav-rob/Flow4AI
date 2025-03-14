@@ -10,14 +10,14 @@ Usage:
     - If a number is provided, runs the specified example
 """
 
+import json
 import os
 import sys
-import json
 
 # Add the src directory to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.jobchain.graph_pic import visualize_graph, compare_layouts
+from src.jobchain.graph_pic import compare_layouts, visualize_graph
 
 
 def print_graph_definition(graph_definition):
@@ -154,6 +154,8 @@ def example_4_large_scale():
     }
     
     print("Creating visualization of large-scale graph...")
+    print_graph_definition(graph_definition)
+
     visualize_graph(
         graph_definition, 
         layout='hierarchical',
