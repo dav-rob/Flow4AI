@@ -202,6 +202,10 @@ def custom_hierarchical_layout(G: nx.DiGraph) -> Dict[str, Tuple[float, float]]:
                 x = len(generations) # Put at the far right
                 
             pos[node] = (x, 0)  # Y will be assigned later
+            
+    # Special handling for source nodes to ensure proper ordering and spacing
+    # Sort source nodes based on their name/ID to maintain consistency
+    source_nodes.sort(key=lambda n: str(n))
     
     # Group nodes by their x position
     x_groups = {}
