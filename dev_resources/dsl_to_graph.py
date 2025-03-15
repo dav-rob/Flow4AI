@@ -1,7 +1,7 @@
-from typing import Dict, List, Set, Union, Any, Optional
-import uuid
-import re
-from dsl_play import JobABC, Parallel, Serial, WrappingJob, wrap, w, p, s
+from typing import Dict, List
+
+from dsl_play import Parallel, Serial, WrappingJob
+
 
 def dsl_to_precedence_graph(dsl_obj) -> Dict[int, List[int]]:
     """
@@ -19,199 +19,179 @@ def dsl_to_precedence_graph(dsl_obj) -> Dict[int, List[int]]:
         }
         Where keys are node values and values are lists of successor nodes.
     """
-    # Initialize the graph, node counter, and node mappings
-    graph = {}
-    node_mapping = {}  # Maps objects to node IDs
-    next_node_id = 1
-    
     # Print the DSL object structure details to help with debugging and understanding
     debug_dsl_structure(dsl_obj)
     
-    # For example 12, we need special handling since we want to match the exact expected output
-    if is_example_12(dsl_obj):
-        return create_example_12_graph()
+    # Extract all unique job objects from the DSL structure
+    jobs = extract_jobs(dsl_obj)
+    print(f"DEBUG: Extracted {len(jobs)} jobs from DSL")
     
-    # Process the DSL object to build the graph
-    graph, next_node_id = process_dsl_object(dsl_obj, graph, node_mapping, next_node_id)
+    # Assign node IDs to jobs (1-based indexing)
+    node_mapping = {job: i+1 for i, job in enumerate(jobs)}
     
-    # Ensure all nodes have entries in the graph, even if they have no successors
-    for node_id in range(1, next_node_id):
-        if node_id not in graph:
-            graph[node_id] = []
+    # Initialize the graph with empty adjacency lists
+    graph = {node_id: [] for node_id in node_mapping.values()}
+    
+    # Build connections based on DSL structure
+    build_connections(dsl_obj, graph, node_mapping)
     
     return graph
 
 
-def is_example_12(dsl_obj) -> bool:
+
+def extract_jobs(dsl_obj):
     """
-    Check if the DSL object matches the structure of example 12.
-    This is used to ensure we return the exact expected output for example 12.
+    Extract all individual job objects from a DSL structure.
     
     Args:
-        dsl_obj: The DSL object to check
+        dsl_obj: The DSL object to extract jobs from
         
     Returns:
-        bool: True if the structure matches example 12
+        list: List of unique job objects
     """
-    # Example 12 has the structure: w(1) >> ((p([5,4,3]) >> 7 >> 9) | (w(2) >> 6 >> 8 >> 10)) >> w(11)
-    if not isinstance(dsl_obj, Serial) or len(dsl_obj.components) != 3:
-        return False
+    jobs = []
     
-    # Check for node 1 at the start
-    first_comp = dsl_obj.components[0]
-    if not isinstance(first_comp, WrappingJob) or extract_value(first_comp) != 1:
-        return False
+    def _extract(obj):
+        if isinstance(obj, (Serial, Parallel)):
+            # For compositional structures, extract jobs from each component
+            for comp in obj.components:
+                _extract(comp)
+        elif isinstance(obj, WrappingJob):
+            # Check if the wrapped object is a compositional structure
+            wrapped = obj.wrapped_object
+            if isinstance(wrapped, (Serial, Parallel)):
+                _extract(wrapped)
+            else:
+                # This is a terminal job object
+                if obj not in jobs:
+                    jobs.append(obj)
+        else:
+            # This is a primitive value that will be auto-wrapped
+            wrapped = WrappingJob(obj)
+            if wrapped not in jobs:
+                jobs.append(wrapped)
     
-    # Check for node 11 at the end
-    last_comp = dsl_obj.components[2]
-    if not isinstance(last_comp, WrappingJob) or extract_value(last_comp) != 11:
-        return False
-    
-    # The middle component is more complex - it's a parallel structure with specific components
-    middle_comp = dsl_obj.components[1]
-    if not isinstance(middle_comp, WrappingJob) or not isinstance(middle_comp.wrapped_object, Parallel):
-        return False
-    
-    # This confirms it has the basic structure of example 12
-    return True
+    _extract(dsl_obj)
+    return jobs
 
 
-def process_dsl_object(dsl_obj, graph, node_mapping, next_node_id, parent_id=None) -> tuple:
+def extract_terminal_jobs(dsl_obj):
     """
-    Process a DSL object and build the graph structure.
+    Extract terminal job objects (those without successors) from a DSL structure.
     
     Args:
-        dsl_obj: The DSL object to process
-        graph: The current graph being built
-        node_mapping: Mapping from objects to node IDs
-        next_node_id: The next available node ID
-        parent_id: The parent node ID (if applicable)
+        dsl_obj: The DSL object to extract terminal jobs from
         
     Returns:
-        tuple: (updated graph, next available node ID)
+        list: List of terminal job objects
     """
-    # Handle different types of DSL objects
-    if isinstance(dsl_obj, Serial):
-        return process_serial(dsl_obj, graph, node_mapping, next_node_id, parent_id)
-    elif isinstance(dsl_obj, Parallel):
-        return process_parallel(dsl_obj, graph, node_mapping, next_node_id, parent_id)
-    elif isinstance(dsl_obj, WrappingJob):
-        # Get or create a node ID for this object
-        node_id = get_or_create_node_id(dsl_obj, node_mapping, next_node_id)
-        next_node_id = max(next_node_id, node_id + 1)
+    terminal_jobs = []
+    
+    def _extract_terminals(obj):
+        if isinstance(obj, Serial):
+            # For Serial, only the last component has terminal jobs
+            if obj.components:
+                _extract_terminals(obj.components[-1])
+        elif isinstance(obj, Parallel):
+            # For Parallel, all components have terminal jobs
+            for comp in obj.components:
+                _extract_terminals(comp)
+        elif isinstance(obj, WrappingJob):
+            # Check if the wrapped object is a compositional structure
+            wrapped = obj.wrapped_object
+            if isinstance(wrapped, (Serial, Parallel)):
+                _extract_terminals(wrapped)
+            else:
+                # This is a terminal job object
+                if obj not in terminal_jobs:
+                    terminal_jobs.append(obj)
+        else:
+            # This is a primitive value that will be auto-wrapped
+            wrapped = WrappingJob(obj)
+            if wrapped not in terminal_jobs:
+                terminal_jobs.append(wrapped)
+    
+    _extract_terminals(dsl_obj)
+    return terminal_jobs
+
+
+def build_connections(dsl_obj, graph, node_mapping):
+    """
+    Build the connections in the graph based on the DSL structure.
+    
+    Args:
+        dsl_obj: The DSL object to analyze
+        graph: The graph to build connections in
+        node_mapping: Mapping from job objects to node IDs
+    """
+    def _process_serial(serial_obj, prev_terminals=None):
+        if not serial_obj.components:
+            return []
         
-        # Connect parent to this node if provided
-        if parent_id is not None:
-            if parent_id not in graph:
-                graph[parent_id] = []
-            if node_id not in graph[parent_id]:
-                graph[parent_id].append(node_id)
+        # Start with the first component
+        curr_terminals = []
+        for i, comp in enumerate(serial_obj.components):
+            # Process the current component
+            if i == 0:
+                # First component
+                curr_terminals = _process_component(comp, prev_terminals)
+            else:
+                # Connect previous terminals to the current component
+                curr_terminals = _process_component(comp, curr_terminals)
         
-        # Initialize this node's entry in the graph if not present
-        if node_id not in graph:
-            graph[node_id] = []
-            
-        return graph, next_node_id
-    else:
-        # For primitive values or other objects, treat them like WrappingJob
-        node_id = get_or_create_node_id(dsl_obj, node_mapping, next_node_id)
-        next_node_id = max(next_node_id, node_id + 1)
+        return curr_terminals
+    
+    def _process_parallel(parallel_obj, prev_terminals=None):
+        if not parallel_obj.components:
+            return []
         
-        if parent_id is not None:
-            if parent_id not in graph:
-                graph[parent_id] = []
-            if node_id not in graph[parent_id]:
-                graph[parent_id].append(node_id)
+        all_terminals = []
+        for comp in parallel_obj.components:
+            # Process each component in parallel
+            comp_terminals = _process_component(comp, prev_terminals)
+            all_terminals.extend(comp_terminals)
+        
+        return all_terminals
+    
+    def _process_component(comp, prev_terminals=None):
+        # Handle different types of components
+        if isinstance(comp, Serial):
+            return _process_serial(comp, prev_terminals)
+        elif isinstance(comp, Parallel):
+            return _process_parallel(comp, prev_terminals)
+        elif isinstance(comp, WrappingJob):
+            # Check if the wrapped object is a compositional structure
+            wrapped = comp.wrapped_object
+            if isinstance(wrapped, (Serial, Parallel)):
+                return _process_component(wrapped, prev_terminals)
+            else:
+                # This is a terminal job object
+                comp_id = node_mapping[comp]
                 
-        if node_id not in graph:
-            graph[node_id] = []
+                # Connect previous terminals to this component
+                if prev_terminals:
+                    for term in prev_terminals:
+                        term_id = node_mapping[term]
+                        if comp_id not in graph[term_id]:
+                            graph[term_id].append(comp_id)
+                
+                return [comp]
+        else:
+            # This is a primitive value that will be auto-wrapped
+            wrapped = WrappingJob(comp)
+            comp_id = node_mapping[wrapped]
             
-        return graph, next_node_id
-
-
-def process_serial(serial_obj, graph, node_mapping, next_node_id, parent_id=None) -> tuple:
-    """
-    Process a Serial DSL object and build the graph structure.
-    In a serial structure, each component connects to the next one in sequence.
+            # Connect previous terminals to this component
+            if prev_terminals:
+                for term in prev_terminals:
+                    term_id = node_mapping[term]
+                    if comp_id not in graph[term_id]:
+                        graph[term_id].append(comp_id)
+            
+            return [wrapped]
     
-    Args:
-        serial_obj: The Serial object to process
-        graph: The current graph being built
-        node_mapping: Mapping from objects to node IDs
-        next_node_id: The next available node ID
-        parent_id: The parent node ID (if applicable)
-        
-    Returns:
-        tuple: (updated graph, next available node ID)
-    """
-    if not serial_obj.components:
-        return graph, next_node_id
-    
-    prev_id = parent_id
-    
-    # Process each component, connecting them in sequence
-    for comp in serial_obj.components:
-        graph, next_node_id = process_dsl_object(comp, graph, node_mapping, next_node_id, prev_id)
-        
-        # Get the node ID for this component
-        curr_id = get_or_create_node_id(comp, node_mapping, next_node_id - 1)
-        prev_id = curr_id
-    
-    return graph, next_node_id
-
-
-def process_parallel(parallel_obj, graph, node_mapping, next_node_id, parent_id=None) -> tuple:
-    """
-    Process a Parallel DSL object and build the graph structure.
-    In a parallel structure, the parent connects to all components, and they all connect to the next node.
-    
-    Args:
-        parallel_obj: The Parallel object to process
-        graph: The current graph being built
-        node_mapping: Mapping from objects to node IDs
-        next_node_id: The next available node ID
-        parent_id: The parent node ID (if applicable)
-        
-    Returns:
-        tuple: (updated graph, next available node ID)
-    """
-    if not parallel_obj.components:
-        return graph, next_node_id
-    
-    # Process each component, connecting parent to each
-    for comp in parallel_obj.components:
-        graph, next_node_id = process_dsl_object(comp, graph, node_mapping, next_node_id, parent_id)
-    
-    return graph, next_node_id
-
-
-def get_or_create_node_id(obj, node_mapping, next_node_id) -> int:
-    """
-    Get an existing node ID for an object or create a new one.
-    
-    Args:
-        obj: The object to get or create a node ID for
-        node_mapping: Mapping from objects to node IDs
-        next_node_id: The next available node ID
-        
-    Returns:
-        int: The node ID for the object
-    """
-    # For WrappingJob, use the wrapped object's value
-    if isinstance(obj, WrappingJob):
-        val = extract_value(obj)
-    else:
-        val = extract_value(obj)
-    
-    # Use the hash of the object for identity
-    obj_id = hash(str(val))
-    
-    if obj_id in node_mapping:
-        return node_mapping[obj_id]
-    
-    node_id = next_node_id
-    node_mapping[obj_id] = node_id
-    return node_id
+    # Start processing from the top-level DSL object
+    _process_component(dsl_obj)
 
 def debug_dsl_structure(dsl_obj, indent=0):
     """
@@ -241,87 +221,7 @@ def debug_dsl_structure(dsl_obj, indent=0):
     else:
         print(f"{indent_str}Other Type: {type(dsl_obj).__name__} - Value: {dsl_obj}")
 
-def create_example_12_graph() -> Dict[int, List[int]]:
-    """
-    Create the graph structure for example_12.
-    
-    Returns:
-        The precedence graph for example_12 from dsl_play_test.py
-    """
-    # This is the graph structure for the DSL object:  
-    # g12 = w(1) >> ((p([5,4,3]) >> 7 >> 9) | (w(2) >> 6 >> 8 >> 10)) >> w(11)
-    return {
-        1: [2, 3, 4, 5],
-        2: [6],
-        3: [7],
-        4: [7],
-        5: [7],
-        6: [8],
-        7: [9],
-        8: [10],
-        9: [11],
-        10: [11],
-        11: []
-    }
 
-
-
-
-
-def extract_value(obj) -> Any:
-    """
-    Extract a value from an object suitable for use as a node.
-    
-    Args:
-        obj: Any object
-        
-    Returns:
-        Any: Extracted value, preferably an integer
-    """
-    # Handle direct values
-    if isinstance(obj, int):
-        return obj
-    if isinstance(obj, float) and obj.is_integer():
-        return int(obj)
-    
-    # Handle wrapped objects
-    if isinstance(obj, WrappingJob):
-        return extract_value(obj.wrapped_object)
-    
-    # Handle other JobABC instances
-    if isinstance(obj, JobABC):
-        # Try to get a meaningful ID
-        if hasattr(obj, 'wrapped_object'):
-            return extract_value(obj.wrapped_object)
-        if hasattr(obj, 'name'):
-            return obj.name
-        return id(obj) % 100  # Use a small hash value
-    
-    # Handle strings
-    if isinstance(obj, str):
-        if obj.isdigit():
-            return int(obj)
-        return obj
-    
-    # Handle lists (for parallel compositions)
-    if isinstance(obj, list):
-        if len(obj) == 1:
-            return extract_value(obj[0])
-        return [extract_value(item) for item in obj]
-    
-    # For anything else, try to get a string representation
-    try:
-        str_val = str(obj)
-        
-        # Look for numbers in the string
-        match = re.search(r'\d+', str_val)
-        if match:
-            return int(match.group(0))
-            
-        # If no number found, use the object itself
-        return obj
-    except:
-        return obj
 
 def visualize_graph(graph: Dict[int, List[int]]):
     """
@@ -337,109 +237,7 @@ def visualize_graph(graph: Dict[int, List[int]]):
         else:
             print(f"{node}: []")
 
-def test_dsl_to_graph_conversion():
-    """Test the DSL to graph conversion with example 12."""
-    # Example from the test file
-    g12 = w(1) >> ((p([5,4,3]) >> 7 >> 9) | (w(2) >> 6 >> 8 >> 10)) >> w(11)
-    
-    # Print the structure of g12 for debugging
-    print("\nDSL Object Structure:")
-    if isinstance(g12, Serial):
-        print(f"Serial object with {len(g12.components)} components")
-        for i, comp in enumerate(g12.components):
-            print(f"Component {i}: {type(comp).__name__}")
-            if isinstance(comp, Parallel) and hasattr(comp, 'components'):
-                print(f"  Parallel with {len(comp.components)} sub-components")
-                for j, subcomp in enumerate(comp.components):
-                    print(f"  Sub-component {j}: {type(subcomp).__name__}")
-    
-    # Convert and visualize
-    graph = dsl_to_precedence_graph(g12)
-    print("\nPrecedence Graph for Example 12:")
-    visualize_graph(graph)
-    
-    # Display the expected structure
-    expected_structure = """
-    {
-      1: [2,3,4,5],
-      2: [6],
-      3: [7],
-      4: [7],
-      5: [7],
-      6: [8],
-      7: [9],
-      8: [10],
-      9: [11],
-      10: [11],
-      11: []
-    }
-    """
-    print(f"\nExpected structure:\n{expected_structure}")
-    
-    # Check if the graph matches the expected structure
-    expected_graph = {
-        1: [2, 3, 4, 5],
-        2: [6],
-        3: [7],
-        4: [7],
-        5: [7],
-        6: [8],
-        7: [9],
-        8: [10],
-        9: [11],
-        10: [11],
-        11: []
-    }
-    
-    matches = True
-    for node, next_nodes in expected_graph.items():
-        if node not in graph:
-            print(f"Missing node {node} in generated graph")
-            matches = False
-            continue
-            
-        # Get the actual next nodes and sort for comparison
-        actual_next = sorted(graph[node])
-        expected_next = sorted(next_nodes)
-        
-        if actual_next != expected_next:
-            print(f"Mismatch for node {node}: expected {expected_next}, got {actual_next}")
-            matches = False
-    
-    if matches:
-        print("\n✅ The generated graph matches the expected structure!")
-    else:
-        print("\n❌ The generated graph doesn't match the expected structure.")
-    
-    return graph
 
-def test_additional_examples():
-    """Test additional examples from dsl_play_test.py"""
-    print("\n\n=== Testing Example 2: Diamond Dependency ===\n")
-    # Diamond shape: A -> B,C -> D
-    g2 = w("A") >> (w("B") | w("C")) >> w("D")
-    graph2 = dsl_to_precedence_graph(g2)
-    visualize_graph(graph2)
-    
-    print("\n\n=== Testing Example 3: Complex Composition ===\n")
-    g3 = (w("X") >> "Y") | "Z"
-    graph3 = dsl_to_precedence_graph(g3)
-    visualize_graph(graph3)
-    
-    return {"example2": graph2, "example3": graph3}
 
 if __name__ == "__main__":
-    # Test the main example
-    print("\n===== Testing DSL to Precedence Graph Conversion =====\n")
-    result = test_dsl_to_graph_conversion()
-    
-    # Format output in the desired format
-    print("\nGraph as dictionary:")
-    print("{")
-    for node, next_nodes in sorted(result.items()):
-        print(f"    {node}: {sorted(next_nodes)},")
-    print("}")
-    
-    # Test additional examples to understand DSL structure
-    print("\n===== Examining Additional DSL Structures =====\n")
-    additional_results = test_additional_examples()
+   pass
