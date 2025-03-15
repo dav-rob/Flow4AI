@@ -107,7 +107,7 @@ class WrappingJob(JobABC):
         return f"WrappingJob({self.wrapped_object.__class__.__name__})"
 
     async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
-        return f"Executed {self.wrapped_object}"
+        return f"{self.wrapped_object}"
 
 def wrap(obj):
     """
