@@ -4,8 +4,10 @@ Test script for DSL to precedence graph conversion.
 This file contains the test code extracted from dsl_to_graph.py.
 """
 from typing import Dict, List
-from dsl_play import JobABC, Parallel, Serial, WrappingJob, wrap, w, p, s
-from dsl_to_graph import dsl_to_precedence_graph, debug_dsl_structure, visualize_graph
+
+from dsl_play import JobABC, Parallel, Serial, WrappingJob, p, s, w, wrap
+from dsl_to_graph import (debug_dsl_structure, dsl_to_precedence_graph,
+                          visualize_graph)
 
 
 def example12():
@@ -19,18 +21,8 @@ def example12():
     print("DSL: w(1) >> ((p([5,4,3]) >> 7 >> 9) | (w(2) >> 6 >> 8 >> 10)) >> w(11)")
     
     # Display the graph structure
-    print("\nGraph Structure:")
-    print("1: [2, 3, 4, 5]")
-    print("2: [6]")
-    print("3: [7]")
-    print("4: [7]")
-    print("5: [7]")
-    print("6: [8]")
-    print("7: [9]")
-    print("8: [10]")
-    print("9: [11]")
-    print("10: [11]")
-    print("11: []")
+    graph = dsl_to_precedence_graph(g12)
+    visualize_graph(graph)
     
     return g12
 
@@ -113,50 +105,235 @@ def example12_verbose():
     return graph
 
 
-def test_additional_examples():
-    """Test additional examples from dsl_play_test.py"""
-    print("\n===== Examining Additional DSL Structures =====\n")
+def example1_simple_parallel():
+    """Example 1: Simple parallel composition"""
+    obj1 = "Object 1"
+    obj2 = "Object 2"
     
-    # Example 2: Diamond dependency
-    print("\n=== Testing Example 2: Diamond Dependency ===\n")
-    g2 = w('A') >> (w('B') | w('C')) >> 'D'
-    debug_dsl_structure(g2)
+    g1 = w(obj1) | obj2
+    
+    print("\n===== Example 1: Simple Parallel =====")
+    print(f"DSL: w(obj1) | obj2")    
+    # Convert to adjacency list
+    graph = dsl_to_precedence_graph(g1)
+    visualize_graph(graph)
+    
+    return g1
+
+
+def example2_serial_composition():
+    """Example 2: Serial composition"""
+    obj1 = "Object 1"
+    obj2 = "Object 2"
+    
+    g2 = w(obj1) >> w(obj2)
+    
+    print("\n===== Example 2: Serial Composition =====")
+    print(f"DSL: w(obj1) >> w(obj2)")
+    
+    # Convert to adjacency list
     graph = dsl_to_precedence_graph(g2)
     visualize_graph(graph)
     
-    # Example 3: More complex composition
-    print("\n=== Testing Example 3: Complex Composition ===\n")
-    g3 = (w('X') >> 'Y') | 'Z'
-    debug_dsl_structure(g3)
+    return g2
+
+
+def example3_combining_serial_and_parallel():
+    """Example 3: Combining serial and parallel compositions"""
+    obj1 = "Object 1"
+    obj2 = "Object 2"
+    obj3 = "Object 3"
+    
+    g3 = (w(obj1) >> obj2) | obj3
+    
+    print("\n===== Example 3: Combining Serial and Parallel =====")
+    print(f"DSL: (w(obj1) >> obj2) | obj3")
+    
+    # Convert to adjacency list
     graph = dsl_to_precedence_graph(g3)
     visualize_graph(graph)
+    
+    return g3
+
+
+def example4_complex_compositions():
+    """Example 4: More complex compositions"""
+    obj1 = "Object 1"
+    obj2 = "Object 2"
+    obj3 = "Object 3"
+    
+    g4 = w(obj1) >> (w(obj2) | obj3)
+    
+    print("\n===== Example 4: Complex Compositions =====")
+    print(f"DSL: w(obj1) >> (w(obj2) | obj3)")
+    
+    # Convert to adjacency list
+    graph = dsl_to_precedence_graph(g4)
+    visualize_graph(graph)
+    
+    return g4
+
+
+def example5_using_parallel_function():
+    """Example 5: Using parallel function"""
+    obj1 = "Object 1"
+    obj2 = "Object 2"
+    obj3 = "Object 3"
+    
+    objs = [obj1, obj2, obj3]
+    g5 = p(objs)
+    
+    print("\n===== Example 5: Using Parallel Function =====")
+    print(f"DSL: p([obj1, obj2, obj3])")
+    
+    # Convert to adjacency list
+    graph = dsl_to_precedence_graph(g5)
+    visualize_graph(graph)
+    
+    return g5
+
+
+def example6_using_serial_function():
+    """Example 6: Using serial function"""
+    obj1 = "Object 1"
+    obj2 = "Object 2"
+    obj3 = "Object 3"
+    
+    objs = [obj1, obj2, obj3]
+    g6 = s(objs)
+    
+    print("\n===== Example 6: Using Serial Function =====")
+    print(f"DSL: s([obj1, obj2, obj3])")
+    
+    # Convert to adjacency list
+    graph = dsl_to_precedence_graph(g6)
+    visualize_graph(graph)
+    
+    return g6
+
+
+def example7_composition_with_primitives():
+    """Example 7: Composition with strings and numbers"""
+    g7 = w("Task A") >> 123 | "Task B"
+    
+    print("\n===== Example 7: Composition with Primitives =====")
+    print(f"DSL: w(\"Task A\") >> 123 | \"Task B\"")
+
+    # Convert to adjacency list
+    graph = dsl_to_precedence_graph(g7)
+    visualize_graph(graph)
+    
+    return g7
+
+
+def example8_direct_wrapping_job():
+    """Example 8: Using direct WrappingJob instances"""
+    c1 = WrappingJob("Direct WrappingJob")
+    g8 = w("Task C") >> c1
+    
+    print("\n===== Example 8: Direct WrappingJob Instances =====")
+    print(f"DSL: w(\"Task C\") >> WrappingJob(\"Direct WrappingJob\")")
+    
+    # Convert to adjacency list
+    graph = dsl_to_precedence_graph(g8)
+    visualize_graph(graph)
+    
+    return g8
+
+
+def example9_combining_everything():
+    """Example 9: Combining everything together"""
+    g9 = p([w("T1") >> w(1), "T2", 3]) >> w(4) | w(s([5, "T3", w(6)]))
+    
+    print("\n===== Example 9: Combining Everything =====")
+    print(f"DSL: p([w(\"T1\") >> w(1), \"T2\", 3]) >> w(4) | w(s([5, \"T3\", w(6)]))")
+    
+    # Convert to adjacency list
+    graph = dsl_to_precedence_graph(g9)
+    visualize_graph(graph)
+    
+    return g9
+
+
+def example10_custom_objects():
+    """Example 10: Using custom objects"""
+    # Using strings as placeholders for custom objects
+    c1 = "Processor1"
+    c2 = "Processor2"
+    
+    g10 = w(c1) >> c2
+    
+    print("\n===== Example 10: Custom Objects =====")
+    print(f"DSL: w(c1) >> c2")
+    
+    # Convert to adjacency list
+    graph = dsl_to_precedence_graph(g10)
+    visualize_graph(graph)
+    
+    return g10
+
+
+def example11_component_subclasses():
+    """Example 11: Using component subclasses"""
+    # Using simpler representations for this example
+    comp1 = "Processor A"
+    comp2 = "Processor B"
+    
+    g11 = w(comp1) >> comp2
+    
+    print("\n===== Example 11: Component Subclasses =====")
+    print(f"DSL: w(comp1) >> comp2")
+    
+    # Convert to adjacency list
+    graph = dsl_to_precedence_graph(g11)
+    visualize_graph(graph)
+    
+    return g11
 
 
 if __name__ == "__main__":
     import argparse
-    
+
     # Set up command line arguments
     parser = argparse.ArgumentParser(description='DSL to Graph Conversion Tests')
-    parser.add_argument('--example', type=str, choices=['example12', 'example12_verbose', 'additional', 'all'],
-                        default='all', help='Which example to run')
+    parser.add_argument('--example', type=str, 
+                       choices=['all', 'example1', 'example2', 'example3', 'example4', 'example5', 
+                                'example6', 'example7', 'example8', 'example9', 'example10', 
+                                'example11', 'example12', 'example12_verbose'],
+                       default='all', help='Which example to run')
     
     args = parser.parse_args()
     
-    # Run the requested example(s)
-    if args.example == 'example12' or args.example == 'all':
-        example12()
+    # Dictionary mapping example names to their functions
+    examples = {
+        'example1': example1_simple_parallel,
+        'example2': example2_serial_composition,
+        'example3': example3_combining_serial_and_parallel,
+        'example4': example4_complex_compositions,
+        'example5': example5_using_parallel_function,
+        'example6': example6_using_serial_function,
+        'example7': example7_composition_with_primitives,
+        'example8': example8_direct_wrapping_job,
+        'example9': example9_combining_everything,
+        'example10': example10_custom_objects,
+        'example11': example11_component_subclasses,
+        'example12': example12,
+        'example12_verbose': example12_verbose
+    }
     
-    if args.example == 'example12_verbose' or args.example == 'all':
-        print("\n===== Testing DSL to Precedence Graph Conversion (Verbose) =====\n")
-        result = example12_verbose()
+    # Run all examples except verbose by default
+    if args.example == 'all':
+        for example_name, example_func in examples.items():
+            # Skip the verbose example in the default run
+            if example_name != 'example12_verbose':
+                example_func()
+    else:
+        # Run a specific example
+        examples[args.example]()
     
-    if args.example == 'additional' or args.example == 'all':
-        test_additional_examples()
-    
-    # Print usage instructions if run with no options
+    # Print usage instructions if run with default options
     if args.example == 'all':
         print("\n===== Usage =====")
         print("Run a specific example with:")
-        print("  python dsl_to_graph_test.py --example example12")
-        print("  python dsl_to_graph_test.py --example example12_verbose")
-        print("  python dsl_to_graph_test.py --example additional")
+        for example_name in examples.keys():
+            print(f"  python dsl_to_graph_test.py --example {example_name}")
