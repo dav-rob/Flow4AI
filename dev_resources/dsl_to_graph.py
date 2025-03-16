@@ -75,45 +75,6 @@ def extract_jobs(dsl_obj):
     return jobs
 
 
-def extract_terminal_jobs(dsl_obj):
-    """
-    Extract terminal job objects (those without successors) from a DSL structure.
-    
-    Args:
-        dsl_obj: The DSL object to extract terminal jobs from
-        
-    Returns:
-        list: List of terminal job objects
-    """
-    terminal_jobs = []
-    
-    def _extract_terminals(obj):
-        if isinstance(obj, Serial):
-            # For Serial, only the last component has terminal jobs
-            if obj.components:
-                _extract_terminals(obj.components[-1])
-        elif isinstance(obj, Parallel):
-            # For Parallel, all components have terminal jobs
-            for comp in obj.components:
-                _extract_terminals(comp)
-        elif isinstance(obj, WrappingJob):
-            # Check if the wrapped object is a compositional structure
-            wrapped = obj.wrapped_object
-            if isinstance(wrapped, (Serial, Parallel)):
-                _extract_terminals(wrapped)
-            else:
-                # This is a terminal job object
-                if obj not in terminal_jobs:
-                    terminal_jobs.append(obj)
-        else:
-            # This is a primitive value that will be auto-wrapped
-            wrapped = WrappingJob(obj)
-            if wrapped not in terminal_jobs:
-                terminal_jobs.append(wrapped)
-    
-    _extract_terminals(dsl_obj)
-    return terminal_jobs
-
 
 def build_connections(dsl_obj, graph, node_mapping):
     """
