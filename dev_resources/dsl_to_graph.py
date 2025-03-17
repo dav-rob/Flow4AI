@@ -114,23 +114,25 @@ def build_connections(dsl_obj, graph):
             return _process_serial(comp, prev_terminals)
         elif isinstance(comp, Parallel):
             return _process_parallel(comp, prev_terminals)
-        elif isinstance(comp, WrappingJob):
-            # Check if the wrapped object is a compositional structure
-            wrapped = comp.wrapped_object
-            if isinstance(wrapped, (Serial, Parallel)):
-                return _process_component(wrapped, prev_terminals)
-            else:
-                # This is a terminal job object
-                comp_str = str(comp)
-                
-                # Connect previous terminals to this component
-                if prev_terminals:
-                    for term in prev_terminals:
-                        term_str = str(term)
-                        if comp_str not in graph[term_str]:
-                            graph[term_str].append(comp_str)
-                
-                return [comp]
+        elif isinstance(comp, MockJobABC):
+            if isinstance(comp, WrappingJob):
+                # Check if the wrapped object is a compositional structure
+                wrapped = comp.wrapped_object
+                if isinstance(wrapped, (Serial, Parallel)):
+                    return _process_component(wrapped, prev_terminals)
+            
+            # This is a terminal job object (either WrappingJob with non-compositional object
+            # or any other MockJobABC subclass)
+            comp_str = str(comp)
+            
+            # Connect previous terminals to this component
+            if prev_terminals:
+                for term in prev_terminals:
+                    term_str = str(term)
+                    if comp_str not in graph[term_str]:
+                        graph[term_str].append(comp_str)
+            
+            return [comp]
         else:
             # This is a primitive value that will be auto-wrapped
             wrapped = WrappingJob(comp)

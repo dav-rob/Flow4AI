@@ -3,7 +3,7 @@
 Test script for DSL to precedence graph conversion.
 This file contains the test code extracted from dsl_to_graph.py.
 """
-from typing import Dict, List
+from typing import Any, Dict, List, Union
 
 from dsl_play import MockJobABC, Parallel, Serial, WrappingJob, p, s, w, wrap
 from dsl_to_graph import (debug_dsl_structure, dsl_to_precedence_graph,
@@ -24,9 +24,9 @@ class ProcessorJob(MockJobABC):
         super().__init__(name)
         self.process_type = process_type
     def __repr__(self):
-        return f"ProcessorComponent(name={self.name}, type={self.process_type})"
+        return f"{self.name}"
     
-    async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
+    async def run(self, task: Dict[str, Any]) -> Dict[str, Any]:
         return f"{self.name}"
 
 
@@ -296,13 +296,13 @@ def example10_custom_objects():
 def example11_ordinary_JobABC_subclasses():
     """Example 11: Using ordinary JobABC subclasses"""
     # Using simpler representations for this example
-    comp1 = ProcessorJob("Processor A", "type1")
-    comp2 = ProcessorJob("Processor B", "type2")
+    processorA = ProcessorJob("Processor A", "type1")
+    processorB = ProcessorJob("Processor B", "type2")
     
-    g11 = w(comp1) >> comp2
+    g11 = w(processorA) >> processorB
     
     print("\n===== Example 11: Component Subclasses =====")
-    print(f"DSL: w(comp1) >> comp2")
+    print(f"DSL: w(processorA) >> processorB")
     
     # Convert to adjacency list
     graph = dsl_to_precedence_graph(g11)
