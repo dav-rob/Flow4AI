@@ -3,7 +3,7 @@ from typing import Dict, List
 from dsl_play import MockJobABC, Parallel, Serial, WrappingJob
 
 
-def dsl_to_precedence_graph(dsl_obj) -> Dict[int, List[int]]:
+def dsl_to_precedence_graph(dsl_obj) -> Dict[str, List[str]]:
     """
     Convert a DSL object into a precedence graph (adjacency list).
     
@@ -11,13 +11,13 @@ def dsl_to_precedence_graph(dsl_obj) -> Dict[int, List[int]]:
         dsl_obj: A DSL object created with operators >> and |, or functions p() and s()
     
     Returns:
-        Dict[int, List[int]]: A graph definition in the format:
+        Dict[str, List[str]]: A graph definition in the format:
         {
-            1: [2, 3, 4, 5],
-            2: [6],
+            'Task A': ['Task B', 'Task C'],
+            'Task B': [],
             ...
         }
-        Where keys are node values and values are lists of successor nodes.
+        Where keys are node string representations and values are lists of successor node representations.
     """
     # Print the DSL object structure details to help with debugging and understanding
     debug_dsl_structure(dsl_obj)
@@ -26,14 +26,11 @@ def dsl_to_precedence_graph(dsl_obj) -> Dict[int, List[int]]:
     jobs = extract_jobs(dsl_obj)
     print(f"DEBUG: Extracted {len(jobs)} jobs from DSL")
     
-    # Assign node IDs to jobs (1-based indexing)
-    node_mapping = {job: i+1 for i, job in enumerate(jobs)}
-    
-    # Initialize the graph with empty adjacency lists
-    graph = {node_id: [] for node_id in node_mapping.values()}
+    # Initialize the graph with empty adjacency lists using string representation of jobs
+    graph = {str(job): [] for job in jobs}
     
     # Build connections based on DSL structure
-    build_connections(dsl_obj, graph, node_mapping)
+    build_connections(dsl_obj, graph)
     
     return graph
 
@@ -74,14 +71,13 @@ def extract_jobs(dsl_obj):
 
 
 
-def build_connections(dsl_obj, graph, node_mapping):
+def build_connections(dsl_obj, graph):
     """
     Build the connections in the graph based on the DSL structure.
     
     Args:
         dsl_obj: The DSL object to analyze
-        graph: The graph to build connections in
-        node_mapping: Mapping from job objects to node IDs
+        graph: The graph to build connections in where keys and values are string representations of jobs
     """
     def _process_serial(serial_obj, prev_terminals=None):
         if not serial_obj.components:
@@ -125,27 +121,27 @@ def build_connections(dsl_obj, graph, node_mapping):
                 return _process_component(wrapped, prev_terminals)
             else:
                 # This is a terminal job object
-                comp_id = node_mapping[comp]
+                comp_str = str(comp)
                 
                 # Connect previous terminals to this component
                 if prev_terminals:
                     for term in prev_terminals:
-                        term_id = node_mapping[term]
-                        if comp_id not in graph[term_id]:
-                            graph[term_id].append(comp_id)
+                        term_str = str(term)
+                        if comp_str not in graph[term_str]:
+                            graph[term_str].append(comp_str)
                 
                 return [comp]
         else:
             # This is a primitive value that will be auto-wrapped
             wrapped = WrappingJob(comp)
-            comp_id = node_mapping[wrapped]
+            comp_str = str(wrapped)
             
             # Connect previous terminals to this component
             if prev_terminals:
                 for term in prev_terminals:
-                    term_id = node_mapping[term]
-                    if comp_id not in graph[term_id]:
-                        graph[term_id].append(comp_id)
+                    term_str = str(term)
+                    if comp_str not in graph[term_str]:
+                        graph[term_str].append(comp_str)
             
             return [wrapped]
     
@@ -182,17 +178,17 @@ def debug_dsl_structure(dsl_obj, indent=0):
 
 
 
-def visualize_graph(graph: Dict[int, List[int]]):
+def visualize_graph(graph: Dict[str, List[str]]):
     """
     Visualize the graph structure for debugging purposes.
     
     Args:
-        graph: A graph definition in adjacency list format
+        graph: A graph definition in adjacency list format with string representations as keys
     """
     print("Graph Structure:")
     for node, next_nodes in sorted(graph.items()):
         if next_nodes:
-            print(f"{node}: {sorted(next_nodes)}")
+            print(f"{node}: {next_nodes}")
         else:
             print(f"{node}: []")
 
