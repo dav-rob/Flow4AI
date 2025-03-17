@@ -181,12 +181,45 @@ def debug_dsl_structure(dsl_obj, indent=0):
 def visualize_graph(graph: Dict[str, List[str]]):
     """
     Visualize the graph structure for debugging purposes.
+    Displays parent nodes before their children for better readability.
     
     Args:
         graph: A graph definition in adjacency list format with string representations as keys
     """
     print("Graph Structure:")
-    for node, next_nodes in sorted(graph.items()):
+    
+    # Identify root nodes (nodes that are not in any other node's next_nodes list)
+    all_child_nodes = set()
+    for next_nodes in graph.values():
+        all_child_nodes.update(next_nodes)
+    
+    root_nodes = [node for node in graph if node not in all_child_nodes]
+    
+    # Build a node order that puts parents before children
+    visited = set()
+    node_order = []
+    
+    def visit_node(node):
+        if node in visited:
+            return
+        visited.add(node)
+        node_order.append(node)
+        # Visit children nodes
+        for child in graph.get(node, []):
+            visit_node(child)
+    
+    # Start the traversal from root nodes
+    for root in root_nodes:
+        visit_node(root)
+    
+    # Add any remaining nodes (disconnected components)
+    for node in graph:
+        if node not in visited:
+            visit_node(node)
+    
+    # Print the graph in the calculated order
+    for node in node_order:
+        next_nodes = graph.get(node, [])
         if next_nodes:
             print(f"{node}: {next_nodes}")
         else:
