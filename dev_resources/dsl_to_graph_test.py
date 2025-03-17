@@ -10,6 +10,26 @@ from dsl_to_graph import (debug_dsl_structure, dsl_to_precedence_graph,
                           visualize_graph)
 
 
+class CustomAnyObject:
+    """Example custom processor class."""
+    def __init__(self, name):
+        self.name = name
+    def __repr__(self):
+        return f"{self.name}"
+
+
+class ProcessorJob(MockJobABC):
+    """Example component that implements JobABC interface."""
+    def __init__(self, name, process_type):
+        super().__init__(name)
+        self.process_type = process_type
+    def __repr__(self):
+        return f"ProcessorComponent(name={self.name}, type={self.process_type})"
+    
+    async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
+        return f"{self.name}"
+
+
 def example12():
     """
     Show the example 12 DSL and its corresponding graph structure in a simple format.
@@ -258,8 +278,8 @@ def example9_combining_everything():
 def example10_custom_objects():
     """Example 10: Using custom objects"""
     # Using strings as placeholders for custom objects
-    c1 = "Processor1"
-    c2 = "Processor2"
+    c1 = CustomAnyObject("Custom1")
+    c2 = CustomAnyObject("Custom2")
     
     g10 = w(c1) >> c2
     
@@ -276,8 +296,8 @@ def example10_custom_objects():
 def example11_component_subclasses():
     """Example 11: Using component subclasses"""
     # Using simpler representations for this example
-    comp1 = "Processor A"
-    comp2 = "Processor B"
+    comp1 = ProcessorJob("Processor A", "type1")
+    comp2 = ProcessorJob("Processor B", "type2")
     
     g11 = w(comp1) >> comp2
     
