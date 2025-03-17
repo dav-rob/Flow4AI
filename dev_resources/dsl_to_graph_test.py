@@ -311,6 +311,37 @@ def example11_ordinary_JobABC_subclasses():
     return g11
 
 
+def example13_complex_JobABC_subclass():
+    """Example 13: Complex DSL with both wrapped objects and direct MockJobABC subclasses"""
+    # Create various ProcessorJob instances (MockJobABC subclasses)
+    preprocessor = ProcessorJob("Preprocessor", "preprocess")
+    analyzer1 = ProcessorJob("Analyzer1", "analyze")
+    analyzer2 = ProcessorJob("Analyzer2", "analyze")
+    transformer = ProcessorJob("Transformer", "transform")
+    aggregator = ProcessorJob("Aggregator", "aggregate")
+    formatter = ProcessorJob("Formatter", "format")
+    cache_manager = ProcessorJob("CacheManager", "cache")
+    logger = ProcessorJob("Logger", "log")
+    
+    # Create a complex DSL with various combinations of wrapping and direct usage
+    # Main pipeline has a preprocessor followed by parallel analyzers, then transforms and formats
+    # Side pipeline handles caching and logging which can run in parallel with the main pipeline
+    main_pipeline = preprocessor >> p([analyzer1, analyzer2]) >> transformer >> formatter
+    side_pipeline = w("Init") >> p([cache_manager, logger])
+    
+    # Combine pipelines and add an aggregator at the end
+    g13 = p([main_pipeline, side_pipeline]) >> aggregator
+    
+    print("\n===== Example 13: Complex JobABC Subclass Usage =====")
+    print(f"DSL: Complex expression with ProcessorJob instances combined with p(), s(), >> and |")
+    
+    # Convert to adjacency list
+    graph = dsl_to_precedence_graph(g13)
+    visualize_graph(graph)
+    
+    return g13
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -319,7 +350,7 @@ if __name__ == "__main__":
     parser.add_argument('--example', type=str, 
                        choices=['all', 'example1', 'example2', 'example3', 'example4', 'example5', 
                                 'example6', 'example7', 'example8', 'example9', 'example10', 
-                                'example11', 'example12', 'example12_verbose'],
+                                'example11', 'example12', 'example12_verbose', 'example13'],
                        default='all', help='Which example to run')
     
     args = parser.parse_args()
@@ -338,7 +369,8 @@ if __name__ == "__main__":
         'example10': example10_custom_objects,
         'example11': example11_ordinary_JobABC_subclasses,
         'example12': example12,
-        'example12_verbose': example12_verbose
+        'example12_verbose': example12_verbose,
+        'example13': example13_complex_JobABC_subclass
     }
     
     # Run all examples except verbose by default
