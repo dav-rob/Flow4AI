@@ -9,6 +9,8 @@ from dsl_play import MockJobABC, Parallel, Serial, WrappingJob, p, s, w, wrap
 from dsl_to_graph import (debug_dsl_structure, dsl_to_precedence_graph,
                           visualize_graph)
 
+from jobchain.jc_graph import validate_graph
+
 
 class CustomAnyObject:
     """Example custom processor class."""
@@ -44,6 +46,8 @@ def example12():
     graph = dsl_to_precedence_graph(g12)
     visualize_graph(graph)
     
+    validate_graph(graph, name="Example 12")
+    
     return g12
 
 
@@ -60,49 +64,56 @@ def example12_verbose():
     # Display the expected structure
     expected_structure = """
     {
-        '1': ['2', '3', '4', '5'],
-        '2': ['6'],
-        '3': ['7'],
-        '4': ['7'],
-        '5': ['7'],
-        '6': ['8'],
-        '7': ['9'],
-        '8': ['10'],
-        '9': ['11'],
-        '10': ['11'],
-        '11': []
+        '1': {'next': ['5', '4', '3', '2']},
+        '2': {'next': ['6']},
+        '3': {'next': ['7']},
+        '4': {'next': ['7']},
+        '5': {'next': ['7']},
+        '6': {'next': ['8']},
+        '7': {'next': ['9']},
+        '8': {'next': ['10']},
+        '9': {'next': ['11']},
+        '10': {'next': ['11']},
+        '11': {'next': []}
     }
     """
     print(f"\nExpected structure:{expected_structure}")
     
     # Check if the graph matches the expected structure
     expected_graph = {
-        '1': ['2', '3', '4', '5'],
-        '2': ['6'],
-        '3': ['7'],
-        '4': ['7'],
-        '5': ['7'],
-        '6': ['8'],
-        '7': ['9'],
-        '8': ['10'],
-        '9': ['11'],
-        '10': ['11'],
-        '11': []
+        '1': {'next': ['5', '4', '3', '2']},
+        '2': {'next': ['6']},
+        '3': {'next': ['7']},
+        '4': {'next': ['7']},
+        '5': {'next': ['7']},
+        '6': {'next': ['8']},
+        '7': {'next': ['9']},
+        '8': {'next': ['10']},
+        '9': {'next': ['11']},
+        '10': {'next': ['11']},
+        '11': {'next': []}
     }
     
     # Compare expected with actual
     if graph == expected_graph:
         print("\n✅ The generated graph matches the expected structure!")
     else:
-        print("\n❌ The generated graph does NOT match the expected structure!")
-        print("Differences:")
-        for k in set(list(graph.keys()) + list(expected_graph.keys())):
-            if k not in graph:
-                print(f"  Missing key {k} in generated graph")
-            elif k not in expected_graph:
-                print(f"  Extra key {k} in generated graph")
-            elif set(graph[k]) != set(expected_graph[k]):
-                print(f"  For key {k}: Expected {sorted(expected_graph[k])}, got {sorted(graph[k])}")
+        print_diff(graph, expected_graph)
+
+
+def print_diff(graph, expected_graph):
+    """
+    Print the differences between the two graphs.
+    """
+    print("\n❌ The generated graph does NOT match the expected structure!")
+    print("Differences:")
+    for k in set(list(graph.keys()) + list(expected_graph.keys())):
+        if k not in graph:
+            print(f"  Missing key {k} in generated graph")
+        elif k not in expected_graph:
+            print(f"  Extra key {k} in generated graph")
+        elif set(graph[k]) != set(expected_graph[k]):
+            print(f"  For key {k}: Expected {sorted(expected_graph[k])}, got {sorted(graph[k])}")
     
     # Print the graph as a dictionary for reference
     print("\nGraph as dictionary:")
@@ -110,6 +121,8 @@ def example12_verbose():
     for node, edges in graph.items():
         print(f"    {node}: {edges},")
     print("}")
+    
+    validate_graph(graph, name="Example 12 Verbose")
     
     return graph
 
@@ -127,6 +140,8 @@ def example1_simple_parallel():
     graph = dsl_to_precedence_graph(g1)
     visualize_graph(graph)
     
+    validate_graph(graph, name="Example 1")
+    
     return g1
 
 
@@ -143,6 +158,8 @@ def example2_serial_composition():
     # Convert to adjacency list
     graph = dsl_to_precedence_graph(g2)
     visualize_graph(graph)
+    
+    validate_graph(graph, name="Example 2")
     
     return g2
 
@@ -162,6 +179,8 @@ def example3_combining_serial_and_parallel():
     graph = dsl_to_precedence_graph(g3)
     visualize_graph(graph)
     
+    validate_graph(graph, name="Example 3")
+    
     return g3
 
 
@@ -179,6 +198,8 @@ def example4_complex_compositions():
     # Convert to adjacency list
     graph = dsl_to_precedence_graph(g4)
     visualize_graph(graph)
+    
+    validate_graph(graph, name="Example 4")
     
     return g4
 
@@ -199,6 +220,8 @@ def example5_using_parallel_function():
     graph = dsl_to_precedence_graph(g5)
     visualize_graph(graph)
     
+    validate_graph(graph, name="Example 5")
+    
     return g5
 
 
@@ -218,6 +241,8 @@ def example6_using_serial_function():
     graph = dsl_to_precedence_graph(g6)
     visualize_graph(graph)
     
+    validate_graph(graph, name="Example 6")
+    
     return g6
 
 
@@ -231,6 +256,8 @@ def example7_composition_with_primitives():
     # Convert to adjacency list
     graph = dsl_to_precedence_graph(g7)
     visualize_graph(graph)
+    
+    validate_graph(graph, name="Example 7")
     
     return g7
 
@@ -247,6 +274,8 @@ def example8_direct_wrapping_job():
     graph = dsl_to_precedence_graph(g8)
     visualize_graph(graph)
     
+    validate_graph(graph, name="Example 8")
+    
     return g8
 
 
@@ -260,6 +289,8 @@ def example9_combining_everything():
     # Convert to adjacency list
     graph = dsl_to_precedence_graph(g9)
     visualize_graph(graph)
+    
+    validate_graph(graph, name="Example 9")
     
     return g9
 
@@ -279,6 +310,8 @@ def example10_custom_objects():
     graph = dsl_to_precedence_graph(g10)
     visualize_graph(graph)
     
+    validate_graph(graph, name="Example 10")
+    
     return g10
 
 
@@ -296,6 +329,8 @@ def example11_ordinary_JobABC_subclasses():
     # Convert to adjacency list
     graph = dsl_to_precedence_graph(g11)
     visualize_graph(graph)
+    
+    validate_graph(graph, name="Example 11")
     
     return g11
 
@@ -328,6 +363,8 @@ def example13_complex_JobABC_subclass():
     graph = dsl_to_precedence_graph(g13)
     visualize_graph(graph)
     
+    validate_graph(graph, name="Example 13")
+
     return g13
 
 
