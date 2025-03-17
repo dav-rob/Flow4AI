@@ -107,7 +107,7 @@ def example12_verbose():
     # Print the graph as a dictionary for reference
     print("\nGraph as dictionary:")
     print("{")
-    for node, edges in sorted(graph.items()):
+    for node, edges in graph.items():
         print(f"    {node}: {edges},")
     print("}")
     
