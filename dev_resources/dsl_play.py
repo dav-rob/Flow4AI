@@ -30,6 +30,8 @@ class MockJobABC(ABC):
         self.job_id = str(uuid.uuid4())
 
     def __repr__(self):
+        if self.name is None:
+            return f"{self.job_id}"
         return f"{self.name}"
     
     def __or__(self, other):
@@ -111,9 +113,7 @@ class WrappingJob(MockJobABC):
         super().__init__(str(wrapped_object))
 
     def __repr__(self):
-        if isinstance(self.wrapped_object, (str, int, float, bool)):
-            return f"WrappingJob({repr(self.wrapped_object)})"
-        return f"WrappingJob({self.wrapped_object.__class__.__name__})"
+        return self.name
 
     async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
         return f"{self.wrapped_object}"
