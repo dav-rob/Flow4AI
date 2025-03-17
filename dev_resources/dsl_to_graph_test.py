@@ -348,10 +348,10 @@ if __name__ == "__main__":
     # Set up command line arguments
     parser = argparse.ArgumentParser(description='DSL to Graph Conversion Tests')
     parser.add_argument('--example', type=str, 
-                       choices=['all', 'example1', 'example2', 'example3', 'example4', 'example5', 
+                       choices=['all', 'list', 'example1', 'example2', 'example3', 'example4', 'example5', 
                                 'example6', 'example7', 'example8', 'example9', 'example10', 
                                 'example11', 'example12', 'example12_verbose', 'example13'],
-                       default='all', help='Which example to run')
+                       default='all', help='Which example to run. Use "list" to just show available examples without running any.')
     
     args = parser.parse_args()
     
@@ -373,19 +373,24 @@ if __name__ == "__main__":
         'example13': example13_complex_JobABC_subclass
     }
     
+    # Just list available examples without running any
+    if args.example == 'list':
+        print("\n===== Available Examples =====")
+        for example_name in examples.keys():
+            print(f"  python dsl_to_graph_test.py --example {example_name}")
     # Run all examples except verbose by default
-    if args.example == 'all':
+    elif args.example == 'all':
         for example_name, example_func in examples.items():
             # Skip the verbose example in the default run
             if example_name != 'example12_verbose':
                 example_func()
+        
+        # Print usage instructions after running all examples
+        print("\n===== Usage =====")
+        print("To see a list of all examples without running them:")
+        print("  python dsl_to_graph_test.py --example list")
+        print("\nTo run a specific example:")
+        print("  python dsl_to_graph_test.py --example <example_name>")
     else:
         # Run a specific example
         examples[args.example]()
-    
-    # Print usage instructions if run with default options
-    if args.example == 'all':
-        print("\n===== Usage =====")
-        print("Run a specific example with:")
-        for example_name in examples.keys():
-            print(f"  python dsl_to_graph_test.py --example {example_name}")
