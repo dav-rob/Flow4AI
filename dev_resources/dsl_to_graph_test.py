@@ -52,17 +52,6 @@ def example12_verbose():
     # Example from the test file
     g12 = w(1) >> ((p([5,4,3]) >> 7 >> 9) | (w(2) >> 6 >> 8 >> 10)) >> w(11)
     
-    # Print the structure of g12 for debugging
-    print("\nDSL Object Structure:")
-    if isinstance(g12, Serial):
-        print(f"Serial object with {len(g12.components)} components")
-        for i, comp in enumerate(g12.components):
-            print(f"Component {i}: {type(comp).__name__}")
-            if isinstance(comp, Parallel) and hasattr(comp, 'components'):
-                print(f"  Parallel with {len(comp.components)} sub-components")
-                for j, subcomp in enumerate(comp.components):
-                    print(f"  Sub-component {j}: {type(subcomp).__name__}")
-    
     # Convert and visualize
     graph = dsl_to_precedence_graph(g12)
     print("\nPrecedence Graph for Example 12:")
