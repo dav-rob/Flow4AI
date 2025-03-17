@@ -293,8 +293,8 @@ def example10_custom_objects():
     return g10
 
 
-def example11_component_subclasses():
-    """Example 11: Using component subclasses"""
+def example11_ordinary_JobABC_subclasses():
+    """Example 11: Using ordinary JobABC subclasses"""
     # Using simpler representations for this example
     comp1 = ProcessorJob("Processor A", "type1")
     comp2 = ProcessorJob("Processor B", "type2")
@@ -336,7 +336,7 @@ if __name__ == "__main__":
         'example8': example8_direct_wrapping_job,
         'example9': example9_combining_everything,
         'example10': example10_custom_objects,
-        'example11': example11_component_subclasses,
+        'example11': example11_ordinary_JobABC_subclasses,
         'example12': example12,
         'example12_verbose': example12_verbose
     }
