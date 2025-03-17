@@ -13,24 +13,24 @@ class AnyObject:
         return f"AnyObject({self.obj})"
 
 
-class CustomProcessor:
+class CustomAnyObject:
     """Example custom processor class."""
     def __init__(self, name):
         self.name = name
     def __repr__(self):
-        return f"CustomProcessor({self.name})"
+        return f"{self.name}"
 
 
-class ProcessorComponent(JobABC):
+class ProcessorJob(MockJobABC):
     """Example component that implements JobABC interface."""
     def __init__(self, name, process_type):
+        super().__init__(name)
         self.process_type = process_type
-        self.name = name
     def __repr__(self):
         return f"ProcessorComponent(name={self.name}, type={self.process_type})"
     
     async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
-        return f"{self.process_type} {self.name} processed {task}"
+        return f"{self.name}"
 
 
 async def example_1_simple_parallel():
@@ -196,8 +196,8 @@ async def example_10_custom_objects():
     Returns:
         The evaluation result
     """
-    c1 = CustomProcessor("Processor1")
-    c2 = CustomProcessor("Processor2")
+    c1 = CustomAnyObject("CustomAnyObject1")
+    c2 = CustomAnyObject("CustomAnyObject2")
     
     g10 = w(c1) >> c2
     print("\n----- Example 10: Using custom objects -----")
@@ -214,8 +214,8 @@ async def example_11_component_subclasses():
     Returns:
         The evaluation result
     """
-    pc1 = ProcessorComponent("Processor1", "transform")
-    pc2 = ProcessorComponent("Processor2", "validate")
+    pc1 = ProcessorJob("ProcessorJob1", "transform")
+    pc2 = ProcessorJob("ProcessorJob2", "validate")
     
     g11 = pc1 | pc2
     print("\n----- Example 11: Using Component subclasses -----")

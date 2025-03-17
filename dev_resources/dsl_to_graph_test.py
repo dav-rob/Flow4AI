@@ -5,7 +5,7 @@ This file contains the test code extracted from dsl_to_graph.py.
 """
 from typing import Dict, List
 
-from dsl_play import JobABC, Parallel, Serial, WrappingJob, p, s, w, wrap
+from dsl_play import MockJobABC, Parallel, Serial, WrappingJob, p, s, w, wrap
 from dsl_to_graph import (debug_dsl_structure, dsl_to_precedence_graph,
                           visualize_graph)
 

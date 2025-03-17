@@ -1,3 +1,4 @@
+import uuid
 from abc import ABC, abstractmethod
 from functools import reduce
 from typing import Any, Dict, Optional, Type, Union
@@ -22,14 +23,18 @@ class Task(dict):
         if job_name is not None:
             self['job_name'] = job_name
 
-class JobABC(ABC):
+class MockJobABC(ABC):
+
+    def __init__(self, name: Optional[str] = None):
+        self.name = name
+        self.job_id = str(uuid.uuid4())
     
     def __or__(self, other):
         """Implements the | operator for parallel composition"""
         if isinstance(other, Parallel):
             # If right side is already a parallel component, add to its components
             return Parallel(*([self] + other.components))
-        elif isinstance(other, JobABC):
+        elif isinstance(other, MockJobABC):
             return Parallel(self, other)
         else:
             # If other is a raw object, wrap it first
@@ -40,7 +45,7 @@ class JobABC(ABC):
         if isinstance(other, Serial):
             # If right side is already a serial component, add to its components
             return Serial(*([self] + other.components))
-        elif isinstance(other, JobABC):
+        elif isinstance(other, MockJobABC):
             return Serial(self, other)
         else:
             # If other is a raw object, wrap it first
@@ -60,14 +65,14 @@ class Parallel:
 
     def __or__(self, other):
         """Support chaining with | operator"""
-        if not isinstance(other, (JobABC, Parallel, Serial)):
+        if not isinstance(other, (MockJobABC, Parallel, Serial)):
             other = WrappingJob(other)
         
         return Parallel(*list(self.components) + [other])
         
     def __rshift__(self, other):
         """Support chaining with >> operator"""
-        if not isinstance(other, (JobABC, Parallel, Serial)):
+        if not isinstance(other, (MockJobABC, Parallel, Serial)):
             other = WrappingJob(other)
             
         return Serial(self, other)
@@ -82,14 +87,14 @@ class Serial:
         
     def __or__(self, other):
         """Support chaining with | operator"""
-        if not isinstance(other, (JobABC, Parallel, Serial)):
+        if not isinstance(other, (MockJobABC, Parallel, Serial)):
             other = WrappingJob(other)
             
         return Parallel(self, other)
         
     def __rshift__(self, other):
         """Support chaining with >> operator"""
-        if not isinstance(other, (JobABC, Parallel, Serial)):
+        if not isinstance(other, (MockJobABC, Parallel, Serial)):
             other = WrappingJob(other)
             
         return Serial(*list(self.components) + [other])
@@ -97,9 +102,10 @@ class Serial:
     def __repr__(self):
         return f"serial({', '.join(repr(c) for c in self.components)})"
 
-class WrappingJob(JobABC):
+class WrappingJob(MockJobABC):
     def __init__(self, wrapped_object: Any):
         self.wrapped_object = wrapped_object
+        super().__init__(str(wrapped_object))
 
     def __repr__(self):
         if isinstance(self.wrapped_object, (str, int, float, bool)):
@@ -117,7 +123,7 @@ def wrap(obj):
     wrap(obj1) | wrap(obj2)  # For parallel composition
     wrap(obj1) >> wrap(obj2)  # For serial composition
     """
-    if isinstance(obj, JobABC):
+    if isinstance(obj, MockJobABC):
         return obj  # Already has the operations we need
     return WrappingJob(obj)
 
@@ -179,7 +185,7 @@ class GraphCreator:
             results = [await GraphCreator.evaluate(c) for c in graph_obj.components]
             return f"Executed in series: [{', '.join(results)}]"
         
-        elif isinstance(graph_obj, JobABC):
+        elif isinstance(graph_obj, MockJobABC):
             # Simple case - just a single component
             result = await graph_obj.run({})
             return result
