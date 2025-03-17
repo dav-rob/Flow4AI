@@ -368,8 +368,6 @@ JobChain is designed to be easily extended:
 - Performance depends on system resources
 - Complex graphs may increase complexity
 
-## TODO
-
 ## Future Roadmap
 
 - Enhanced graph visualization
