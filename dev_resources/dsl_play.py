@@ -28,6 +28,9 @@ class MockJobABC(ABC):
     def __init__(self, name: Optional[str] = None):
         self.name = name
         self.job_id = str(uuid.uuid4())
+
+    def __repr__(self):
+        return f"{self.name}"
     
     def __or__(self, other):
         """Implements the | operator for parallel composition"""
