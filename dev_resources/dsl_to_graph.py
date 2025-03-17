@@ -182,40 +182,53 @@ def visualize_graph(graph: Dict[str, List[str]]):
     """
     Visualize the graph structure for debugging purposes.
     Displays parent nodes before their children for better readability.
+    Ensures a node is only displayed after all of its parents have been processed.
     
     Args:
         graph: A graph definition in adjacency list format with string representations as keys
     """
     print("Graph Structure:")
     
-    # Identify root nodes (nodes that are not in any other node's next_nodes list)
-    all_child_nodes = set()
-    for next_nodes in graph.values():
-        all_child_nodes.update(next_nodes)
-    
-    root_nodes = [node for node in graph if node not in all_child_nodes]
-    
-    # Build a node order that puts parents before children
-    visited = set()
-    node_order = []
-    
-    def visit_node(node):
-        if node in visited:
-            return
-        visited.add(node)
-        node_order.append(node)
-        # Visit children nodes
-        for child in graph.get(node, []):
-            visit_node(child)
-    
-    # Start the traversal from root nodes
-    for root in root_nodes:
-        visit_node(root)
-    
-    # Add any remaining nodes (disconnected components)
+    # Build a reverse graph (child -> parents) to track parent relationships
+    reverse_graph = {}
     for node in graph:
-        if node not in visited:
-            visit_node(node)
+        reverse_graph[node] = []
+    
+    # Find all parent-child relationships
+    for parent, children in graph.items():
+        for child in children:
+            if child not in reverse_graph:
+                reverse_graph[child] = []
+            reverse_graph[child].append(parent)
+    
+    # Use Kahn's algorithm for topological sorting
+    # Identify nodes with no parents (root nodes)
+    root_nodes = []
+    for node, parents in reverse_graph.items():
+        if not parents and node in graph:  # Only include nodes that are in the original graph
+            root_nodes.append(node)
+    
+    # Process nodes in order, ensuring a node is only processed after all its parents
+    node_order = []
+    while root_nodes:
+        node = root_nodes.pop(0)  # Get a node with no unprocessed parents
+        node_order.append(node)
+        
+        # Process this node's children
+        for child in graph.get(node, []):
+            # Remove this parent from the child's parent list
+            reverse_graph[child].remove(node)
+            # If the child has no more unprocessed parents, add it to the root nodes
+            if not reverse_graph[child]:
+                root_nodes.append(child)
+    
+    # Check for cycles or disconnected components
+    remaining_nodes = [node for node in graph if node not in node_order]
+    if remaining_nodes:
+        # For disconnected components, process them separately
+        for node in sorted(remaining_nodes):
+            if node not in node_order:  # Skip if already added through processing
+                node_order.append(node)
     
     # Print the graph in the calculated order
     for node in node_order:
