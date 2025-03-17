@@ -1,6 +1,6 @@
 from typing import Dict, List
 
-from dsl_play import Parallel, Serial, WrappingJob
+from dsl_play import MockJobABC, Parallel, Serial, WrappingJob
 
 
 def dsl_to_precedence_graph(dsl_obj) -> Dict[int, List[int]]:
@@ -56,15 +56,13 @@ def extract_jobs(dsl_obj):
             # For compositional structures, extract jobs from each component
             for comp in obj.components:
                 _extract(comp)
-        elif isinstance(obj, WrappingJob):
-            # Check if the wrapped object is a compositional structure
-            wrapped = obj.wrapped_object
-            if isinstance(wrapped, (Serial, Parallel)):
-                _extract(wrapped)
-            else:
-                # This is a terminal job object
-                if obj not in jobs:
-                    jobs.append(obj)
+        elif isinstance(obj, MockJobABC):
+            # Recursively extract jobs from wrapped compositional structures
+            if isinstance(obj, WrappingJob) and isinstance(obj.wrapped_object, (Serial, Parallel)):
+                _extract(obj.wrapped_object)
+            # Terminal job object
+            elif obj not in jobs:
+                jobs.append(obj)
         else:
             # This is a primitive value that will be auto-wrapped
             wrapped = WrappingJob(obj)
