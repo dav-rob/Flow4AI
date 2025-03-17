@@ -3,21 +3,22 @@ from typing import Dict, List
 from dsl_play import MockJobABC, Parallel, Serial, WrappingJob
 
 
-def dsl_to_precedence_graph(dsl_obj) -> Dict[str, List[str]]:
+def dsl_to_precedence_graph(dsl_obj) -> Dict[str, Dict[str, List[str]]]:
     """
-    Convert a DSL object into a precedence graph (adjacency list).
+    Convert a DSL object into a precedence graph with nested dictionary.
     
     Args:
         dsl_obj: A DSL object created with operators >> and |, or functions p() and s()
     
     Returns:
-        Dict[str, List[str]]: A graph definition in the format:
+        Dict[str, Dict[str, List[str]]]: A graph definition in the format:
         {
-            'Task A': ['Task B', 'Task C'],
-            'Task B': [],
+            'Task A': {'next': ['Task B', 'Task C']},
+            'Task B': {'next': []},
             ...
         }
-        Where keys are node string representations and values are lists of successor node representations.
+        Where keys are node string representations and values are dictionaries with 'next' key
+        pointing to lists of successor node representations.
     """
     # Print the DSL object structure details to help with debugging and understanding
     debug_dsl_structure(dsl_obj)
@@ -26,11 +27,11 @@ def dsl_to_precedence_graph(dsl_obj) -> Dict[str, List[str]]:
     jobs = extract_jobs(dsl_obj)
     print(f"DEBUG: Extracted {len(jobs)} jobs from DSL")
     
-    # Initialize the graph with empty adjacency lists using string representation of jobs
-    graph = {str(job): [] for job in jobs}
+    # Initialize the graph with empty adjacency nested dictionaries using string representation of jobs
+    graph = {str(job): {'next': []} for job in jobs}
     
-    # Build connections based on DSL structure
-    build_connections(dsl_obj, graph)
+    # Build connections based on DSL structure using the new format
+    build_connections(dsl_obj, graph, nested=True)
     
     return graph
 
@@ -71,13 +72,14 @@ def extract_jobs(dsl_obj):
 
 
 
-def build_connections(dsl_obj, graph):
+def build_connections(dsl_obj, graph, nested=False):
     """
     Build the connections in the graph based on the DSL structure.
     
     Args:
         dsl_obj: The DSL object to analyze
         graph: The graph to build connections in where keys and values are string representations of jobs
+        nested: If True, the graph uses the nested format {'next': [...]} for edges instead of direct lists
     """
     def _process_serial(serial_obj, prev_terminals=None):
         if not serial_obj.components:
@@ -129,8 +131,12 @@ def build_connections(dsl_obj, graph):
             if prev_terminals:
                 for term in prev_terminals:
                     term_str = str(term)
-                    if comp_str not in graph[term_str]:
-                        graph[term_str].append(comp_str)
+                    if nested:
+                        if comp_str not in graph[term_str]['next']:
+                            graph[term_str]['next'].append(comp_str)
+                    else:
+                        if comp_str not in graph[term_str]:
+                            graph[term_str].append(comp_str)
             
             return [comp]
         else:
@@ -142,8 +148,12 @@ def build_connections(dsl_obj, graph):
             if prev_terminals:
                 for term in prev_terminals:
                     term_str = str(term)
-                    if comp_str not in graph[term_str]:
-                        graph[term_str].append(comp_str)
+                    if nested:
+                        if comp_str not in graph[term_str]['next']:
+                            graph[term_str]['next'].append(comp_str)
+                    else:
+                        if comp_str not in graph[term_str]:
+                            graph[term_str].append(comp_str)
             
             return [wrapped]
     
@@ -180,16 +190,21 @@ def debug_dsl_structure(dsl_obj, indent=0):
 
 
 
-def visualize_graph(graph: Dict[str, List[str]]):
+def visualize_graph(graph):
     """
     Visualize the graph structure for debugging purposes.
     Displays parent nodes before their children for better readability.
     Ensures a node is only displayed after all of its parents have been processed.
     
     Args:
-        graph: A graph definition in adjacency list format with string representations as keys
+        graph: A graph definition, either in:
+            - Adjacency list format Dict[str, List[str]]
+            - Or nested dictionary format Dict[str, Dict[str, List[str]]] with 'next' key
     """
     print("Graph Structure:")
+    
+    # Check if we're using the nested format
+    is_nested = all(isinstance(node_data, dict) and 'next' in node_data for node_data in graph.values())
     
     # Build a reverse graph (child -> parents) to track parent relationships
     reverse_graph = {}
@@ -197,7 +212,13 @@ def visualize_graph(graph: Dict[str, List[str]]):
         reverse_graph[node] = []
     
     # Find all parent-child relationships
-    for parent, children in graph.items():
+    for parent, node_data in graph.items():
+        # Get children based on the graph format
+        if is_nested:
+            children = node_data['next']
+        else:
+            children = node_data
+            
         for child in children:
             if child not in reverse_graph:
                 reverse_graph[child] = []
@@ -217,7 +238,12 @@ def visualize_graph(graph: Dict[str, List[str]]):
         node_order.append(node)
         
         # Process this node's children
-        for child in graph.get(node, []):
+        if is_nested:
+            children = graph.get(node, {}).get('next', [])
+        else:
+            children = graph.get(node, [])
+            
+        for child in children:
             # Remove this parent from the child's parent list
             reverse_graph[child].remove(node)
             # If the child has no more unprocessed parents, add it to the root nodes
@@ -234,11 +260,15 @@ def visualize_graph(graph: Dict[str, List[str]]):
     
     # Print the graph in the calculated order
     for node in node_order:
-        next_nodes = graph.get(node, [])
-        if next_nodes:
-            print(f"{node}: {next_nodes}")
+        if is_nested:
+            next_nodes = graph.get(node, {}).get('next', [])
+            print(f"{node}: {{'next': {next_nodes}}}")
         else:
-            print(f"{node}: []")
+            next_nodes = graph.get(node, [])
+            if next_nodes:
+                print(f"{node}: {next_nodes}")
+            else:
+                print(f"{node}: []")
 
 
 
