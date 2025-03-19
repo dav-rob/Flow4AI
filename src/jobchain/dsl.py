@@ -1,4 +1,5 @@
 from typing import Any, Dict, Union
+from functools import reduce
 
 from . import jc_logging as logging
 from .job import JobABC, Task
