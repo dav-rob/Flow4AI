@@ -148,6 +148,7 @@ class JobABC(ABC, metaclass=JobMeta):
         self.next_jobs:list[JobABC] = [] 
         self.timeout = 3000
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.global_ctx = None
 
     def __or__(self, other):
         """Implements the | operator for parallel composition"""
@@ -477,6 +478,15 @@ class JobABC(ABC, metaclass=JobMeta):
         # else:
         #     task = inputs
         # return task
+
+    def update_context(self, new_context: Dict[str, Any]) -> None:
+        """
+        Update the context dictionary with new values.
+        
+        Args:
+            new_context: Dictionary with new context values
+        """
+        self.global_ctx.update(new_context)
 
     @abstractmethod
     async def run(self, task: Union[Dict[str, Any], Task]) -> Dict[str, Any]:
