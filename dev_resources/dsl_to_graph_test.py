@@ -46,6 +46,24 @@ def example12():
     graph = dsl_to_precedence_graph(g12)
     visualize_graph(graph)
     
+    # Define expected graph structure
+    expected_graph = {
+        '1': {'next': ['5', '4', '3', '2']},
+        '2': {'next': ['6']},
+        '3': {'next': ['7']},
+        '4': {'next': ['7']},
+        '5': {'next': ['7']},
+        '6': {'next': ['8']},
+        '7': {'next': ['9']},
+        '8': {'next': ['10']},
+        '9': {'next': ['11']},
+        '10': {'next': ['11']},
+        '11': {'next': []}
+    }
+    
+    # Verify graph structure
+    assert graph == expected_graph, "Graph structure has changed"
+    
     validate_graph(graph, name="Example 12")
     
     return g12
@@ -140,6 +158,15 @@ def example1_simple_parallel():
     graph = dsl_to_precedence_graph(g1)
     visualize_graph(graph)
     
+    # Define expected graph structure
+    expected_graph = {
+        "Object 1": {"next": []},
+        "Object 2": {"next": []}
+    }
+    
+    # Verify graph structure
+    assert graph == expected_graph, "Graph structure has changed"
+    
     validate_graph(graph, name="Example 1")
     
     return g1
@@ -158,6 +185,15 @@ def example2_serial_composition():
     # Convert to adjacency list
     graph = dsl_to_precedence_graph(g2)
     visualize_graph(graph)
+    
+    # Define expected graph structure
+    expected_graph = {
+        "Object 1": {"next": ["Object 2"]},
+        "Object 2": {"next": []}
+    }
+    
+    # Verify graph structure
+    assert graph == expected_graph, "Graph structure has changed"
     
     validate_graph(graph, name="Example 2")
     
@@ -179,6 +215,16 @@ def example3_combining_serial_and_parallel():
     graph = dsl_to_precedence_graph(g3)
     visualize_graph(graph)
     
+    # Define expected graph structure
+    expected_graph = {
+        "Object 1": {"next": ["Object 2"]},
+        "Object 3": {"next": []},
+        "Object 2": {"next": []}
+    }
+    
+    # Verify graph structure
+    assert graph == expected_graph, "Graph structure has changed"
+    
     validate_graph(graph, name="Example 3")
     
     return g3
@@ -198,6 +244,16 @@ def example4_complex_compositions():
     # Convert to adjacency list
     graph = dsl_to_precedence_graph(g4)
     visualize_graph(graph)
+    
+    # Define expected graph structure
+    expected_graph = {
+        "Object 1": {"next": ["Object 2", "Object 3"]},
+        "Object 2": {"next": []},
+        "Object 3": {"next": []}
+    }
+    
+    # Verify graph structure
+    assert graph == expected_graph, "Graph structure has changed"
     
     validate_graph(graph, name="Example 4")
     
@@ -220,6 +276,16 @@ def example5_using_parallel_function():
     graph = dsl_to_precedence_graph(g5)
     visualize_graph(graph)
     
+    # Define expected graph structure
+    expected_graph = {
+        "Object 1": {"next": []},
+        "Object 2": {"next": []},
+        "Object 3": {"next": []}
+    }
+    
+    # Verify graph structure
+    assert graph == expected_graph, "Graph structure has changed"
+    
     validate_graph(graph, name="Example 5")
     
     return g5
@@ -241,6 +307,16 @@ def example6_using_serial_function():
     graph = dsl_to_precedence_graph(g6)
     visualize_graph(graph)
     
+    # Define expected graph structure
+    expected_graph = {
+        "Object 1": {"next": ["Object 2"]},
+        "Object 2": {"next": ["Object 3"]},
+        "Object 3": {"next": []}
+    }
+    
+    # Verify graph structure
+    assert graph == expected_graph, "Graph structure has changed"
+    
     validate_graph(graph, name="Example 6")
     
     return g6
@@ -256,6 +332,16 @@ def example7_composition_with_primitives():
     # Convert to adjacency list
     graph = dsl_to_precedence_graph(g7)
     visualize_graph(graph)
+    
+    # Define expected graph structure
+    expected_graph = {
+        "Task A": {"next": ["123"]},
+        "123": {"next": []},
+        "Task B": {"next": []}
+    }
+    
+    # Verify graph structure
+    assert graph == expected_graph, "Graph structure has changed"
     
     validate_graph(graph, name="Example 7")
     
@@ -274,6 +360,15 @@ def example8_direct_wrapping_job():
     graph = dsl_to_precedence_graph(g8)
     visualize_graph(graph)
     
+    # Define expected graph structure
+    expected_graph = {
+        "Task C": {"next": ["Direct WrappingJob"]},
+        "Direct WrappingJob": {"next": []}
+    }
+    
+    # Verify graph structure
+    assert graph == expected_graph, "Graph structure has changed"
+    
     validate_graph(graph, name="Example 8")
     
     return g8
@@ -289,6 +384,21 @@ def example9_combining_everything():
     # Convert to adjacency list
     graph = dsl_to_precedence_graph(g9)
     visualize_graph(graph)
+    
+    # Define expected graph structure
+    expected_graph = {
+        "T1": {"next": ["1"]},
+        "T2": {"next": ["4"]},
+        "3": {"next": ["4"]},
+        "5": {"next": ["T3"]},
+        "1": {"next": ["4"]},
+        "T3": {"next": ["6"]},
+        "4": {"next": []},
+        "6": {"next": []}
+    }
+    
+    # Verify graph structure
+    assert graph == expected_graph, "Graph structure has changed"
     
     validate_graph(graph, name="Example 9")
     
@@ -310,6 +420,15 @@ def example10_custom_objects():
     graph = dsl_to_precedence_graph(g10)
     visualize_graph(graph)
     
+    # Define expected graph structure
+    expected_graph = {
+        "Custom1": {"next": ["Custom2"]},
+        "Custom2": {"next": []}
+    }
+    
+    # Verify graph structure
+    assert graph == expected_graph, "Graph structure has changed"
+    
     validate_graph(graph, name="Example 10")
     
     return g10
@@ -329,6 +448,15 @@ def example11_ordinary_JobABC_subclasses():
     # Convert to adjacency list
     graph = dsl_to_precedence_graph(g11)
     visualize_graph(graph)
+    
+    # Define expected graph structure
+    expected_graph = {
+        "Processor A": {"next": ["Processor B"]},
+        "Processor B": {"next": []}
+    }
+    
+    # Verify graph structure
+    assert graph == expected_graph, "Graph structure has changed"
     
     validate_graph(graph, name="Example 11")
     
@@ -362,6 +490,22 @@ def example13_complex_JobABC_subclass():
     # Convert to adjacency list
     graph = dsl_to_precedence_graph(g13)
     visualize_graph(graph)
+    
+    # Define expected graph structure
+    expected_graph = {
+        "Preprocessor": {"next": ["Analyzer1", "Analyzer2"]},
+        "Init": {"next": ["CacheManager", "Logger"]},
+        "Analyzer1": {"next": ["Transformer"]},
+        "Analyzer2": {"next": ["Transformer"]},
+        "CacheManager": {"next": ["Aggregator"]},
+        "Logger": {"next": ["Aggregator"]},
+        "Transformer": {"next": ["Formatter"]},
+        "Formatter": {"next": ["Aggregator"]},
+        "Aggregator": {"next": []}
+    }
+    
+    # Verify graph structure
+    assert graph == expected_graph, "Graph structure has changed"
     
     validate_graph(graph, name="Example 13")
 
