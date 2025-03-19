@@ -6,6 +6,7 @@ from contextvars import ContextVar
 from typing import Any, Dict, Optional, Type, Union
 
 from . import jc_logging as logging
+from .dsl import WrappingJob
 from .utils.otel_wrapper import trace_function
 
 
@@ -148,6 +149,29 @@ class JobABC(ABC, metaclass=JobMeta):
         self.next_jobs:list[JobABC] = [] 
         self.timeout = 3000
         self.logger = logging.getLogger(self.__class__.__name__)
+
+    def __or__(self, other):
+        """Implements the | operator for parallel composition"""
+        if isinstance(other, Parallel):
+            # If right side is already a parallel component, add to its components
+            return Parallel(*([self] + other.components))
+        elif isinstance(other, JobABC):
+            return Parallel(self, other)
+        else:
+            # If other is a raw object, wrap it first
+            return Parallel(self, WrappingJob(other))
+    
+    def __rshift__(self, other):
+        """Implements the >> operator for serial composition"""
+        if isinstance(other, Serial):
+            # If right side is already a serial component, add to its components
+            return Serial(*([self] + other.components))
+        elif isinstance(other, JobABC):
+            return Serial(self, other)
+        else:
+            # If other is a raw object, wrap it first
+            return Serial(self, WrappingJob(other))
+    
 
     @classmethod
     def parse_job_loader_name(cls, name: str) -> Dict[str, str]:
