@@ -25,7 +25,9 @@ setup(
             'psutil>=6.1.1',
             'pytest-asyncio>=0.25.1',
         "aiofiles>=24.1.0",
-        "aiohttp>=3.11.12"
+        "aiohttp>=3.11.12",
+        "networkx>=3.4.2",
+        "matplotlib==3.10.1"
         ],
         'dev': [
           "gitingest>=0.1.3"
