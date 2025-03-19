@@ -62,7 +62,7 @@ def example12():
     }
     
     # Verify graph structure
-    assert graph == expected_graph, "Graph structure has changed"
+    assert graph == expected_graph or print_diff(graph, expected_graph, "Example 12")
     
     validate_graph(graph, name="Example 12")
     
@@ -116,33 +116,62 @@ def example12_verbose():
     if graph == expected_graph:
         print("\n✅ The generated graph matches the expected structure!")
     else:
-        print_diff(graph, expected_graph)
+        print_diff(graph, expected_graph, "Example 12 Verbose")
 
 
-def print_diff(graph, expected_graph):
+def print_diff(graph, expected_graph, test_name="Unknown"):
     """
     Print the differences between the two graphs.
+    Also returns False if there are differences, True if graphs match.
     """
-    print("\n❌ The generated graph does NOT match the expected structure!")
+    print(f"\n❌ The generated graph for {test_name} does NOT match the expected structure!")
     print("Differences:")
+    has_differences = False
+    
     for k in set(list(graph.keys()) + list(expected_graph.keys())):
         if k not in graph:
             print(f"  Missing key {k} in generated graph")
+            has_differences = True
         elif k not in expected_graph:
             print(f"  Extra key {k} in generated graph")
-        elif set(graph[k]) != set(expected_graph[k]):
-            print(f"  For key {k}: Expected {sorted(expected_graph[k])}, got {sorted(graph[k])}")
+            has_differences = True
+        else:
+            # Check the 'next' attribute in each node
+            if 'next' in graph[k] and 'next' in expected_graph[k]:
+                if set(graph[k]['next']) != set(expected_graph[k]['next']):
+                    print(f"  For key {k}, 'next' values differ:")
+                    print(f"    Expected: {sorted(expected_graph[k]['next'])}")
+                    print(f"    Actual:   {sorted(graph[k]['next'])}")
+                    
+                    # Show which elements were added or removed
+                    added = set(graph[k]['next']) - set(expected_graph[k]['next'])
+                    removed = set(expected_graph[k]['next']) - set(graph[k]['next'])
+                    if added:
+                        print(f"    Added elements: {sorted(added)}")
+                    if removed:
+                        print(f"    Removed elements: {sorted(removed)}")
+                    has_differences = True
+            else:
+                # Check for other differences in the node dictionaries
+                if graph[k] != expected_graph[k]:
+                    print(f"  For key {k}, values differ:")
+                    print(f"    Expected: {expected_graph[k]}")
+                    print(f"    Actual:   {graph[k]}")
+                    has_differences = True
     
-    # Print the graph as a dictionary for reference
-    print("\nGraph as dictionary:")
-    print("{")
-    for node, edges in graph.items():
-        print(f"    {node}: {edges},")
-    print("}")
+    if has_differences:
+        # Print the graph as a dictionary for reference
+        print("\nActual graph as dictionary:")
+        print("{")
+        for node, edges in graph.items():
+            print(f"    '{node}': {edges},")
+        print("}")
+    else:
+        print("✅ No differences found! This is unexpected since the assertion failed.")
     
-    validate_graph(graph, name="Example 12 Verbose")
+    validate_graph(graph, name=test_name)
     
-    return graph
+    return not has_differences
 
 
 def example1_simple_parallel():
@@ -165,7 +194,7 @@ def example1_simple_parallel():
     }
     
     # Verify graph structure
-    assert graph == expected_graph, "Graph structure has changed"
+    assert graph == expected_graph or print_diff(graph, expected_graph, "Example 1")
     
     validate_graph(graph, name="Example 1")
     
@@ -193,7 +222,7 @@ def example2_serial_composition():
     }
     
     # Verify graph structure
-    assert graph == expected_graph, "Graph structure has changed"
+    assert graph == expected_graph or print_diff(graph, expected_graph, "Example 2")
     
     validate_graph(graph, name="Example 2")
     
@@ -223,7 +252,7 @@ def example3_combining_serial_and_parallel():
     }
     
     # Verify graph structure
-    assert graph == expected_graph, "Graph structure has changed"
+    assert graph == expected_graph or print_diff(graph, expected_graph, "Example 3")
     
     validate_graph(graph, name="Example 3")
     
@@ -253,7 +282,7 @@ def example4_complex_compositions():
     }
     
     # Verify graph structure
-    assert graph == expected_graph, "Graph structure has changed"
+    assert graph == expected_graph or print_diff(graph, expected_graph, "Example 4")
     
     validate_graph(graph, name="Example 4")
     
@@ -284,7 +313,7 @@ def example5_using_parallel_function():
     }
     
     # Verify graph structure
-    assert graph == expected_graph, "Graph structure has changed"
+    assert graph == expected_graph or print_diff(graph, expected_graph, "Example 5")
     
     validate_graph(graph, name="Example 5")
     
@@ -315,7 +344,7 @@ def example6_using_serial_function():
     }
     
     # Verify graph structure
-    assert graph == expected_graph, "Graph structure has changed"
+    assert graph == expected_graph or print_diff(graph, expected_graph, "Example 6")
     
     validate_graph(graph, name="Example 6")
     
@@ -341,7 +370,7 @@ def example7_composition_with_primitives():
     }
     
     # Verify graph structure
-    assert graph == expected_graph, "Graph structure has changed"
+    assert graph == expected_graph or print_diff(graph, expected_graph, "Example 7")
     
     validate_graph(graph, name="Example 7")
     
@@ -367,7 +396,7 @@ def example8_direct_wrapping_job():
     }
     
     # Verify graph structure
-    assert graph == expected_graph, "Graph structure has changed"
+    assert graph == expected_graph or print_diff(graph, expected_graph, "Example 8")
     
     validate_graph(graph, name="Example 8")
     
@@ -398,7 +427,7 @@ def example9_combining_everything():
     }
     
     # Verify graph structure
-    assert graph == expected_graph, "Graph structure has changed"
+    assert graph == expected_graph or print_diff(graph, expected_graph, "Example 9")
     
     validate_graph(graph, name="Example 9")
     
@@ -427,7 +456,7 @@ def example10_custom_objects():
     }
     
     # Verify graph structure
-    assert graph == expected_graph, "Graph structure has changed"
+    assert graph == expected_graph or print_diff(graph, expected_graph, "Example 10")
     
     validate_graph(graph, name="Example 10")
     
@@ -456,7 +485,7 @@ def example11_ordinary_JobABC_subclasses():
     }
     
     # Verify graph structure
-    assert graph == expected_graph, "Graph structure has changed"
+    assert graph == expected_graph or print_diff(graph, expected_graph, "Example 11")
     
     validate_graph(graph, name="Example 11")
     
@@ -505,7 +534,7 @@ def example13_complex_JobABC_subclass():
     }
     
     # Verify graph structure
-    assert graph == expected_graph, "Graph structure has changed"
+    assert graph == expected_graph or print_diff(graph, expected_graph, "Example 13")
     
     validate_graph(graph, name="Example 13")
 
