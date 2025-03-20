@@ -73,7 +73,7 @@ class WrappingJob(JobABC):
 
         is_callable = callable(callable_obj)
         self.is_callable = is_callable
-        if not is_callable and not isinstance(callable_obj, (JobABC, Parallel, Serial)):
+        if not is_callable: #and not isinstance(callable_obj, (JobABC, Parallel, Serial))
             raise TypeError(f"Expected a callable object or JobABC, Parallel, Serial, got {type(callable_obj).__name__}")
         self.wrapped_obj = callable_obj
         super().__init__(name)
