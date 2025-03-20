@@ -181,7 +181,7 @@ async def example_9_combining_everything():
     Returns:
         The evaluation result
     """
-    g9 = p(w("T1") >> w(1), "T2", 3) >> w(4) | w(s([5, "T3", w(6)]))
+    g9 = p(w("T1") >> w(1), "T2", 3) >> w(4) | w(s(5, "T3", w(6)))
     print("\n----- Example 9: Combining everything together -----")
     result = await evaluate(g9)
     print("Evaluated:", result)
