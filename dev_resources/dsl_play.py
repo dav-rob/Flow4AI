@@ -41,6 +41,8 @@ class MockJobABC(ABC):
             return Parallel(*([self] + other.components))
         elif isinstance(other, MockJobABC):
             return Parallel(self, other)
+        elif isinstance(other, Serial):
+            return Parallel(self, other)
         else:
             # If other is a raw object, wrap it first
             return Parallel(self, WrappingJob(other))
@@ -51,6 +53,8 @@ class MockJobABC(ABC):
             # If right side is already a serial component, add to its components
             return Serial(*([self] + other.components))
         elif isinstance(other, MockJobABC):
+            return Serial(self, other)
+        elif isinstance(other, Parallel):
             return Serial(self, other)
         else:
             # If other is a raw object, wrap it first
