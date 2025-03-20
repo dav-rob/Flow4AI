@@ -6,8 +6,8 @@ from contextvars import ContextVar
 from typing import Any, Dict, Optional, Type, Union
 
 from . import jc_logging as logging
-from .dsl import Parallel, Serial, WrappingJob
 from .utils.otel_wrapper import trace_function
+# DSL imports moved inline to avoid circular imports
 
 
 def _is_traced(method):
@@ -153,6 +153,9 @@ class JobABC(ABC, metaclass=JobMeta):
 
     def __or__(self, other):
         """Implements the | operator for parallel composition"""
+        # Import DSL classes inline to avoid circular imports
+        from .dsl import Parallel, Serial, WrappingJob
+        
         if isinstance(other, Parallel):
             # If right side is already a parallel component, add to its components
             return Parallel(*([self] + other.components))
@@ -166,6 +169,9 @@ class JobABC(ABC, metaclass=JobMeta):
     
     def __rshift__(self, other):
         """Implements the >> operator for serial composition"""
+        # Import DSL classes inline to avoid circular imports
+        from .dsl import Parallel, Serial, WrappingJob
+        
         if isinstance(other, Serial):
             # If right side is already a serial component, add to its components
             return Serial(*([self] + other.components))
