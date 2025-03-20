@@ -63,7 +63,7 @@ class TestWrapping:
         """Test wrapping a callable object."""
         wrapped = wrap(mock_llm_completion)
         assert isinstance(wrapped, WrappingJob)
-        assert wrapped.callable == mock_llm_completion
+        assert wrapped.wrapped_obj == mock_llm_completion
     
     def test_wrap_job_object(self):
         """Test wrapping a JobABC object (should return the object unchanged)."""
@@ -77,7 +77,7 @@ class TestWrapping:
         wrapped2 = w(mock_data_extraction)
         assert isinstance(wrapped1, WrappingJob)
         assert isinstance(wrapped2, WrappingJob)
-        assert wrapped1.callable == wrapped2.callable
+        assert wrapped1.wrapped_obj == wrapped2.wrapped_obj
 
 
 class TestParallelComposition:
@@ -90,8 +90,8 @@ class TestParallelComposition:
         
         assert isinstance(composition, Parallel)
         assert len(composition.components) == 2
-        assert composition.components[0].callable == mock_llm_completion
-        assert composition.components[1].callable == mock_data_extraction
+        assert composition.components[0].wrapped_obj == mock_llm_completion
+        assert composition.components[1].wrapped_obj == mock_data_extraction
     
     def test_parallel_with_job_objects(self):
         """Test parallel composition with JobABC objects."""
@@ -116,7 +116,7 @@ class TestParallelComposition:
         assert len(composition.components) == 3
         callables = [mock_llm_completion, mock_data_extraction, mock_text_processing]
         for i, func in enumerate(callables):
-            assert composition.components[i].callable == func
+            assert composition.components[i].wrapped_obj == func
     
     def test_p_alias(self):
         """Test that p is an alias for parallel."""
@@ -138,7 +138,7 @@ class TestParallelComposition:
         """Test that parallel with a single item returns a wrapped item."""
         result = parallel([mock_llm_completion])
         assert isinstance(result, WrappingJob)
-        assert result.callable == mock_llm_completion
+        assert result.wrapped_obj == mock_llm_completion
         
     def test_parallel_mixed_components(self):
         """Test parallel composition with a mix of JobABC subclasses and wrapped callables."""
@@ -163,8 +163,8 @@ class TestSerialComposition:
         
         assert isinstance(composition, Serial)
         assert len(composition.components) == 2
-        assert composition.components[0].callable == mock_text_processing
-        assert composition.components[1].callable == mock_json_formatter
+        assert composition.components[0].wrapped_obj == mock_text_processing
+        assert composition.components[1].wrapped_obj == mock_json_formatter
     
     def test_serial_with_job_objects(self):
         """Test serial composition with JobABC objects."""
@@ -189,7 +189,7 @@ class TestSerialComposition:
         assert len(composition.components) == 3
         funcs = [mock_data_extraction, mock_text_processing, mock_json_formatter]
         for i, func in enumerate(funcs):
-            assert composition.components[i].callable == func
+            assert composition.components[i].wrapped_obj == func
     
     def test_s_alias(self):
         """Test that s is an alias for serial."""
@@ -211,7 +211,7 @@ class TestSerialComposition:
         """Test that serial with a single item returns a wrapped item."""
         result = serial([mock_llm_completion])
         assert isinstance(result, WrappingJob)
-        assert result.callable == mock_llm_completion
+        assert result.wrapped_obj == mock_llm_completion
         
     def test_serial_mixed_components(self):
         """Test serial composition with a mix of JobABC subclasses and wrapped callables."""
@@ -241,9 +241,9 @@ class TestMixedComposition:
         assert isinstance(composition1, Parallel)
         assert len(composition1.components) == 2
         assert isinstance(composition1.components[0], Serial)
-        assert composition1.components[0].components[0].callable == mock_llm_completion
-        assert composition1.components[0].components[1].callable == mock_json_formatter
-        assert composition1.components[1].callable == mock_data_extraction
+        assert composition1.components[0].components[0].wrapped_obj == mock_llm_completion
+        assert composition1.components[0].components[1].wrapped_obj == mock_json_formatter
+        assert composition1.components[1].wrapped_obj == mock_data_extraction
         
         # Another complex workflow:
         # Text processing | (Data extraction >> JSON formatting)
@@ -253,7 +253,7 @@ class TestMixedComposition:
         
         assert isinstance(composition2, Parallel)
         assert len(composition2.components) == 2
-        assert composition2.components[0].callable == mock_text_processing
+        assert composition2.components[0].wrapped_obj == mock_text_processing
         assert isinstance(composition2.components[1], Serial)
     
     def test_complex_llm_workflow(self):

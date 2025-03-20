@@ -70,9 +70,12 @@ class WrappingJob(JobABC):
         Raises:
             TypeError: If callable_obj is not actually callable
         """
-        if not callable(callable_obj):
-            raise TypeError(f"Expected a callable object, got {type(callable_obj).__name__}")
-        self.callable = callable_obj
+
+        is_callable = callable(callable_obj)
+        self.is_callable = is_callable
+        if not is_callable and not isinstance(callable_obj, (JobABC, Parallel, Serial)):
+            raise TypeError(f"Expected a callable object or JobABC, Parallel, Serial, got {type(callable_obj).__name__}")
+        self.wrapped_obj = callable_obj
         super().__init__(name)
         self.default_args = []
         self.default_kwargs = {}
@@ -87,6 +90,9 @@ class WrappingJob(JobABC):
         Returns:
             The result of the callable execution
         """
+        if not self.is_callable:
+            raise ValueError(f"Callable '{self.wrapped_obj}' is not callable")
+            
         params = self.get_context()
 
         if self.name not in params:
@@ -95,7 +101,7 @@ class WrappingJob(JobABC):
         callable_params = self._create_callable_params(params[self.name])
         
         # Add context to the kwargs if the callable accepts it
-        if self.global_ctx and "context" in inspect.signature(self.callable).parameters:
+        if self.global_ctx and "context" in inspect.signature(self.wrapped_obj).parameters:
             callable_params["kwargs"]["context"] = self.global_ctx
             
         # Validate parameters against the callable's signature
@@ -150,7 +156,7 @@ class WrappingJob(JobABC):
         Raises:
             ValueError: If parameters don't match the callable's signature
         """
-        sig = inspect.signature(self.callable)
+        sig = inspect.signature(self.wrapped_obj)
         try:
             sig.bind(*args, **kwargs)
         except TypeError as e:
@@ -167,7 +173,7 @@ class WrappingJob(JobABC):
         Returns:
             Tuple containing converted args and kwargs
         """
-        sig = inspect.signature(self.callable)
+        sig = inspect.signature(self.wrapped_obj)
         
         # Convert positional args
         converted_args = []
@@ -227,7 +233,7 @@ class WrappingJob(JobABC):
         Returns:
             Result of the callable execution
         """
-        return self.callable(*args, **kwargs)
+        return self.wrapped_obj(*args, **kwargs)
     
 
 
