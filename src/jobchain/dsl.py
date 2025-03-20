@@ -253,19 +253,26 @@ def wrap(obj):
 # Synonym for wrap
 w = wrap
 
-def parallel(objects):
+def parallel(*objects):
     """
-    Create a parallel composition from a list of objects.
+    Create a parallel composition from multiple objects.
     
-    This utility function takes a list of objects (which can be a mix of JobABC
+    This utility function takes objects (which can be a mix of JobABC
     instances and regular objects) and creates a parallel composition of all of them.
     
     Example:
+        graph = parallel(obj1, obj2, obj3)  # Equivalent to wrap(obj1) | wrap(obj2) | wrap(obj3)
+        
+        # Also supports list argument for backward compatibility
         objects = [obj1, obj2, obj3]
-        graph = all_parallel(objects)  # Equivalent to wrap(obj1) | wrap(obj2) | wrap(obj3)
+        graph = parallel(objects)  # Still works if a single list is passed
     """
+    # Handle case where a single list is passed (for backward compatibility)
+    if len(objects) == 1 and isinstance(objects[0], list):
+        objects = objects[0]
+        
     if not objects:
-        raise ValueError("Cannot create a parallel composition from an empty list")
+        raise ValueError("Cannot create a parallel composition from empty arguments")
     if len(objects) == 1:
         return wrap(objects[0])
     return reduce(lambda acc, obj: acc | wrap(obj), objects[1:], wrap(objects[0]))
@@ -273,19 +280,26 @@ def parallel(objects):
 # Synonym for parallel
 p = parallel
 
-def serial(objects):
+def serial(*objects):
     """
-    Create a serial composition from a list of objects.
+    Create a serial composition from multiple objects.
     
-    This utility function takes a list of objects (which can be a mix of JobABC
+    This utility function takes objects (which can be a mix of JobABC
     instances and regular objects) and creates a serial composition of all of them.
     
     Example:
+        graph = serial(obj1, obj2, obj3)  # Equivalent to wrap(obj1) >> wrap(obj2) >> wrap(obj3)
+        
+        # Also supports list argument for backward compatibility
         objects = [obj1, obj2, obj3]
-        graph = all_serial(objects)  # Equivalent to wrap(obj1) >> wrap(obj2) >> wrap(obj3)
+        graph = serial(objects)  # Still works if a single list is passed
     """
+    # Handle case where a single list is passed (for backward compatibility)
+    if len(objects) == 1 and isinstance(objects[0], list):
+        objects = objects[0]
+        
     if not objects:
-        raise ValueError("Cannot create a serial composition from an empty list")
+        raise ValueError("Cannot create a serial composition from empty arguments")
     if len(objects) == 1:
         return wrap(objects[0])
     return reduce(lambda acc, obj: acc >> wrap(obj), objects[1:], wrap(objects[0]))

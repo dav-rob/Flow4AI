@@ -110,7 +110,7 @@ class TestParallelComposition:
     def test_parallel_function(self):
         """Test parallel composition using parallel function."""
         # Create parallel composition with three callables
-        composition = parallel([mock_llm_completion, mock_data_extraction, mock_text_processing])
+        composition = parallel(mock_llm_completion, mock_data_extraction, mock_text_processing)
         
         assert isinstance(composition, Parallel)
         assert len(composition.components) == 3
@@ -183,7 +183,7 @@ class TestSerialComposition:
     def test_serial_function(self):
         """Test serial composition using serial function."""
         # Create a three-stage pipeline: extraction -> processing -> formatting
-        composition = serial([mock_data_extraction, mock_text_processing, mock_json_formatter])
+        composition = serial(mock_data_extraction, mock_text_processing, mock_json_formatter)
         
         assert isinstance(composition, Serial)
         assert len(composition.components) == 3
@@ -209,7 +209,7 @@ class TestSerialComposition:
     
     def test_serial_single_item(self):
         """Test that serial with a single item returns a wrapped item."""
-        result = serial([mock_llm_completion])
+        result = serial(mock_llm_completion)
         assert isinstance(result, WrappingJob)
         assert result.wrapped_obj == mock_llm_completion
         
