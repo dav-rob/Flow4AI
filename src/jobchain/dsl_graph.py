@@ -1,7 +1,10 @@
 from typing import Dict, List
 
+from . import jc_logging as logging
 from .dsl import Parallel, Serial, WrappingJob
 from .job import JobABC
+
+logger = logging.getLogger(__name__)
 
 
 def dsl_to_precedence_graph(dsl_obj) -> Dict[str, Dict[str, List[str]]]:
@@ -22,14 +25,15 @@ def dsl_to_precedence_graph(dsl_obj) -> Dict[str, Dict[str, List[str]]]:
         pointing to lists of successor node representations.
     """
     # Print the DSL object structure details to help with debugging and understanding
-    debug_dsl_structure(dsl_obj)
+    if logger.getEffectiveLevel() == logging.DEBUG:
+        debug_dsl_structure(dsl_obj)
     
     # Extract all unique job objects from the DSL structure
     jobs = extract_jobs(dsl_obj)
-    print(f"DEBUG: Extracted {len(jobs)} jobs from DSL")
+    logger.info(f"Extracted {len(jobs)} jobs from DSL")
     
     # Initialize the graph with empty adjacency nested dictionaries using string representation of jobs
-    graph = {str(job): {'next': []} for job in jobs}
+    graph = {job.name: {'next': []} for job in jobs}
     
     # Build connections based on DSL structure using the new format
     build_connections(dsl_obj, graph, nested=True)
@@ -126,12 +130,12 @@ def build_connections(dsl_obj, graph, nested=False):
             
             # This is a terminal job object (either WrappingJob with non-compositional object
             # or any other JobABC subclass)
-            comp_str = str(comp)
+            comp_str = comp.name
             
             # Connect previous terminals to this component
             if prev_terminals:
                 for term in prev_terminals:
-                    term_str = str(term)
+                    term_str = term.name
                     if nested:
                         if comp_str not in graph[term_str]['next']:
                             graph[term_str]['next'].append(comp_str)
@@ -143,12 +147,12 @@ def build_connections(dsl_obj, graph, nested=False):
         else:
             # This is a primitive value that will be auto-wrapped
             wrapped = WrappingJob(comp)
-            comp_str = str(wrapped)
+            comp_str = wrapped.name
             
             # Connect previous terminals to this component
             if prev_terminals:
                 for term in prev_terminals:
-                    term_str = str(term)
+                    term_str = term.name
                     if nested:
                         if comp_str not in graph[term_str]['next']:
                             graph[term_str]['next'].append(comp_str)

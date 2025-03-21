@@ -32,3 +32,57 @@ class GraphCreator:
 
 # Create a convenient access to the evaluation method
 evaluate = GraphCreator.evaluate
+
+def print_diff(graph, expected_graph, test_name="Unknown"):
+    """
+    Print the differences between the two graphs.
+    Also returns False if there are differences, True if graphs match.
+    """
+    print(f"\n❌ The generated graph for {test_name} does NOT match the expected structure!")
+    print("Differences:")
+    has_differences = False
+    
+    for k in set(list(graph.keys()) + list(expected_graph.keys())):
+        if k not in graph:
+            print(f"  Missing key {k} in generated graph")
+            has_differences = True
+        elif k not in expected_graph:
+            print(f"  Extra key {k} in generated graph")
+            has_differences = True
+        else:
+            # Check the 'next' attribute in each node
+            if 'next' in graph[k] and 'next' in expected_graph[k]:
+                if set(graph[k]['next']) != set(expected_graph[k]['next']):
+                    print(f"  For key {k}, 'next' values differ:")
+                    print(f"    Expected: {sorted(expected_graph[k]['next'])}")
+                    print(f"    Actual:   {sorted(graph[k]['next'])}")
+                    
+                    # Show which elements were added or removed
+                    added = set(graph[k]['next']) - set(expected_graph[k]['next'])
+                    removed = set(expected_graph[k]['next']) - set(graph[k]['next'])
+                    if added:
+                        print(f"    Added elements: {sorted(added)}")
+                    if removed:
+                        print(f"    Removed elements: {sorted(removed)}")
+                    has_differences = True
+            else:
+                # Check for other differences in the node dictionaries
+                if graph[k] != expected_graph[k]:
+                    print(f"  For key {k}, values differ:")
+                    print(f"    Expected: {expected_graph[k]}")
+                    print(f"    Actual:   {graph[k]}")
+                    has_differences = True
+    
+    if has_differences:
+        # Print the graph as a dictionary for reference
+        print("\nActual graph as dictionary:")
+        print("{")
+        for node, edges in graph.items():
+            print(f"    '{node}': {edges},")
+        print("}")
+    else:
+        print("✅ No differences found! This is unexpected since the assertion failed.")
+    
+    validate_graph(graph, name=test_name)
+    
+    return not has_differences
