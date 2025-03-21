@@ -253,7 +253,7 @@ def wrap(obj):
     wrap(obj1) | wrap(obj2)  # For parallel composition
     wrap(obj1) >> wrap(obj2)  # For serial composition
     """
-    if isinstance(obj, JobABC):
+    if isinstance(obj, (JobABC, Parallel, Serial)):
         return obj  # Already has the operations we need
     return WrappingJob(obj)
 
