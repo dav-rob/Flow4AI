@@ -325,6 +325,106 @@ class TestMixedComposition:
         # Verify the result contains expected components
         assert "Executed in series" in result
         assert "Executed in parallel" in result
+        
+    @pytest.mark.asyncio
+    async def test_combining_everything(self):
+        """Test combining everything together in a complex graph structure.
+        
+        Based on the example: p(w("T1") >> w(1), "T2", 3) >> w(4) | w(s(5, "T3", w(6)))
+        """
+        # Create functions and JobABC instances to use in the graph
+        fn1 = lambda x: f"Function 1: {x}"
+        fn2 = lambda x: f"Function 2: {x}"
+        fn3 = lambda x: {"result": f"Function 3 result with {x}"}
+        fn4 = lambda x: f"Function 4: {x}"
+        fn5 = lambda x: f"Function 5: {x}"
+        fn6 = lambda x: f"Function 6: {x}"
+        
+        llm_job = LLMSummarizer("T2")
+        data_job = DataProcessor("T3")
+        
+        # Create the complex graph structure
+        # p(w("T1") >> w(1), "T2", 3) >> w(4) | w(s(5, "T3", w(6)))
+        fn1_job = wrap(fn1)
+        fn1_job.name = "T1"
+        fn2_job = wrap(fn2)
+        fn3_job = wrap(fn3)
+        fn4_job = wrap(fn4)
+        fn5_job = wrap(fn5)
+        fn6_job = wrap(fn6)
+        
+        # Build the graph in parts
+        part1 = fn1_job >> fn2_job
+        part2 = parallel(part1, llm_job, fn3_job)
+        part3 = part2 >> fn4_job
+        part4 = serial(fn5_job, data_job, fn6_job)
+        
+        # Combine into final graph
+        graph = part3 | wrap(part4)
+        
+        # Set up context access for all WrappingJob instances
+        for job in [fn1_job, fn2_job, fn3_job, fn4_job, fn5_job, fn6_job]:
+            job.get_context = MagicMock(return_value={job.name: {"fn.args": ["test_input"]}})
+        
+        # Execute the workflow
+        result = await evaluate(graph)
+        
+        # Verify the result contains expected components
+        assert "Executed in parallel" in result
+        assert "Executed in series" in result
+        
+    @pytest.mark.asyncio
+    async def test_precedence_graph(self):
+        """Test creating a precedence graph based on the example:
+        graph = w(1) >> ((p(5,4,3) >> 7 >> 9) | (w(2) >> 6 >> 8>> 10)) >> w(11)
+        """
+        # Create functions and JobABC instances to use in the graph
+        fn1 = lambda x: f"Function 1: {x}"
+        fn2 = lambda x: f"Function 2: {x}"
+        fn3 = lambda x: f"Function 3: {x}"
+        fn4 = lambda x: f"Function 4: {x}"
+        fn5 = lambda x: f"Function 5: {x}"
+        fn6 = lambda x: f"Function 6: {x}"
+        fn7 = lambda x: f"Function 7: {x}"
+        fn8 = lambda x: f"Function 8: {x}"
+        fn9 = lambda x: f"Function 9: {x}"
+        fn10 = lambda x: f"Function 10: {x}"
+        fn11 = lambda x: f"Function 11: {x}"
+        
+        # Create the WrappingJob instances
+        job1 = wrap(fn1)
+        job2 = wrap(fn2)
+        job3 = wrap(fn3)
+        job4 = wrap(fn4)
+        job5 = wrap(fn5)
+        job6 = wrap(fn6)
+        job7 = wrap(fn7)
+        job8 = wrap(fn8)
+        job9 = wrap(fn9)
+        job10 = wrap(fn10)
+        job11 = wrap(fn11)
+        
+        # Build the complex graph structure: w(1) >> ((p(5,4,3) >> 7 >> 9) | (w(2) >> 6 >> 8>> 10)) >> w(11)
+        parallel_part1 = parallel(job5, job4, job3)
+        serial_part1 = parallel_part1 >> job7 >> job9
+        
+        serial_part2 = job2 >> job6 >> job8 >> job10
+        
+        middle_part = serial_part1 | serial_part2
+        
+        # Complete graph
+        graph = job1 >> middle_part >> job11
+        
+        # Set up context access for all WrappingJob instances
+        for job in [job1, job2, job3, job4, job5, job6, job7, job8, job9, job10, job11]:
+            job.get_context = MagicMock(return_value={job.name: {"fn.args": ["test_input"]}})
+        
+        # Execute the workflow
+        result = await evaluate(graph)
+        
+        # Verify the result contains expected components
+        assert "Executed in series" in result
+        assert "Executed in parallel" in result
 
 
 class TestWrappingJob:
