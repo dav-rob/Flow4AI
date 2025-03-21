@@ -113,7 +113,7 @@ class WrappingJob(JobABC):
             callable_params["kwargs"]
         )
         
-        return self._execute_callable(args, kwargs)
+        return await self._execute_callable(args, kwargs)
     
     def _create_callable_params(self, params: Dict[str, Any]) -> Dict[str, List[Any]]:
         """
@@ -222,7 +222,7 @@ class WrappingJob(JobABC):
                 
         return converted_args, converted_kwargs
     
-    def _execute_callable(self, args: List[Any], kwargs: Dict[str, Any]) -> Any:
+    async def _execute_callable(self, args: List[Any], kwargs: Dict[str, Any]) -> Any:
         """
         Execute the callable with the given parameters.
         
@@ -233,7 +233,14 @@ class WrappingJob(JobABC):
         Returns:
             Result of the callable execution
         """
-        return self.wrapped_obj(*args, **kwargs)
+        result = self.wrapped_obj(*args, **kwargs)
+        
+        # Check if the result is a coroutine (from an async function)
+        if inspect.iscoroutine(result):
+            # Await the coroutine to get the actual result
+            return await result
+            
+        return result
     
 
 
