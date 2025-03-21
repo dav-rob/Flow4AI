@@ -315,11 +315,11 @@ class GraphCreator:
         This is where you would implement the actual graph processing logic.
         """
         if isinstance(graph_obj, Parallel):
-            results = [await GraphCreator.evaluate(c) for c in graph_obj.components]
+            results = [str(await GraphCreator.evaluate(c)) for c in graph_obj.components]
             return f"Executed in parallel: [{', '.join(results)}]"
         
         elif isinstance(graph_obj, Serial):
-            results = [await GraphCreator.evaluate(c) for c in graph_obj.components]
+            results = [str(await GraphCreator.evaluate(c)) for c in graph_obj.components]
             return f"Executed in series: [{', '.join(results)}]"
         
         elif isinstance(graph_obj, JobABC):
