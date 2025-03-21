@@ -287,6 +287,44 @@ class TestMixedComposition:
         assert isinstance(workflow.components[0].components[0], LLMSummarizer)
         assert isinstance(workflow.components[0].components[1], DataProcessor)
         assert workflow.components[1] is formatter
+        
+    @pytest.mark.asyncio
+    async def test_with_lambdas(self):
+        """Test complex composition with lambdas, JobABC instances, and functions."""
+        # Create lambda functions
+        lambda1 = lambda x: f"Lambda1 processed: {x}"
+        lambda2 = lambda x: f"Lambda2 processed: {x}"
+        lambda3 = lambda x: {"lambda3_result": x}
+        
+        # Create JobABC instances
+        llm_job = LLMSummarizer()
+        data_job = DataProcessor()
+        
+        # Create a complex composition with lambdas, JobABC instances, and functions
+        # (lambda1 | data_job) >> (lambda2 >> mock_text_processing) >> (llm_job | lambda3)
+        lambda1_job = wrap(lambda1)
+        lambda2_job = wrap(lambda2)
+        lambda3_job = wrap(lambda3)
+        text_proc_job = wrap(mock_text_processing)
+        
+        first_stage = lambda1_job | data_job
+        second_stage = lambda2_job >> text_proc_job
+        third_stage = llm_job | lambda3_job
+        
+        composition = first_stage >> second_stage >> third_stage
+        
+        # Set up context access for the wrapped jobs with appropriate parameters
+        lambda1_job.get_context = MagicMock(return_value={lambda1_job.name: {"fn.args": ["input_data"]}})
+        lambda2_job.get_context = MagicMock(return_value={lambda2_job.name: {"fn.args": ["input_data"]}})
+        lambda3_job.get_context = MagicMock(return_value={lambda3_job.name: {"fn.args": ["input_data"]}})
+        text_proc_job.get_context = MagicMock(return_value={text_proc_job.name: {}})
+        
+        # Execute the workflow
+        result = await evaluate(composition)
+        
+        # Verify the result contains expected components
+        assert "Executed in series" in result
+        assert "Executed in parallel" in result
 
 
 class TestWrappingJob:
