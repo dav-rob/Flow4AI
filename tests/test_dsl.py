@@ -15,8 +15,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from jobchain.dsl import (Parallel, Serial, WrappingJob, evaluate, p, parallel,
+from jobchain.dsl import (Parallel, Serial, WrappingJob, p, parallel,
                           s, serial, w, wrap)
+from tests.test_utils.graph_evaluation import evaluate
 from jobchain.job import JobABC
 
 
