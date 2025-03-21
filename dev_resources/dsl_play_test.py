@@ -230,7 +230,7 @@ async def example_12_precedence_graph():
         The evaluation result
     """
 
-    g12 = w(1) >> ((p([5,4,3]) >> 7 >> 9) | (w(2) >> 6 >> 8>> 10)) >> w(11)
+    g12 = w(1) >> ((p(5,4,3) >> 7 >> 9) | (w(2) >> 6 >> 8>> 10)) >> w(11)
 
     print("\n----- Example 12: Creating an adjacency list / precedence graph -----")
     result = await evaluate(g12)
