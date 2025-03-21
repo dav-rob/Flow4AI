@@ -38,7 +38,7 @@ def test_complex_JobABC_subclass():
     # Combine pipelines and add an aggregator at the end
     dsl = p(main_pipeline, side_pipeline) >> aggregator
     
-    print(f"DSL: Complex expression with ProcessorJob instances combined with p(), s(), >> and |")
+    print(f"DSL: Complex expression with ProcessorJob instances combined with p() and >>")
     
     # Convert to adjacency list
     graph = dsl_to_precedence_graph(dsl)
