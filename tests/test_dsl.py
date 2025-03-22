@@ -815,17 +815,11 @@ class TestComplexDSLExpressions:
         
         # Mock results for each function to avoid needing to evaluate them
         # This allows us to test the parameter passing mechanism directly
-        math_op_result = {"result": 38}  # 5 * 7 + 3 = 38
-        process_data_point_result = {"distance": 10.0}  # 5 * 2.0 = 10.0
+        math_op_result = "{'result': 38}" # 5 * 7 + 3 = 38
+        process_data_point_result = "{'distance': 10.0}" # 5 * 2.0 = 10.0
         format_lambda_result = "<< test >>"
-        config_builder_result = {"config": {"mode": "testing", "debug": True}}
-        transform_data_result = {
-            "value": "SAMPLE",  # uppercase transform
-            "score": 20,  # double transform
-            "metadata": {"source": "test"},
-            "option_format": "json",
-            "option_version": 2
-        }
+        config_builder_result = "{'config': {'mode': 'testing', 'debug': True}}"
+        transform_data_result = "{'value': 'SAMPLE', 'score': 20, 'metadata': {'source': 'test'}, 'option_format': 'json', 'option_version': 2}"
         
         # Create a custom data point
         data_point = DataPoint(3, 4)  # 3-4-5 triangle, distance = 5
@@ -939,6 +933,7 @@ class TestComplexDSLExpressions:
         # This tests that parameters are correctly passed through the entire graph
         # Use the built-in evaluate function to test the graph execution
         result_string = await evaluate(complex_dsl)
+        logger.info(f"\n {result_string}")
         
         # Since evaluate returns a string representation, we just verify it completed
         # The individual tests above already verified the parameter handling works correctly
@@ -946,6 +941,11 @@ class TestComplexDSLExpressions:
         assert isinstance(result_string, str)
         assert "Executed in parallel" in result_string
         assert "Executed in series" in result_string
+        assert math_op_result in result_string
+        assert process_data_point_result in result_string
+        assert format_lambda_result in result_string
+        assert config_builder_result in result_string
+        assert transform_data_result in result_string
 
 
 @pytest.mark.asyncio
