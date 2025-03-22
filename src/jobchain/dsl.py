@@ -94,14 +94,23 @@ class WrappingJob(JobABC):
             raise ValueError(f"Callable '{self.callable}' is not callable")
             
         params = self.get_context()
-
-        if self.name not in params:
+        
+        # Check if the callable requires parameters
+        sig = inspect.signature(self.callable)
+        requires_params = bool(sig.parameters)
+        
+        # Only check for parameters if the callable actually requires them
+        if requires_params and self.name not in params:
             raise ValueError(f"No parameters found for callable '{self.name}'")
-            
-        callable_params = self._create_callable_params(params[self.name])
+        
+        # If no parameters are required, use empty args and kwargs
+        if not requires_params or self.name not in params:
+            callable_params = {"args": [], "kwargs": {}}
+        else:
+            callable_params = self._create_callable_params(params[self.name])
         
         # Add context to the kwargs if the callable accepts it
-        if self.global_ctx and "context" in inspect.signature(self.callable).parameters:
+        if self.global_ctx and "context" in sig.parameters:
             callable_params["kwargs"]["context"] = self.global_ctx
             
         # Validate parameters against the callable's signature

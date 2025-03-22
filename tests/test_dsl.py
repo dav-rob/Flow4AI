@@ -318,7 +318,7 @@ class TestMixedComposition:
         lambda1_job.get_context = MagicMock(return_value={lambda1_job.name: {"fn.args": ["input_data1"]}})
         lambda2_job.get_context = MagicMock(return_value={lambda2_job.name: {"fn.args": ["input_data2"]}})
         lambda3_job.get_context = MagicMock(return_value={lambda3_job.name: {"fn.args": ["input_data3"]}})
-        text_proc_job.get_context = MagicMock(return_value={text_proc_job.name: {}})
+        text_proc_job.get_context = MagicMock(return_value={}) # text_proc_job.name: {}
         
         # Execute the workflow
         result = await evaluate(composition)
