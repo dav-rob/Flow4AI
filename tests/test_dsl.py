@@ -326,6 +326,11 @@ class TestMixedComposition:
         # Verify the result contains expected components
         assert "Executed in series" in result
         assert "Executed in parallel" in result
+        assert "Lambda1 processed" in result
+        assert "Lambda2 processed" in result
+        assert "{'lambda3_result': 'input_data3'}" in result
+        assert "Processed text output" in result
+        assert "This is a summary of the input text." in result
         
     @pytest.mark.asyncio
     async def test_combining_everything(self):
