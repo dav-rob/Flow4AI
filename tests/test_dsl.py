@@ -318,10 +318,10 @@ class TestMixedComposition:
         composition = first_stage >> second_stage >> third_stage
         
         # Set up context access for the wrapped jobs with appropriate parameters
-        lambda1_job.get_context = MagicMock(return_value={lambda1_job.name: {"fn.args": ["input_data1"]}})
-        lambda2_job.get_context = MagicMock(return_value={lambda2_job.name: {"fn.args": ["input_data2"]}})
-        lambda3_job.get_context = MagicMock(return_value={lambda3_job.name: {"fn.args": ["input_data3"]}})
-        text_proc_job.get_context = MagicMock(return_value={}) # text_proc_job.name: {}
+        lambda1_job.get_task = MagicMock(return_value={lambda1_job.name: {"fn.args": ["input_data1"]}})
+        lambda2_job.get_task = MagicMock(return_value={lambda2_job.name: {"fn.args": ["input_data2"]}})
+        lambda3_job.get_task = MagicMock(return_value={lambda3_job.name: {"fn.args": ["input_data3"]}})
+        text_proc_job.get_task = MagicMock(return_value={}) # text_proc_job.name: {}
         
         # Execute the workflow
         result = await evaluate(composition)
@@ -374,7 +374,7 @@ class TestMixedComposition:
         
         # Set up context access for all WrappingJob instances
         for job in [fn1_job, fn2_job, fn3_job, fn4_job, fn5_job, fn6_job]:
-            job.get_context = MagicMock(return_value={job.name: {"fn.args": ["test_input"]}})
+            job.get_task = MagicMock(return_value={job.name: {"fn.args": ["test_input"]}})
         
         # Execute the workflow
         result = await evaluate(graph)
@@ -427,7 +427,7 @@ class TestMixedComposition:
         
         # Set up context access for all WrappingJob instances
         for job in [job1, job2, job3, job4, job5, job6, job7, job8, job9, job10, job11]:
-            job.get_context = MagicMock(return_value={job.name: {"fn.args": ["test_input"]}})
+            job.get_task = MagicMock(return_value={job.name: {"fn.args": ["test_input"]}})
         
         # Execute the workflow
         result = await evaluate(graph)
@@ -453,7 +453,7 @@ class TestWrappingJob:
         task = {job.name: {}}
         
         # Set up context access to work in tests
-        job.get_context = MagicMock(return_value=task)
+        job.get_task = MagicMock(return_value=task)
         
         # Execute the job
         result = await job.run(task)
@@ -475,7 +475,7 @@ class TestWrappingJob:
         task = {job.name: {}}
         
         # Set up context access to work in tests
-        job.get_context = MagicMock(return_value=task)
+        job.get_task = MagicMock(return_value=task)
         
         # Execute the job
         result = await job.run(task)
@@ -496,7 +496,7 @@ class TestGraphEvaluation:
         job = WrappingJob(mock_callable, name="test_callable")
         
         # Set up context access to work in tests
-        job.get_context = MagicMock(return_value={job.name: {}})
+        job.get_task = MagicMock(return_value={job.name: {}})
         
         result = await evaluate(job)
         assert result == "0) callable result"
@@ -519,8 +519,8 @@ class TestGraphEvaluation:
         job2 = WrappingJob(mock_callable2, name="callable2")
         
         # Set up context access to work in tests
-        job1.get_context = MagicMock(return_value={job1.name: {}})
-        job2.get_context = MagicMock(return_value={job2.name: {}})
+        job1.get_task = MagicMock(return_value={job1.name: {}})
+        job2.get_task = MagicMock(return_value={job2.name: {}})
         
         composition = job1 | job2
         
@@ -540,8 +540,8 @@ class TestGraphEvaluation:
         job2 = WrappingJob(mock_callable2, name="callable2")
         
         # Set up context access to work in tests
-        job1.get_context = MagicMock(return_value={job1.name: {}})
-        job2.get_context = MagicMock(return_value={job2.name: {}})
+        job1.get_task = MagicMock(return_value={job1.name: {}})
+        job2.get_task = MagicMock(return_value={job2.name: {}})
         
         composition = job1 >> job2
         
@@ -558,7 +558,7 @@ class TestGraphEvaluation:
         
         mock_callable = MagicMock(return_value="callable result")
         callable_job = WrappingJob(mock_callable, name="mock_callable")
-        callable_job.get_context = MagicMock(return_value={callable_job.name: {}})
+        callable_job.get_task = MagicMock(return_value={callable_job.name: {}})
         
         llm_job = LLMSummarizer()
         data_job = DataProcessor()

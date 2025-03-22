@@ -93,7 +93,7 @@ class WrappingJob(JobABC):
         if not self.is_callable:
             raise ValueError(f"Callable '{self.callable}' is not callable")
             
-        params = self.get_context()
+        params = self.get_task()
         
         # Check if the callable requires parameters
         sig = inspect.signature(self.callable)
