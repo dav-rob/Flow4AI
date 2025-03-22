@@ -15,10 +15,13 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from jobchain import jc_logging as logging
 from jobchain.dsl import (Parallel, Serial, WrappingJob, p, parallel, s,
                           serial, w, wrap)
 from jobchain.job import JobABC
 from tests.test_utils.graph_evaluation import evaluate
+
+logger = logging.getLogger(__name__)
 
 
 # Define mock functions for testing
@@ -322,6 +325,7 @@ class TestMixedComposition:
         
         # Execute the workflow
         result = await evaluate(composition)
+        logger.info(result)
         
         # Verify the result contains expected components
         assert "Executed in series" in result
@@ -495,13 +499,14 @@ class TestGraphEvaluation:
         job.get_context = MagicMock(return_value={job.name: {}})
         
         result = await evaluate(job)
-        assert result == "callable result"
+        assert result == "0) callable result"
     
     async def test_evaluate_single_job(self):
         """Test evaluating a custom JobABC subclass."""
         job = LLMSummarizer()
         
         result = await evaluate(job)
+        logger.info(result)
         assert "summary" in result
     
     async def test_evaluate_parallel_callables(self):
@@ -520,6 +525,7 @@ class TestGraphEvaluation:
         composition = job1 | job2
         
         result = await evaluate(composition)
+        logger.info(result)
         assert "Executed in parallel" in result
         assert "result1" in result
         assert "result2" in result
@@ -540,6 +546,7 @@ class TestGraphEvaluation:
         composition = job1 >> job2
         
         result = await evaluate(composition)
+        logger.info(result)
         assert "Executed in series" in result
         assert "result1" in result
         assert "result2" in result
@@ -561,6 +568,7 @@ class TestGraphEvaluation:
         workflow = parallel_stage >> data_job
         
         result = await evaluate(workflow)
+        logger.info(result)
         
         # Verify result structure
         assert "Executed in series" in result

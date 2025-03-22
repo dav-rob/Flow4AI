@@ -7,27 +7,43 @@ from jobchain.dsl import Parallel, Serial
 
 class GraphCreator:
     @staticmethod
-    async def evaluate(graph_obj):
+    async def evaluate(graph_obj, prefix="0"):
         """
         Process/evaluate the graph object and return the result.
         This is where you would implement the actual graph processing logic.
+        
+        Args:
+            graph_obj: The graph object to evaluate
+            prefix: The prefix to use for hierarchical numbering (e.g., "1.2.3")
         """
+        indent = "    " * (prefix.count("."))
+        
         if isinstance(graph_obj, Parallel):
-            results = [str(await GraphCreator.evaluate(c)) for c in graph_obj.components]
-            return f"Executed in parallel: [{', '.join(results)}]"
+            result_lines = [f"{prefix})Executed in parallel: ["]
+            for i, component in enumerate(graph_obj.components):
+                component_prefix = f"{prefix}.{i+1}"
+                component_result = await GraphCreator.evaluate(component, component_prefix)
+                result_lines.append(f"{indent}    {component_result},")
+            result_lines.append(f"{indent}]")
+            return "\n".join(result_lines)
         
         elif isinstance(graph_obj, Serial):
-            results = [str(await GraphCreator.evaluate(c)) for c in graph_obj.components]
-            return f"Executed in series: [{', '.join(results)}]"
+            result_lines = [f"{prefix})Executed in series: ["]
+            for i, component in enumerate(graph_obj.components):
+                component_prefix = f"{prefix}.{i+1}"
+                component_result = await GraphCreator.evaluate(component, component_prefix)
+                result_lines.append(f"{indent}    {component_result},")
+            result_lines.append(f"{indent}]")
+            return "\n".join(result_lines)
         
         elif isinstance(graph_obj, JobABC):
             # Simple case - just a single component
             result = await graph_obj.run({})
-            return result
+            return f"{prefix}) {result}"
         
         else:
             # Raw object (shouldn't normally happen)
-            return f"Executed {graph_obj}"
+            return f"{prefix}) Executed {graph_obj}"
 
 
 # Create a convenient access to the evaluation method
