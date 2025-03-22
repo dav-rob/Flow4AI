@@ -15,10 +15,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from jobchain.dsl import (Parallel, Serial, WrappingJob, p, parallel,
-                          s, serial, w, wrap)
-from tests.test_utils.graph_evaluation import evaluate
+from jobchain.dsl import (Parallel, Serial, WrappingJob, p, parallel, s,
+                          serial, w, wrap)
 from jobchain.job import JobABC
+from tests.test_utils.graph_evaluation import evaluate
 
 
 # Define mock functions for testing
@@ -298,15 +298,15 @@ class TestMixedComposition:
         lambda3 = lambda x: {"lambda3_result": x}
         
         # Create JobABC instances
-        llm_job = LLMSummarizer()
-        data_job = DataProcessor()
+        llm_job = LLMSummarizer() #return {"summary": "This is a summary of the input text."}
+        data_job = DataProcessor() # return {"processed_data": [1, 2, 3, 4, 5], "status": "success"}
         
         # Create a complex composition with lambdas, JobABC instances, and functions
         # (lambda1 | data_job) >> (lambda2 >> mock_text_processing) >> (llm_job | lambda3)
         lambda1_job = wrap(lambda1)
         lambda2_job = wrap(lambda2)
         lambda3_job = wrap(lambda3)
-        text_proc_job = wrap(mock_text_processing)
+        text_proc_job = wrap(mock_text_processing) # return "Processed text output"
         
         first_stage = lambda1_job | data_job
         second_stage = lambda2_job >> text_proc_job
@@ -315,9 +315,9 @@ class TestMixedComposition:
         composition = first_stage >> second_stage >> third_stage
         
         # Set up context access for the wrapped jobs with appropriate parameters
-        lambda1_job.get_context = MagicMock(return_value={lambda1_job.name: {"fn.args": ["input_data"]}})
-        lambda2_job.get_context = MagicMock(return_value={lambda2_job.name: {"fn.args": ["input_data"]}})
-        lambda3_job.get_context = MagicMock(return_value={lambda3_job.name: {"fn.args": ["input_data"]}})
+        lambda1_job.get_context = MagicMock(return_value={lambda1_job.name: {"fn.args": ["input_data1"]}})
+        lambda2_job.get_context = MagicMock(return_value={lambda2_job.name: {"fn.args": ["input_data2"]}})
+        lambda3_job.get_context = MagicMock(return_value={lambda3_job.name: {"fn.args": ["input_data3"]}})
         text_proc_job.get_context = MagicMock(return_value={text_proc_job.name: {}})
         
         # Execute the workflow
