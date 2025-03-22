@@ -483,6 +483,412 @@ class TestWrappingJob:
         # Verify the async callable was executed
         mock_async_callable.assert_called_once()
         assert result == "async result"
+    
+    @pytest.mark.asyncio
+    async def test_wrapped_function_with_multiple_args(self):
+        """Test wrapped function that accepts multiple positional arguments."""
+        # Create a function that processes multiple arguments
+        def process_multiple_args(a, b, c):
+            return {"sum": a + b + c, "product": a * b * c}
+        
+        # Mock the function to verify calls
+        mock_func = MagicMock(side_effect=process_multiple_args)
+        
+        # Create a WrappingJob with the function
+        job = WrappingJob(mock_func, name="multi_arg_func")
+        
+        # Prepare task with positional arguments
+        task = {"multi_arg_func": {"fn.args": [5, 7, 3]}}
+        
+        # Set up context access to work in tests
+        job.get_task = MagicMock(return_value=task)
+        
+        # Execute the job
+        result = await job.run(task)
+        
+        # Verify the function was called with correct arguments
+        mock_func.assert_called_once_with(5, 7, 3)
+        
+        # Check the results
+        assert result["sum"] == 15  # 5 + 7 + 3
+        assert result["product"] == 105  # 5 * 7 * 3
+    
+    @pytest.mark.asyncio
+    async def test_wrapped_function_with_custom_objects(self):
+        """Test wrapped function that accepts custom object arguments."""
+        # Define a custom class
+        class CustomData:
+            def __init__(self, value, name):
+                self.value = value
+                self.name = name
+                
+            def process(self):
+                return self.value * 2
+        
+        # Create a function that works with custom objects
+        def process_custom_objects(data_obj, multiplier):
+            processed_value = data_obj.process() * multiplier
+            return {
+                "name": data_obj.name,
+                "processed_value": processed_value
+            }
+        
+        # Mock the function to verify calls
+        mock_func = MagicMock(side_effect=process_custom_objects)
+        
+        # Create custom object instance
+        custom_obj = CustomData(10, "test_object")
+        
+        # Create a WrappingJob with the function
+        job = WrappingJob(mock_func, name="custom_obj_func")
+        
+        # Prepare task with custom object as argument
+        task = {"custom_obj_func": {"fn.args": [custom_obj, 3]}}
+        
+        # Set up context access to work in tests
+        job.get_task = MagicMock(return_value=task)
+        
+        # Execute the job
+        result = await job.run(task)
+        
+        # Verify the function was called with correct arguments
+        mock_func.assert_called_once_with(custom_obj, 3)
+        
+        # Check the results - custom object's process method returns 20 (10*2), then multiplied by 3
+        assert result["name"] == "test_object"
+        assert result["processed_value"] == 60  # (10*2) * 3
+    
+    @pytest.mark.asyncio
+    async def test_wrapped_function_with_kwargs(self):
+        """Test wrapped function that accepts keyword arguments."""
+        # Create a function that processes keyword arguments
+        def config_formatter(prefix="", **settings):
+            formatted = {}
+            for key, value in settings.items():
+                formatted[f"{prefix}{key}"] = value
+            return formatted
+        
+        # Mock the function to verify calls
+        mock_func = MagicMock(side_effect=config_formatter)
+        
+        # Create a WrappingJob with the function
+        job = WrappingJob(mock_func, name="config_formatter")
+        
+        # Prepare task with keyword arguments - two ways to provide kwargs
+        task = {
+            "config_formatter": {
+                # Method 1: Using fn.kwargs dictionary
+                "fn.kwargs": {
+                    "prefix": "setting_", 
+                    "color": "blue", 
+                    "size": "large", 
+                    "enabled": True
+                }
+            }
+        }
+        
+        # Set up context access to work in tests
+        job.get_task = MagicMock(return_value=task)
+        
+        # Execute the job
+        result = await job.run(task)
+        
+        # Verify the function was called with correct keyword arguments
+        mock_func.assert_called_once_with(
+            prefix="setting_", 
+            color="blue", 
+            size="large", 
+            enabled=True
+        )
+        
+        # Check the results contain properly formatted settings
+        assert result == {
+            "setting_color": "blue",
+            "setting_size": "large",
+            "setting_enabled": True
+        }
+        
+    @pytest.mark.asyncio
+    async def test_wrapped_function_with_fn_prefix_kwargs(self):
+        """Test wrapped function with kwargs using fn. prefix notation."""
+        # Create a function that processes keyword arguments
+        def config_processor(mode, timeout=30, debug=False):
+            return {
+                "config": {
+                    "mode": mode,
+                    "timeout": timeout,
+                    "debug": debug
+                }
+            }
+        
+        # Mock the function to verify calls
+        mock_func = MagicMock(side_effect=config_processor)
+        
+        # Create a WrappingJob with the function
+        job = WrappingJob(mock_func, name="processor")
+        
+        # Prepare task with fn. prefix notation for kwargs
+        task = {
+            "processor": {
+                # Method 2: Using fn. prefix for individual parameters
+                "fn.mode": "production",
+                "fn.timeout": 60,
+                "fn.debug": True
+            }
+        }
+        
+        # Set up context access to work in tests
+        job.get_task = MagicMock(return_value=task)
+        
+        # Execute the job
+        result = await job.run(task)
+        
+        # Verify the function was called with correct keyword arguments
+        mock_func.assert_called_once_with(
+            mode="production", 
+            timeout=60, 
+            debug=True
+        )
+        
+        # Check the results
+        assert result["config"]["mode"] == "production"
+        assert result["config"]["timeout"] == 60
+        assert result["config"]["debug"] is True
+    
+    @pytest.mark.asyncio
+    async def test_wrapped_lambda_with_multiple_args(self):
+        """Test wrapped lambda function with multiple arguments."""
+        # Create a lambda function that processes multiple arguments
+        # Lambda that calculates statistics from a list of numbers
+        stats_lambda = lambda numbers, calc_median=False, round_to=2: {
+            "mean": round(sum(numbers) / len(numbers), round_to),
+            "min": min(numbers),
+            "max": max(numbers),
+            "median": round(sorted(numbers)[len(numbers) // 2], round_to) if calc_median else None
+        }
+        
+        # We need to use MagicMock with side_effect to verify lambda calls
+        mock_func = MagicMock(side_effect=stats_lambda)
+        
+        # Create a WrappingJob with the lambda
+        job = WrappingJob(mock_func, name="stats_calculator")
+        
+        # Prepare task with arguments for the lambda
+        task = {
+            "stats_calculator": {
+                "fn.args": [[10, 15, 7, 22, 8, 11]],  # List of numbers as first arg
+                "fn.kwargs": {
+                    "calc_median": True,
+                    "round_to": 1
+                }
+            }
+        }
+        
+        # Set up context access to work in tests
+        job.get_task = MagicMock(return_value=task)
+        
+        # Execute the job
+        result = await job.run(task)
+        
+        # Verify the lambda was called with correct arguments
+        mock_func.assert_called_once_with(
+            [10, 15, 7, 22, 8, 11], 
+            calc_median=True, 
+            round_to=1
+        )
+        
+        # Check the results
+        assert result["mean"] == 12.2  # (10+15+7+22+8+11)/6 = 73/6 = 12.166... rounded to 12.2
+        assert result["min"] == 7
+        assert result["max"] == 22
+        assert result["median"] == 11.0  # Median of [7, 8, 10, 11, 15, 22] is 11 (rounded to 11.0)
+        
+    @pytest.mark.asyncio
+    async def test_wrapped_function_with_args_and_kwargs(self):
+        """Test wrapped function with both positional args and keyword args."""
+        # Create a function that handles both args and kwargs
+        def format_document(template, *sections, meta=None, **attributes):
+            # Create document with template, sections and attributes
+            document = {
+                "template": template,
+                "sections": list(sections),
+                "meta": meta or {},
+            }
+            # Add all attributes
+            for key, value in attributes.items():
+                document[key] = value
+            return document
+        
+        # Mock the function to verify calls
+        mock_func = MagicMock(side_effect=format_document)
+        
+        # Create a WrappingJob with the function
+        job = WrappingJob(mock_func, name="doc_formatter")
+        
+        # Prepare task with both args and kwargs
+        task = {
+            "doc_formatter": {
+                "fn.args": ["report", "Introduction", "Methods", "Results"],
+                "fn.kwargs": {
+                    "meta": {"version": "1.0", "author": "Test User"},
+                    "title": "Annual Report",
+                    "date": "2025-03-22",
+                    "draft": True
+                }
+            }
+        }
+        
+        # Set up context access to work in tests
+        job.get_task = MagicMock(return_value=task)
+        
+        # Execute the job
+        result = await job.run(task)
+        
+        # Verify the function was called with correct args and kwargs
+        mock_func.assert_called_once_with(
+            "report", "Introduction", "Methods", "Results",
+            meta={"version": "1.0", "author": "Test User"},
+            title="Annual Report",
+            date="2025-03-22",
+            draft=True
+        )
+        
+        # Check the results
+        assert result["template"] == "report"
+        assert result["sections"] == ["Introduction", "Methods", "Results"]
+        assert result["meta"] == {"version": "1.0", "author": "Test User"}
+        assert result["title"] == "Annual Report"
+        assert result["date"] == "2025-03-22"
+        assert result["draft"] is True
+
+
+class TestComplexDSLExpressions:
+    """Tests for complex, highly nested DSL expressions."""
+    
+    @pytest.mark.asyncio
+    async def test_complex_nested_dsl_with_mixed_params(self):
+        """Test a highly nested, complex DSL expression with various parameter types."""
+        # Define a series of functions with different parameter patterns
+        
+        # Simple function that takes multiple args
+        def math_op(a, b, c):
+            return {"result": a * b + c}
+        
+        # Function with custom object parameter
+        class DataPoint:
+            def __init__(self, x, y):
+                self.x = x
+                self.y = y
+                
+            def distance(self):
+                return (self.x**2 + self.y**2)**0.5
+        
+        def process_data_point(point, scaling_factor=1.0):
+            return {"distance": point.distance() * scaling_factor}
+        
+        # Function with kwargs
+        def config_builder(**settings):
+            return {"config": settings}
+        
+        # Lambda with multiple args
+        format_lambda = lambda text, prefix="", suffix="": f"{prefix}{text}{suffix}"
+        
+        # Function with args and kwargs
+        def transform_data(data, *transforms, metadata=None, **options):
+            result = data.copy() if isinstance(data, dict) else {"value": data}
+            
+            for transform in transforms:
+                if transform == "uppercase" and isinstance(result.get("value"), str):
+                    result["value"] = result["value"].upper()
+                elif transform == "double":
+                    for key in result:
+                        if isinstance(result[key], (int, float)):
+                            result[key] *= 2
+            
+            if metadata:
+                result["metadata"] = metadata
+                
+            for key, value in options.items():
+                result[f"option_{key}"] = value
+                
+            return result
+        
+        # Create a complex nested DSL expression
+        # This combines serial, parallel compositions with different job types and parameter patterns
+        complex_dsl = (
+            # Start with a simple function taking multiple args
+            w(math_op) >> 
+            # Then parallel branch with custom object and lambda
+            p(
+                # Branch 1: Process with custom object
+                w(process_data_point),
+                # Branch 2: Lambda with format args
+                w(format_lambda) >> 
+                # Branch 2a: Nested with kwargs
+                w(config_builder)
+            ) >> 
+            # Finally, combine with function taking args and kwargs
+            w(transform_data)
+        )
+        
+        # Create a custom data point
+        data_point = DataPoint(3, 4)  # 3-4-5 triangle, distance = 5
+        
+        # Create the complex task with parameters for all the jobs
+        task = {
+            # Parameters for math_op
+            "math_op": {
+                "fn.args": [5, 7, 3]
+            },
+            # Parameters for process_data_point
+            "process_data_point": {
+                "fn.args": [data_point],
+                "fn.kwargs": {"scaling_factor": 2.0}
+            },
+            # Parameters for format_lambda
+            "format_lambda": {
+                "fn.args": ["test"],
+                "fn.prefix": "<< ",
+                "fn.suffix": " >>"
+            },
+            # Parameters for config_builder
+            "config_builder": {
+                "fn.kwargs": {
+                    "mode": "testing",
+                    "debug": True
+                }
+            },
+            # Parameters for transform_data
+            "transform_data": {
+                "fn.args": [{"value": "sample", "score": 10}, "uppercase", "double"],
+                "fn.kwargs": {
+                    "metadata": {"source": "test"},
+                    "format": "json",
+                    "version": 2
+                }
+            }
+        }
+        
+        # Evaluate the complex DSL expression
+        result = await evaluate(complex_dsl, task)
+        
+        # The result should have combined outputs from all branches
+        # Check the structure and values to verify correct execution
+        
+        # Output from transform_data function should be in the result
+        assert "value" in result
+        assert result["value"] == "SAMPLE"  # Uppercase transform
+        assert result["score"] == 20  # Double transform
+        
+        # Check that metadata was added
+        assert "metadata" in result
+        assert result["metadata"] == {"source": "test"}
+        
+        # Check that options were processed
+        assert "option_format" in result
+        assert result["option_format"] == "json"
+        assert "option_version" in result
+        assert result["option_version"] == 2
 
 
 @pytest.mark.asyncio
