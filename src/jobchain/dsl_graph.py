@@ -1,7 +1,8 @@
 from typing import Dict, List
 
 from . import jc_logging as logging
-from .dsl import Parallel, Serial, WrappingJob
+from .dsl import Parallel, Serial
+from jobchain.jobs.wrapping_job import WrappingJob
 from .job import JobABC
 
 logger = logging.getLogger(__name__)

@@ -16,8 +16,9 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from jobchain import jc_logging as logging
-from jobchain.dsl import (Parallel, Serial, WrappingJob, p, parallel, s,
+from jobchain.dsl import (Parallel, Serial, p, parallel, s,
                           serial, w, wrap)
+from jobchain.jobs.wrapping_job import WrappingJob
 from jobchain.job import JobABC
 from tests.test_utils.graph_evaluation import evaluate
 
@@ -230,7 +231,98 @@ class TestSerialComposition:
         assert composition.components[0] is wrapped_func
         assert composition.components[1] is data_job
 
-
+@pytest.mark.asyncio
+class TestGraphEvaluation:
+    """Tests for graph evaluation with various job types."""
+    
+    async def test_evaluate_single_callable(self):
+        """Test evaluating a single wrapped callable."""
+        # Create a simple callable that returns a fixed value
+        mock_callable = MagicMock(return_value="callable result")
+        job = WrappingJob(mock_callable, name="test_callable")
+        
+        # Set up context access to work in tests
+        job.get_task = MagicMock(return_value={job.name: {}})
+        
+        result = await evaluate(job)
+        assert result == "0) callable result"
+    
+    async def test_evaluate_single_job(self):
+        """Test evaluating a custom JobABC subclass."""
+        job = LLMSummarizer()
+        
+        result = await evaluate(job)
+        logger.info(result)
+        assert "summary" in result
+    
+    async def test_evaluate_parallel_callables(self):
+        """Test evaluating a parallel composition of callables."""
+        # Create mockable callables for testing
+        mock_callable1 = MagicMock(return_value="result1")
+        mock_callable2 = MagicMock(return_value="result2")
+        
+        job1 = WrappingJob(mock_callable1, name="callable1")
+        job2 = WrappingJob(mock_callable2, name="callable2")
+        
+        # Set up context access to work in tests
+        job1.get_task = MagicMock(return_value={job1.name: {}})
+        job2.get_task = MagicMock(return_value={job2.name: {}})
+        
+        composition = job1 | job2
+        
+        result = await evaluate(composition)
+        logger.info(result)
+        assert "Executed in parallel" in result
+        assert "result1" in result
+        assert "result2" in result
+    
+    async def test_evaluate_serial_callables(self):
+        """Test evaluating a serial composition of callables."""
+        # Create mockable callables for testing
+        mock_callable1 = MagicMock(return_value="result1")
+        mock_callable2 = MagicMock(return_value="result2")
+        
+        job1 = WrappingJob(mock_callable1, name="callable1")
+        job2 = WrappingJob(mock_callable2, name="callable2")
+        
+        # Set up context access to work in tests
+        job1.get_task = MagicMock(return_value={job1.name: {}})
+        job2.get_task = MagicMock(return_value={job2.name: {}})
+        
+        composition = job1 >> job2
+        
+        result = await evaluate(composition)
+        logger.info(result)
+        assert "Executed in series" in result
+        assert "result1" in result
+        assert "result2" in result
+    
+    async def test_evaluate_mixed_job_types(self):
+        """Test evaluating a mixed composition of JobABC subclasses and wrapped callables."""
+        # Create a complex workflow: 
+        # (LLM summarizer | wrapped callable) >> Data processor
+        
+        mock_callable = MagicMock(return_value="callable result")
+        callable_job = WrappingJob(mock_callable, name="mock_callable")
+        callable_job.get_task = MagicMock(return_value={callable_job.name: {}})
+        
+        llm_job = LLMSummarizer()
+        data_job = DataProcessor()
+        
+        # Build the composition
+        parallel_stage = llm_job | callable_job
+        workflow = parallel_stage >> data_job
+        
+        result = await evaluate(workflow)
+        logger.info(result)
+        
+        # Verify result structure
+        assert "Executed in series" in result
+        assert "Executed in parallel" in result
+        assert "summary" in result
+        assert "callable result" in result
+        assert "processed_data" in result or "status" in result
+        
 class TestMixedComposition:
     """Tests for mixed serial and parallel compositions."""
     
@@ -948,97 +1040,7 @@ class TestComplexDSLExpressions:
         assert transform_data_result in result_string
 
 
-@pytest.mark.asyncio
-class TestGraphEvaluation:
-    """Tests for graph evaluation with various job types."""
-    
-    async def test_evaluate_single_callable(self):
-        """Test evaluating a single wrapped callable."""
-        # Create a simple callable that returns a fixed value
-        mock_callable = MagicMock(return_value="callable result")
-        job = WrappingJob(mock_callable, name="test_callable")
-        
-        # Set up context access to work in tests
-        job.get_task = MagicMock(return_value={job.name: {}})
-        
-        result = await evaluate(job)
-        assert result == "0) callable result"
-    
-    async def test_evaluate_single_job(self):
-        """Test evaluating a custom JobABC subclass."""
-        job = LLMSummarizer()
-        
-        result = await evaluate(job)
-        logger.info(result)
-        assert "summary" in result
-    
-    async def test_evaluate_parallel_callables(self):
-        """Test evaluating a parallel composition of callables."""
-        # Create mockable callables for testing
-        mock_callable1 = MagicMock(return_value="result1")
-        mock_callable2 = MagicMock(return_value="result2")
-        
-        job1 = WrappingJob(mock_callable1, name="callable1")
-        job2 = WrappingJob(mock_callable2, name="callable2")
-        
-        # Set up context access to work in tests
-        job1.get_task = MagicMock(return_value={job1.name: {}})
-        job2.get_task = MagicMock(return_value={job2.name: {}})
-        
-        composition = job1 | job2
-        
-        result = await evaluate(composition)
-        logger.info(result)
-        assert "Executed in parallel" in result
-        assert "result1" in result
-        assert "result2" in result
-    
-    async def test_evaluate_serial_callables(self):
-        """Test evaluating a serial composition of callables."""
-        # Create mockable callables for testing
-        mock_callable1 = MagicMock(return_value="result1")
-        mock_callable2 = MagicMock(return_value="result2")
-        
-        job1 = WrappingJob(mock_callable1, name="callable1")
-        job2 = WrappingJob(mock_callable2, name="callable2")
-        
-        # Set up context access to work in tests
-        job1.get_task = MagicMock(return_value={job1.name: {}})
-        job2.get_task = MagicMock(return_value={job2.name: {}})
-        
-        composition = job1 >> job2
-        
-        result = await evaluate(composition)
-        logger.info(result)
-        assert "Executed in series" in result
-        assert "result1" in result
-        assert "result2" in result
-    
-    async def test_evaluate_mixed_job_types(self):
-        """Test evaluating a mixed composition of JobABC subclasses and wrapped callables."""
-        # Create a complex workflow: 
-        # (LLM summarizer | wrapped callable) >> Data processor
-        
-        mock_callable = MagicMock(return_value="callable result")
-        callable_job = WrappingJob(mock_callable, name="mock_callable")
-        callable_job.get_task = MagicMock(return_value={callable_job.name: {}})
-        
-        llm_job = LLMSummarizer()
-        data_job = DataProcessor()
-        
-        # Build the composition
-        parallel_stage = llm_job | callable_job
-        workflow = parallel_stage >> data_job
-        
-        result = await evaluate(workflow)
-        logger.info(result)
-        
-        # Verify result structure
-        assert "Executed in series" in result
-        assert "Executed in parallel" in result
-        assert "summary" in result
-        assert "callable result" in result
-        assert "processed_data" in result or "status" in result
+
 
 
 if __name__ == "__main__":
