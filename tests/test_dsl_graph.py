@@ -61,3 +61,18 @@ def test_complex_JobABC_subclass():
     assert graph == expected_graph or print_diff(graph, expected_graph, "test_complex_JobABC_subclass")
     
     validate_graph(graph, name="test_complex_JobABC_subclass")
+
+    # DSL by brackets
+    main_pipeline = preprocessor >> (analyzer1 | analyzer2) >> transformer >> formatter 
+    side_pipeline = init >> (cache_manager | logger)
+    dsl_by_brackets = (main_pipeline | side_pipeline) >> aggregator
+
+    # Convert to adjacency list
+    graph = dsl_to_precedence_graph(dsl_by_brackets)
+    visualize_graph(graph)
+    
+
+    assert graph == expected_graph or print_diff(graph, expected_graph, "test_complex_JobABC_subclass")
+    
+    validate_graph(graph, name="test_complex_JobABC_subclass")
+    
