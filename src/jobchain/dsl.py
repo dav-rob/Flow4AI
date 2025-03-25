@@ -192,7 +192,7 @@ def parallel(*objects, **kwargs):
 # Synonym for parallel
 p = parallel
 
-def serial(*objects):
+def serial(*objects, **kwargs):
     """
     Create a serial composition from multiple objects.
     
@@ -205,7 +205,34 @@ def serial(*objects):
         # Also supports list argument for backward compatibility
         objects = [obj1, obj2, obj3]
         graph = serial(objects)  # Still works if a single list is passed
+        
+        # Named objects using kwargs
+        graph = serial(object_a_name=object_a, object_b_name=object_b)
+        
+        # Named objects using a dictionary
+        graph = serial({"object_a_name": object_a, "object_b_name": object_b})
     """
+    # Case 1: Dictionary argument
+    if len(objects) == 1 and isinstance(objects[0], dict) and not kwargs:
+        wrapped_items = {name: wrap({name: obj}) for name, obj in objects[0].items()}
+        if not wrapped_items:
+            raise ValueError("Cannot create a serial composition from empty arguments")
+        if len(wrapped_items) == 1:
+            return list(wrapped_items.values())[0]
+        items = list(wrapped_items.values())
+        return reduce(lambda acc, obj: acc >> obj, items[1:], items[0])
+        
+    # Case 2: Kwargs provided (object_name=object syntax)
+    if kwargs:
+        wrapped_items = {name: wrap({name: obj}) for name, obj in kwargs.items()}
+        if not wrapped_items:
+            raise ValueError("Cannot create a serial composition from empty arguments")
+        if len(wrapped_items) == 1:
+            return list(wrapped_items.values())[0]
+        items = list(wrapped_items.values())
+        return reduce(lambda acc, obj: acc >> obj, items[1:], items[0])
+    
+    # Case 3: Original behavior - using positional arguments
     # Handle case where a single list is passed (for backward compatibility)
     if len(objects) == 1 and isinstance(objects[0], list):
         objects = objects[0]
