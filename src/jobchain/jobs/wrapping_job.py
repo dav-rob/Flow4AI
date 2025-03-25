@@ -1,5 +1,5 @@
 import inspect
-from typing import Callable, Union, Dict, Any, List
+from typing import Any, Callable, Dict, List, Union
 
 from jobchain import JobABC
 from jobchain.job import Task
@@ -43,7 +43,7 @@ class WrappingJob(JobABC):
         if not self.is_callable:
             raise ValueError(f"Callable '{self.callable}' is not callable")
 
-        params = self.get_task()
+        params = task if task else self.get_task()  # if calling run() directly in tests use get_task(), "if task" is falsey so fails on {}
 
         # Check if the callable requires parameters
         sig = inspect.signature(self.callable)

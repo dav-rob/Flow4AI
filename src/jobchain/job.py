@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional, Type, Union
 
 from . import jc_logging as logging
 from .utils.otel_wrapper import trace_function
+
 # DSL imports moved inline to avoid circular imports
 
 
@@ -333,7 +334,7 @@ class JobABC(ABC, metaclass=JobMeta):
         """
         job_state_dict:dict = job_graph_context.get()
         job_state = job_state_dict.get(self.name)
-        if isinstance(task, dict):
+        if self.is_head_job() and  isinstance(task, dict):
             job_state.inputs.update(task)
             self.get_context()[JobABC.TASK_PASSTHROUGH_KEY] = task
         elif task is None:
@@ -393,7 +394,8 @@ class JobABC(ABC, metaclass=JobMeta):
             next_job_inputs = job_state_dict.get(next_job.name).inputs
             # if the next job has all its inputs add coroutine to list to execute
             if next_job.expected_inputs.issubset(set(next_job_inputs.keys())):
-                executing_jobs.append(next_job._execute(task=None))
+                the_task = self.get_task()
+                executing_jobs.append(next_job._execute(task=the_task))
 
         # If there are any child jobs ready to execute, execute them, else return None 
         if executing_jobs:
