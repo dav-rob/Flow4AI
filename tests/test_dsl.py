@@ -11,6 +11,7 @@ This test suite covers:
 """
 
 import json
+import types
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -1465,6 +1466,81 @@ class TestComplexDSLExpressions:
         assert config_builder_result in result_string
         assert transform_data_result in result_string
 
+    @pytest.mark.asyncio
+    async def test_dsl_with_upfront_wrapping(self):
+        """Test DSL construction with upfront wrapping of all objects.
+        
+        This test explores option (i): Wrap all objects up front in a dsl = w({}) expression
+        to give them names, and then use a more concise expression syntax.
+        """
+        
+        # Define simple functions and a JobABC subclass for testing
+        def add_numbers(a, b):
+            return {"result": a + b}
+        
+        def multiply_by(number, factor=2):
+            return {"result": number * factor}
+            
+        format_fn = lambda text, prefix="", suffix="": f"{prefix}{text}{suffix}"
+        
+        class DataProcessor(JobABC):
+            def __init__(self, name=None):
+                super().__init__(name=name)
+                
+            async def run(self, task):
+                the_task = self.get_task()
+                job_data = the_task.get(self.name, {})
+                data = job_data.get("data", "default")
+                logger.info(f"DataProcessor got data: {data}")
+                return {"processed": f"Processed: {data.upper()}"}
+        
+        # Create the task with parameters using the names we'll use in our DSL
+        task = {
+            "add": {
+                "fn.args": [10, 5]
+            },
+            "mult": {
+                "fn.args": [15],
+                "fn.factor": 2
+            },
+            "fmt": {
+                "fn.args": ["Formatted"],
+                "fn.prefix": "[[ ",
+                "fn.suffix": " ]]"
+            },
+            "proc": {
+                "data": "test data"
+            }
+        }
+        
+        jobs = wrap({
+            "add": add_numbers,
+            "mult": multiply_by,
+            "fmt": format_fn,
+            "proc": DataProcessor()
+        })
+
+        for job in jobs.values():
+            job.get_task = MagicMock(return_value=task)
+        
+        # Use the dictionary to create a concise DSL expression
+        dsl = (jobs["add"] >> jobs["mult"]) | (jobs["fmt"] >> jobs["proc"])
+        
+        # Evaluate the DSL
+        result_string = await evaluate(dsl)
+        logger.info(f"\n {result_string}")
+        
+        # Verify the execution by checking expected values directly
+        assert result_string is not None
+        assert isinstance(result_string, str)
+        assert "Executed in parallel" in result_string
+        assert "Executed in series" in result_string
+        
+        # Check for specific expected results based on task parameters
+        assert "{'result': 15}" in result_string  # add_numbers result
+        assert "{'result': 30}" in result_string  # multiply_by result
+        assert "[[ Formatted ]]" in result_string  # format_fn result
+        assert "{'processed': 'Processed: TEST DATA'}" in result_string  # processor result
 
 
 
