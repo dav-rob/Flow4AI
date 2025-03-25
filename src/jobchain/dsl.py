@@ -51,14 +51,68 @@ class Serial:
         return f"serial({', '.join(repr(c) for c in self.components)})"
 
 
-def wrap(obj):
+def wrap(obj=None, **kwargs):
     """
     Wrap any object to enable direct graph operations with | and >> operators.
     
     This function is the key to enabling the clean syntax:
     wrap(obj1) | wrap(obj2)  # For parallel composition
     wrap(obj1) >> wrap(obj2)  # For serial composition
+    
+    Enhanced functionality:
+    1. Single object wrapping (original behavior):
+       wrap(obj) - wraps the object as before
+    
+    2. Single named object wrapping:
+       wrap(object_name=object) or wrap({"object_name": object})
+       - For JobABC instances: sets the name property and returns the instance
+       - For Serial/Parallel: returns the object unchanged
+       - For other objects: creates a WrappingJob with the given name
+    
+    3. Multiple object wrapping:
+       wrap(obj_a_name=obj_a, obj_b_name=obj_b) or wrap({"obj_a_name": obj_a, "obj_b_name": obj_b})
+       - Returns a collection of wrapped objects following the rules in case 2
     """
+    # Case 1: Only keyword arguments provided (no positional argument)
+    if obj is None and kwargs:
+        # Process keyword arguments
+        result = {}
+        for name, value in kwargs.items():
+            if isinstance(value, JobABC):
+                value.name = name
+                result[name] = value
+            elif isinstance(value, (Parallel, Serial)):
+                result[name] = value
+            else:
+                result[name] = WrappingJob(value, name)
+        
+        # If only one item, return just that item
+        if len(result) == 1:
+            return next(iter(result.values()))
+        return result
+    
+    # Case 2: Dictionary passed as the first argument
+    if isinstance(obj, dict):
+        result = {}
+        for name, value in obj.items():
+            if isinstance(value, JobABC):
+                value.name = name
+                result[name] = value
+            elif isinstance(value, (Parallel, Serial)):
+                result[name] = value
+            else:
+                result[name] = WrappingJob(value, name)
+        
+        # If only one item, return just that item
+        if len(result) == 1:
+            return next(iter(result.values()))
+        return result
+    
+    # Case 3: Original behavior - single object
+    # Handle the case where obj is None (could happen if called with wrap())
+    if obj is None:
+        raise ValueError("wrap() requires at least one argument")
+        
     if isinstance(obj, (JobABC, Parallel, Serial)):
         return obj  # Already has the operations we need
     return WrappingJob(obj)

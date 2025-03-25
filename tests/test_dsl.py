@@ -83,6 +83,114 @@ class TestWrapping:
         assert isinstance(wrapped1, WrappingJob)
         assert isinstance(wrapped2, WrappingJob)
         assert wrapped1.callable == wrapped2.callable
+        
+    def test_wrap_named_callable_kwargs(self):
+        """Test wrapping a callable with a name using kwargs syntax."""
+        wrapped = wrap(extractor=mock_data_extraction)
+        assert isinstance(wrapped, WrappingJob)
+        assert wrapped.callable == mock_data_extraction
+        assert wrapped.name == "extractor"
+        
+    def test_wrap_named_callable_dict(self):
+        """Test wrapping a callable with a name using dict syntax."""
+        wrapped = wrap({"formatter": mock_json_formatter})
+        assert isinstance(wrapped, WrappingJob)
+        assert wrapped.callable == mock_json_formatter
+        assert wrapped.name == "formatter"
+        
+    def test_wrap_job_object_with_name(self):
+        """Test wrapping a JobABC object with a name (should set name and return the object)."""
+        job = LLMSummarizer()
+        wrapped = wrap(custom_summarizer=job)
+        assert wrapped is job  # Should return the same object
+        assert wrapped.name == "custom_summarizer"  # But with updated name
+        
+        # Test dict syntax as well
+        job2 = DataProcessor()
+        wrapped2 = wrap({"data_proc": job2})
+        assert wrapped2 is job2
+        assert wrapped2.name == "data_proc"
+        
+    def test_wrap_composite_with_name(self):
+        """Test wrapping Serial/Parallel objects with names (should return object unchanged)."""
+        # Create Serial and Parallel objects
+        serial_obj = serial(mock_llm_completion, mock_text_processing)
+        parallel_obj = parallel(mock_data_extraction, mock_json_formatter)
+        
+        # Wrap them with names
+        wrapped_serial = wrap(pipeline=serial_obj)
+        wrapped_parallel = wrap({"processors": parallel_obj})
+        
+        # Should return the same objects
+        assert wrapped_serial is serial_obj
+        assert wrapped_parallel is parallel_obj
+        
+    def test_wrap_multiple_objects(self):
+        """Test wrapping multiple objects at once."""
+        # Wrap multiple objects using kwargs syntax
+        wrapped = wrap(
+            extractor=mock_data_extraction,
+            formatter=mock_json_formatter,
+            processor=mock_text_processing
+        )
+        
+        # Result should be a dictionary with wrapped objects
+        assert isinstance(wrapped, dict)
+        assert len(wrapped) == 3
+        assert isinstance(wrapped["extractor"], WrappingJob)
+        assert isinstance(wrapped["formatter"], WrappingJob)
+        assert isinstance(wrapped["processor"], WrappingJob)
+        assert wrapped["extractor"].callable == mock_data_extraction
+        assert wrapped["formatter"].callable == mock_json_formatter
+        assert wrapped["processor"].callable == mock_text_processing
+        assert wrapped["extractor"].name == "extractor"
+        assert wrapped["formatter"].name == "formatter"
+        assert wrapped["processor"].name == "processor"
+        
+    def test_wrap_multiple_objects_dict(self):
+        """Test wrapping multiple objects using dictionary syntax."""
+        # Create a mix of different object types
+        job1 = LLMSummarizer()
+        job2 = DataProcessor()
+        serial_obj = serial(mock_llm_completion, mock_text_processing)
+        
+        # Wrap them all in a dictionary
+        wrapped = wrap({
+            "summarizer": job1,
+            "data_processor": job2,
+            "formatter": mock_json_formatter,
+            "pipeline": serial_obj
+        })
+        
+        # Check the results
+        assert isinstance(wrapped, dict)
+        assert len(wrapped) == 4
+        
+        # JobABC instances should be the same objects with names set
+        assert wrapped["summarizer"] is job1
+        assert wrapped["summarizer"].name == "summarizer"
+        assert wrapped["data_processor"] is job2
+        assert wrapped["data_processor"].name == "data_processor"
+        
+        # Callable should be wrapped
+        assert isinstance(wrapped["formatter"], WrappingJob)
+        assert wrapped["formatter"].callable == mock_json_formatter
+        assert wrapped["formatter"].name == "formatter"
+        
+        # Serial object should be returned as is
+        assert wrapped["pipeline"] is serial_obj
+        
+    def test_wrap_single_item_in_collection(self):
+        """Test that wrapping a single item in a collection returns just that item."""
+        # With kwargs syntax
+        wrapped1 = wrap(processor=mock_text_processing)
+        assert isinstance(wrapped1, WrappingJob)
+        assert wrapped1.name == "processor"
+        
+        # With dict syntax
+        wrapped2 = wrap({"extractor": mock_data_extraction})
+        assert isinstance(wrapped2, WrappingJob)
+        assert wrapped2.name == "extractor"
 
 
 class TestParallelComposition:
