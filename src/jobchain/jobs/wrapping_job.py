@@ -60,8 +60,11 @@ class WrappingJob(JobABC):
             callable_params = self._create_callable_params(params[self.name])
 
         # Add context to the kwargs if the callable accepts it
-        if self.global_ctx and "context" in sig.parameters:
-            callable_params["kwargs"]["context"] = self.global_ctx
+        if "context" in sig.parameters:
+            callable_params["kwargs"]["context"] = {}
+            callable_params["kwargs"]["context"]["global"] = self.global_ctx
+            callable_params["kwargs"]["context"]["task"] = params
+            callable_params["kwargs"]["context"]["inputs"] = self.get_inputs()
 
         # Validate parameters against the callable's signature
         self._validate_params(callable_params["args"], callable_params["kwargs"])
