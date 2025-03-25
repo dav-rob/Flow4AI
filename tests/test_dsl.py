@@ -486,6 +486,177 @@ class TestSerialComposition:
         assert len(composition.components) == 2
         assert composition.components[0] is wrapped_func
         assert composition.components[1] is data_job
+        
+    def test_serial_with_kwargs(self):
+        """Test serial composition using kwargs syntax."""
+        # Create a three-stage pipeline with named components
+        composition = serial(
+            extractor=mock_data_extraction,
+            processor=mock_text_processing,
+            formatter=mock_json_formatter
+        )
+        
+        assert isinstance(composition, Serial)
+        assert len(composition.components) == 3
+        
+        # Verify each component is properly wrapped and named
+        component_dict = {comp.name: comp for comp in composition.components}
+        assert "extractor" in component_dict
+        assert "processor" in component_dict
+        assert "formatter" in component_dict
+        assert component_dict["extractor"].callable == mock_data_extraction
+        assert component_dict["processor"].callable == mock_text_processing
+        assert component_dict["formatter"].callable == mock_json_formatter
+        
+    def test_serial_with_dict(self):
+        """Test serial composition using dictionary syntax."""
+        # Create a pipeline with dictionary syntax
+        composition = serial({
+            "extractor": mock_data_extraction,
+            "processor": mock_text_processing,
+            "formatter": mock_json_formatter
+        })
+        
+        assert isinstance(composition, Serial)
+        assert len(composition.components) == 3
+        
+        # Verify each component is properly wrapped and named
+        component_dict = {comp.name: comp for comp in composition.components}
+        assert "extractor" in component_dict
+        assert "processor" in component_dict
+        assert "formatter" in component_dict
+        assert component_dict["extractor"].callable == mock_data_extraction
+        assert component_dict["processor"].callable == mock_text_processing
+        assert component_dict["formatter"].callable == mock_json_formatter
+    
+    def test_serial_invalid_object(self):
+        """Test that serial raises TypeError for non-callable objects."""
+        # Create an invalid object that is not callable
+        class InvalidObject:
+            pass
+            
+        invalid_obj = InvalidObject()
+        
+        # Test using kwargs syntax
+        with pytest.raises(TypeError) as excinfo:
+            serial(
+                valid=mock_text_processing,
+                invalid=invalid_obj
+            )
+            
+        # Check that the error message indicates the issue is with the invalid object
+        assert "WrappingJob will only wrap a callable" in str(excinfo.value)
+        assert "InvalidObject" in str(excinfo.value)
+        
+        # Test using dict syntax
+        with pytest.raises(TypeError) as excinfo:
+            serial({
+                "valid": mock_text_processing,
+                "invalid": invalid_obj
+            })
+            
+        # Check that the error message indicates the issue is with the invalid object
+        assert "WrappingJob will only wrap a callable" in str(excinfo.value)
+        assert "InvalidObject" in str(excinfo.value)
+        
+    def test_serial_with_jobabc_object(self):
+        """Test serial with a JobABC object that isn't callable but is valid."""
+        # JobABC objects are valid for serial even though they may not be callable
+        # because they are handled specially in the wrap function
+        llm_job = LLMSummarizer()
+        
+        # This should work fine with kwargs syntax
+        composition = serial(
+            processor=mock_text_processing,
+            summarizer=llm_job
+        )
+        
+        assert isinstance(composition, Serial)
+        assert len(composition.components) == 2
+        
+        components_by_name = {comp.name: comp for comp in composition.components}
+        assert "processor" in components_by_name
+        assert "summarizer" in components_by_name
+        assert components_by_name["summarizer"] is llm_job
+        assert components_by_name["summarizer"].name == "summarizer"
+        
+        # This should also work with dict syntax
+        composition2 = serial({
+            "processor": mock_text_processing,
+            "summarizer": llm_job
+        })
+        
+        assert isinstance(composition2, Serial)
+        assert len(composition2.components) == 2
+        
+        components_by_name2 = {comp.name: comp for comp in composition2.components}
+        assert "processor" in components_by_name2
+        assert "summarizer" in components_by_name2
+        assert components_by_name2["summarizer"] is llm_job
+        assert components_by_name2["summarizer"].name == "summarizer"
+    
+    def test_serial_single_kwarg(self):
+        """Test that serial with a single kwarg returns a wrapped item with the correct name."""
+        # With kwargs syntax
+        result = serial(processor=mock_text_processing)
+        assert isinstance(result, WrappingJob)
+        assert result.callable == mock_text_processing
+        assert result.name == "processor"
+    
+    def test_serial_single_dict_item(self):
+        """Test that serial with a single dict item returns a wrapped item with the correct name."""
+        # With dict syntax
+        result = serial({"extractor": mock_data_extraction})
+        assert isinstance(result, WrappingJob)
+        assert result.callable == mock_data_extraction
+        assert result.name == "extractor"
+    
+    def test_serial_empty_kwargs(self):
+        """Test that serial raises ValueError for empty kwargs."""
+        with pytest.raises(ValueError):
+            serial()
+    
+    def test_serial_empty_dict(self):
+        """Test that serial raises ValueError for empty dict."""
+        with pytest.raises(ValueError):
+            serial({})
+    
+    def test_serial_composite_with_kwargs(self):
+        """Test serial with mix of Serial/Parallel objects and callables using kwargs."""
+        # Create some nested compositions
+        parallel_obj = parallel(mock_data_extraction, mock_llm_completion)
+        
+        # Mix with callables in kwargs format
+        composition = serial(
+            extractors=parallel_obj,
+            processor=mock_text_processing,
+            formatter=mock_json_formatter
+        )
+        
+        assert isinstance(composition, Serial)
+        assert len(composition.components) == 3
+        
+        # Find each component by examining them directly
+        # Parallel objects won't have a name attribute
+        extractors_component = None
+        processor_component = None
+        formatter_component = None
+        
+        for comp in composition.components:
+            if isinstance(comp, Parallel):
+                extractors_component = comp
+            elif isinstance(comp, WrappingJob):
+                if comp.name == "processor":
+                    processor_component = comp
+                elif comp.name == "formatter":
+                    formatter_component = comp
+        
+        # Verify each component is as expected
+        assert extractors_component is parallel_obj
+        assert processor_component is not None
+        assert formatter_component is not None
+        assert processor_component.callable == mock_text_processing
+        assert formatter_component.callable == mock_json_formatter
 
 @pytest.mark.asyncio
 class TestGraphEvaluation:
