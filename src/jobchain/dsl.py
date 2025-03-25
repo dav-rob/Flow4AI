@@ -120,7 +120,7 @@ def wrap(obj=None, **kwargs):
 # Synonym for wrap
 w = wrap
 
-def parallel(*objects):
+def parallel(*objects, **kwargs):
     """
     Create a parallel composition from multiple objects.
     
@@ -133,7 +133,52 @@ def parallel(*objects):
         # Also supports list argument for backward compatibility
         objects = [obj1, obj2, obj3]
         graph = parallel(objects)  # Still works if a single list is passed
+        
+        # Named objects using kwargs
+        graph = parallel(object_a_name=object_a, object_b_name=object_b)
+        
+        # Named objects using a dictionary
+        graph = parallel({"object_a_name": object_a, "object_b_name": object_b})
     """
+    # Case 1: Only keyword arguments provided (no positional arguments)
+    if not objects and kwargs:
+        # Wrap each item with its name and then combine them with the | operator
+        wrapped_items = wrap(**kwargs)
+        if not isinstance(wrapped_items, dict):
+            # If wrap returned a single item (not a dict), return it
+            return wrapped_items
+            
+        if not wrapped_items:
+            raise ValueError("Cannot create a parallel composition from empty arguments")
+        
+        # Convert dictionary to a list of items
+        items = list(wrapped_items.values())
+        if len(items) == 1:
+            return items[0]
+        
+        # Combine all items with the | operator
+        return reduce(lambda acc, obj: acc | obj, items[1:], items[0])
+    
+    # Case 2: Dictionary passed as the first argument
+    if len(objects) == 1 and isinstance(objects[0], dict) and not kwargs:
+        # Wrap each item with its name and then combine them with the | operator
+        wrapped_items = wrap(objects[0])
+        if not isinstance(wrapped_items, dict):
+            # If wrap returned a single item (not a dict), return it
+            return wrapped_items
+            
+        if not wrapped_items:
+            raise ValueError("Cannot create a parallel composition from empty arguments")
+        
+        # Convert dictionary to a list of items
+        items = list(wrapped_items.values())
+        if len(items) == 1:
+            return items[0]
+        
+        # Combine all items with the | operator
+        return reduce(lambda acc, obj: acc | obj, items[1:], items[0])
+    
+    # Case 3: Original behavior - using positional arguments
     # Handle case where a single list is passed (for backward compatibility)
     if len(objects) == 1 and isinstance(objects[0], list):
         objects = objects[0]
