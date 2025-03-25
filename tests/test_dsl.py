@@ -264,6 +264,154 @@ class TestParallelComposition:
         assert len(composition.components) == 2
         assert composition.components[0] is llm_job
         assert composition.components[1] is wrapped_func
+        
+    def test_parallel_with_kwargs(self):
+        """Test parallel composition using keyword arguments."""
+        # Create parallel composition with named objects using kwargs
+        composition = parallel(
+            llm=mock_llm_completion,
+            extractor=mock_data_extraction,
+            processor=mock_text_processing
+        )
+        
+        assert isinstance(composition, Parallel)
+        assert len(composition.components) == 3
+        
+        # Check that each component is a WrappingJob with the correct name and callable
+        assert isinstance(composition.components[0], WrappingJob)
+        assert composition.components[0].name == "llm"
+        assert composition.components[0].callable == mock_llm_completion
+        
+        assert isinstance(composition.components[1], WrappingJob)
+        assert composition.components[1].name == "extractor"
+        assert composition.components[1].callable == mock_data_extraction
+        
+        assert isinstance(composition.components[2], WrappingJob)
+        assert composition.components[2].name == "processor"
+        assert composition.components[2].callable == mock_text_processing
+    
+    def test_parallel_with_dict(self):
+        """Test parallel composition using dictionary argument."""
+        # Create parallel composition with named objects using dict syntax
+        composition = parallel({
+            "formatter": mock_json_formatter,
+            "extractor": mock_data_extraction
+        })
+        
+        assert isinstance(composition, Parallel)
+        assert len(composition.components) == 2
+        
+        # Names should be preserved in the created WrappingJob objects
+        components_by_name = {comp.name: comp for comp in composition.components}
+        assert "formatter" in components_by_name
+        assert "extractor" in components_by_name
+        
+        assert components_by_name["formatter"].callable == mock_json_formatter
+        assert components_by_name["extractor"].callable == mock_data_extraction
+        
+    def test_parallel_mixed_job_types_with_names(self):
+        """Test parallel composition with named JobABC objects and callables."""
+        # Create a mix of JobABC objects and callables
+        llm_job = LLMSummarizer()
+        data_job = DataProcessor()
+        
+        # Create parallel composition with named objects
+        composition = parallel(
+            summarizer=llm_job,
+            processor=data_job,
+            formatter=mock_json_formatter
+        )
+        
+        assert isinstance(composition, Parallel)
+        assert len(composition.components) == 3
+        
+        # Names should be set correctly for all components
+        components_by_name = {comp.name: comp for comp in composition.components}
+        assert "summarizer" in components_by_name
+        assert "processor" in components_by_name
+        assert "formatter" in components_by_name
+        
+        # JobABC objects should be returned as is with names set
+        assert components_by_name["summarizer"] is llm_job
+        assert components_by_name["processor"] is data_job
+        assert llm_job.name == "summarizer"
+        assert data_job.name == "processor"
+        
+        # Callables should be wrapped
+        assert isinstance(components_by_name["formatter"], WrappingJob)
+        assert components_by_name["formatter"].callable == mock_json_formatter
+        
+    def test_parallel_single_kwarg(self):
+        """Test parallel with a single keyword argument."""
+        # Single named object should be returned directly (not in a Parallel object)
+        result = parallel(processor=mock_text_processing)
+        
+        assert isinstance(result, WrappingJob)
+        assert result.name == "processor"
+        assert result.callable == mock_text_processing
+        
+    def test_parallel_single_dict_item(self):
+        """Test parallel with a dictionary containing a single item."""
+        # Single dictionary item should be returned directly
+        result = parallel({"formatter": mock_json_formatter})
+        
+        assert isinstance(result, WrappingJob)
+        assert result.name == "formatter"
+        assert result.callable == mock_json_formatter
+        
+    def test_parallel_empty_kwargs(self):
+        """Test that parallel raises ValueError for empty kwargs."""
+        with pytest.raises(ValueError):
+            parallel()
+        
+    def test_parallel_empty_dict(self):
+        """Test that parallel raises ValueError for empty dictionary."""
+        with pytest.raises(ValueError):
+            parallel({})
+            
+    def test_parallel_invalid_object(self):
+        """Test parallel with an object that cannot be wrapped."""
+        # Create an invalid object (not callable)
+        class InvalidObject:
+            def __init__(self):
+                self.run = None  # Not a callable
+                
+        invalid_obj = InvalidObject()
+        
+        # When we try to wrap a non-callable object in parallel with other valid objects,
+        # it should raise a TypeError because WrappingJob validates that objects are callable
+        with pytest.raises(TypeError) as excinfo:
+            parallel(
+                valid=mock_text_processing,
+                invalid=invalid_obj
+            )
+            
+        # Check that the error message indicates the issue is with the invalid object
+        assert "WrappingJob will only wrap a callable" in str(excinfo.value)
+        assert "InvalidObject" in str(excinfo.value)
+        
+    def test_parallel_with_jobabc_object(self):
+        """Test parallel with a JobABC object that isn't callable but is valid."""
+        # JobABC objects are valid for parallel even though they may not be callable
+        # because they are handled specially in the wrap function
+        llm_job = LLMSummarizer()
+        
+        # This should work fine
+        composition = parallel(
+            processor=mock_text_processing,
+            summarizer=llm_job
+        )
+        
+        assert isinstance(composition, Parallel)
+        assert len(composition.components) == 2
+        
+        components_by_name = {comp.name: comp for comp in composition.components}
+        assert "processor" in components_by_name
+        assert "summarizer" in components_by_name
+        
+        # The JobABC object should be used directly, not wrapped
+        assert components_by_name["summarizer"] is llm_job
+        assert llm_job.name == "summarizer"
 
 
 class TestSerialComposition:
