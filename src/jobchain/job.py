@@ -463,17 +463,29 @@ class JobABC(ABC, metaclass=JobMeta):
         context = job_state_dict[JobABC.CONTEXT]
         return context
 
-    def _get_inputs(self) -> Dict[str, Any]:
+    def _get_long_name_inputs(self) -> Dict[str, Any]:
         """
         Returns the inputs for this job.
 
         Returns:
-            Dict[str, Any]: The inputs for this job.
+            Dict[str, Any]: Returns the inputs to this job with long fully qualified job names as keys
         """
         job_state_dict:dict = job_graph_context.get()
         jobstate:JobState = job_state_dict[self.name]
         inputs: Dict[str, Dict[str, Any]] = jobstate.inputs
-        return inputs    
+        return inputs   
+    
+    def get_inputs(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Returns the inputs to this job with short job names as keys.
+
+        Returns:
+            Dict[str, Dict[str, Any]]: The inputs to this job.
+        """
+        inputs: Dict[str, Dict[str, Any]] = self._get_long_name_inputs()
+        inputs_with_short_job_name = {JobABC.parse_job_name(k): v for k, v in inputs.items()}
+        self.logger.debug(f"Returning inputs: {inputs_with_short_job_name}")
+        return inputs_with_short_job_name
 
     def get_task(self) -> Union[Dict[str, Any], Task]:
         """
