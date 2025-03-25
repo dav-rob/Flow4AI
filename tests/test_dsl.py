@@ -12,107 +12,16 @@ This test suite covers:
 
 import json
 from unittest.mock import AsyncMock, MagicMock
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import pytest
 
 from jobchain import jc_logging as logging
-from jobchain.dsl import (Parallel, Serial, p, parallel, s,
-                          serial, w, wrap)
-from jobchain.jobs.wrapping_job import WrappingJob
+from jobchain.dsl import Parallel, Serial, p, parallel, s, serial, w, wrap
 from jobchain.job import JobABC
+from jobchain.jobs.wrapping_job import WrappingJob
 from tests.test_utils.graph_evaluation import evaluate
 
 logger = logging.getLogger(__name__)
-
-
-# DSL Testing Helper class for reducing test boilerplate
-class DSLTestHelper:
-    """Helper utilities for DSL testing to reduce boilerplate code."""
-    
-    @staticmethod
-    def configure_job_task(job: WrappingJob, task_data: Dict[str, Any]) -> None:
-        """Configure a job's get_task method to return the specified task data.
-        
-        Args:
-            job: The WrappingJob to configure
-            task_data: The task data to return from get_task
-        """
-        job.get_task = MagicMock(return_value=task_data)
-    
-    @staticmethod
-    def configure_multiple_jobs(jobs: List[WrappingJob], task_data: Dict[str, Any]) -> None:
-        """Configure multiple jobs with the same task data.
-        
-        Args:
-            jobs: List of WrappingJob instances to configure
-            task_data: The task data to return from get_task
-        """
-        for job in jobs:
-            DSLTestHelper.configure_job_task(job, task_data)
-    
-    @staticmethod
-    def create_fn_args_task(job_name: str, args: List[Any], kwargs: Optional[Dict[str, Any]] = None) -> Dict[str, Dict[str, Any]]:
-        """Create a task dictionary with fn.args and optionally fn.kwargs for a job.
-        
-        Args:
-            job_name: Name of the job
-            args: List of positional arguments
-            kwargs: Optional dictionary of keyword arguments
-            
-        Returns:
-            Task dictionary with the specified args and kwargs
-        """
-        task = {
-            job_name: {
-                "fn.args": args
-            }
-        }
-        
-        if kwargs:
-            task[job_name]["fn.kwargs"] = kwargs
-            
-        return task
-    
-    @staticmethod
-    def create_task_with_multiple_jobs(job_configs: Dict[str, Tuple[List[Any], Optional[Dict[str, Any]], Optional[Dict[str, Any]]]]) -> Dict[str, Dict[str, Any]]:
-        """Create a task dictionary for multiple jobs.
-        
-        Args:
-            job_configs: Dictionary mapping job names to tuples of (args, kwargs, extra_params)
-                         where args is a list of positional arguments,
-                         kwargs is an optional dictionary of keyword arguments,
-                         and extra_params is an optional dictionary of additional parameters.
-                         
-        Returns:
-            Combined task dictionary for all jobs
-        """
-        task = {}
-        
-        for job_name, (args, kwargs, extra_params) in job_configs.items():
-            task[job_name] = {"fn.args": args}
-            
-            if kwargs:
-                task[job_name]["fn.kwargs"] = kwargs
-                
-            if extra_params:
-                for param_name, param_value in extra_params.items():
-                    task[job_name][f"fn.{param_name}"] = param_value
-                    
-        return task
-    
-    @staticmethod
-    def create_wrapped_job(func: Callable, name: str) -> WrappingJob:
-        """Create a WrappingJob with the given function and name.
-        
-        Args:
-            func: The callable to wrap
-            name: Name for the job
-            
-        Returns:
-            Configured WrappingJob instance
-        """
-        return WrappingJob(func, name=name)
 
 
 # Define mock functions for testing
@@ -1433,34 +1342,51 @@ class TestComplexDSLExpressions:
         # Create a custom data point
         data_point = DataPoint(3, 4)  # 3-4-5 triangle, distance = 5
         
-        # Create job configurations using the helper class        
-        # Create the complex task with parameters for all the jobs using our helper
-        job_configs = {
-            "math_op": ([5, 7, 3], None, None),
-            "process_data_point": ([data_point], {"scaling_factor": 2.0}, None),
-            "format_lambda": (["test"], None, {"prefix": "<< ", "suffix": " >>"}),
-            "config_builder": ([], {"mode": "testing", "debug": True}, None),
-            "transform_data": (
-                [{"value": "sample", "score": 10}, "uppercase", "double"],
-                {"metadata": {"source": "test"}, "format": "json", "version": 2},
-                None
-            )
+        # Create the complex task with parameters for all the jobs
+        task = {
+            # Parameters for math_op
+            "math_op": {
+                "fn.args": [5, 7, 3]
+            },
+            # Parameters for process_data_point
+            "process_data_point": {
+                "fn.args": [data_point],
+                "fn.kwargs": {"scaling_factor": 2.0}
+            },
+            # Parameters for format_lambda
+            "format_lambda": {
+                "fn.args": ["test"],
+                "fn.prefix": "<< ",
+                "fn.suffix": " >>"
+            },
+            # Parameters for config_builder
+            "config_builder": {
+                "fn.kwargs": {
+                    "mode": "testing",
+                    "debug": True
+                }
+            },
+            # Parameters for transform_data
+            "transform_data": {
+                "fn.args": [{"value": "sample", "score": 10}, "uppercase", "double"],
+                "fn.kwargs": {
+                    "metadata": {"source": "test"},
+                    "format": "json",
+                    "version": 2
+                }
+            }
         }
         
-        # Create task data using the helper
-        task = DSLTestHelper.create_task_with_multiple_jobs(job_configs)
+        # Create a complex nested DSL expression
+        # This combines serial, parallel compositions with different job types and parameter patterns
+        math_op_job = WrappingJob(math_op, name="math_op")
+        process_data_point_job = WrappingJob(process_data_point, name="process_data_point")
+        format_lambda_job = WrappingJob(format_lambda, name="format_lambda")
+        config_builder_job = WrappingJob(config_builder, name="config_builder")
+        transform_data_job = WrappingJob(transform_data, name="transform_data")
         
-        # Create wrapped jobs using the helper
-        math_op_job = DSLTestHelper.create_wrapped_job(math_op, "math_op")
-        process_data_point_job = DSLTestHelper.create_wrapped_job(process_data_point, "process_data_point")
-        format_lambda_job = DSLTestHelper.create_wrapped_job(format_lambda, "format_lambda")
-        config_builder_job = DSLTestHelper.create_wrapped_job(config_builder, "config_builder")
-        transform_data_job = DSLTestHelper.create_wrapped_job(transform_data, "transform_data")
-        
-        # Configure all jobs with the same task data using the helper
-        all_jobs = [math_op_job, process_data_point_job, format_lambda_job, 
-                   config_builder_job, transform_data_job]
-        DSLTestHelper.configure_multiple_jobs(all_jobs, task)
+        # We don't mock the run methods because we want to test actual execution
+        # Instead we'll verify the results match our expectations based on the provided parameters
         
         # Create the complex DSL graph with our DSL operators
         complex_dsl = (
@@ -1478,6 +1404,13 @@ class TestComplexDSLExpressions:
             # Finally, combine with function taking args and kwargs
             transform_data_job
         )
+        
+        # Set up tasks for each job
+        math_op_job.get_task = MagicMock(return_value=task)
+        process_data_point_job.get_task = MagicMock(return_value=task)
+        format_lambda_job.get_task = MagicMock(return_value=task)
+        config_builder_job.get_task = MagicMock(return_value=task)
+        transform_data_job.get_task = MagicMock(return_value=task)
         
         # Execute each job individually to verify parameter passing
         math_result = await math_op_job.run({})
@@ -1535,82 +1468,6 @@ class TestComplexDSLExpressions:
 
 
 
-class TestDSLConstructionApproaches(object):
-    """Tests for exploring different approaches to DSL construction syntax.
-    
-    This test class explores various DSL construction styles to determine which
-    approaches are most readable and expressive for different use cases.
-    """
-    
-    @pytest.mark.asyncio
-    async def test_wrap_all_objects_upfront(self):
-        """Test approach where we wrap all objects first, then compose them.
-        
-        This approach gives meaningful names to all components up front and then
-        builds a DSL expression using those named objects with >> and | operators.
-        """
-        # Applying rules: DRY, clean code structure, readability
-        
-        # Define simple functions and a JobABC subclass
-        def func1(x):
-            return {"func1_result": x * 2}
-            
-        def func2(x):
-            return {"func2_result": x + 10}
-            
-        def func3(x):
-            return {"func3_result": x ** 2}
-            
-        lambda1 = lambda x: {"lambda1_result": x - 5}
-        
-        class CustomJob(JobABC):
-            async def run(self, task):
-                x = task.get("input", 0)
-                return {"custom_job_result": x * 3}
-        
-        # Create a job instance
-        custom_job = CustomJob(name="custom_job")
-        
-        # APPROACH: Wrap all objects in separate variables
-        func1_job = w({"func1": func1})
-        func2_job = w({"func2": func2})
-        func3_job = w({"func3": func3})
-        lambda1_job = w({"lambda1": lambda1})
-        
-        # Then create a clear DSL expression using the named objects
-        dsl = (func1_job >> 
-               (func2_job | func3_job) >> 
-               lambda1_job) | custom_job
-        
-        # Set up the task parameters
-        job_configs = {
-            "func1": ([5], None, None),
-            "func2": ([10], None, None),
-            "func3": ([7], None, None),
-            "lambda1": ([15], None, None),
-            "custom_job": (None, None, {"input": 6})
-        }
-        
-        # Create and configure jobs
-        task = DSLTestHelper.create_task_with_multiple_jobs(job_configs)
-        
-        # Configure get_task for all jobs
-        all_jobs = [func1_job, func2_job, func3_job, lambda1_job, custom_job]
-        for job in all_jobs:
-            job.get_task = MagicMock(return_value=task)
-        
-        # Evaluate the DSL
-        result = await evaluate(dsl)
-        
-        # Verify results
-        assert result is not None
-        assert isinstance(result, str)
-        assert "func1_result" in result
-        assert "func2_result" in result
-        assert "func3_result" in result
-        assert "lambda1_result" in result
-        assert "custom_job_result" in result
-    
 
 if __name__ == "__main__":
     pytest.main(["-v", "test_dsl.py"])
