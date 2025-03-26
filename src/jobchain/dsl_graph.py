@@ -1,8 +1,9 @@
 from typing import Dict, List
 
+from jobchain.jobs.wrapping_job import WrappingJob
+
 from . import jc_logging as logging
 from .dsl import Parallel, Serial
-from jobchain.jobs.wrapping_job import WrappingJob
 from .job import JobABC
 
 logger = logging.getLogger(__name__)
@@ -62,8 +63,8 @@ def extract_jobs(dsl_obj):
                 _extract(comp)
         elif isinstance(obj, JobABC):
             # Recursively extract jobs from wrapped compositional structures
-            if isinstance(obj, WrappingJob) and isinstance(obj.wrapped_object, (Serial, Parallel)):
-                _extract(obj.wrapped_object)
+            if isinstance(obj, WrappingJob) and isinstance(obj.callable, (Serial, Parallel)):
+                _extract(obj.callable)
             # Terminal job object
             elif obj not in jobs:
                 jobs.append(obj)
@@ -125,7 +126,7 @@ def build_connections(dsl_obj, graph, nested=False):
         elif isinstance(comp, JobABC):
             if isinstance(comp, WrappingJob):
                 # Check if the wrapped object is a compositional structure
-                wrapped = comp.wrapped_object
+                wrapped = comp.callable
                 if isinstance(wrapped, (Serial, Parallel)):
                     return _process_component(wrapped, prev_terminals)
             
@@ -189,7 +190,7 @@ def debug_dsl_structure(dsl_obj, indent=0):
             debug_dsl_structure(comp, indent + 1)
     
     elif isinstance(dsl_obj, WrappingJob):
-        print(f"{indent_str}WrappingJob wrapping: {dsl_obj.wrapped_object}")
+        print(f"{indent_str}WrappingJob wrapping: {dsl_obj.callable}")
     
     else:
         print(f"{indent_str}Other Type: {type(dsl_obj).__name__} - Value: {dsl_obj}")

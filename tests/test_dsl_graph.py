@@ -1,6 +1,6 @@
 from typing import Any, Dict
 
-from jobchain.dsl import p
+from jobchain.dsl import p, wrap
 from jobchain.dsl_graph import dsl_to_precedence_graph, visualize_graph
 from jobchain.jc_graph import validate_graph
 from jobchain.job import JobABC
@@ -75,4 +75,58 @@ def test_complex_JobABC_subclass():
     assert graph == expected_graph or print_diff(graph, expected_graph, "test_complex_JobABC_subclass")
     
     validate_graph(graph, name="test_complex_JobABC_subclass")
+
+def test_complex_mixed():
+    times = lambda x: x*2
+    add = lambda x: x+3
+    square = lambda x: x**2
+    
+    def collate(j_ctx):
+        task = j_ctx["task"]
+        inputs = j_ctx["inputs"]
+        return {"task": task, "inputs": inputs}
+        
+    analyzer2 = ProcessorJob("Analyzer2", "analyze")
+    transformer = ProcessorJob("Transformer", "transform")
+    aggregator = ProcessorJob("Aggregator", "aggregate")
+    formatter = ProcessorJob("Formatter", "format")
+    cache_manager = ProcessorJob("CacheManager", "cache")
+
+    jobs = wrap({
+            "analyzer2": analyzer2,
+            "cache_manager": cache_manager,
+            "times": times,
+            "transformer": transformer,
+            "formatter": formatter,
+            "add": add,
+            "square": square,
+            "aggregator": aggregator,
+            "collate": collate
+        })
+
+    dsl = (p(jobs["analyzer2"], jobs["cache_manager"], jobs["times"]) >>
+            jobs["transformer"] >> jobs["formatter"] >> 
+            (jobs["add"] | jobs["square"]) >>
+            jobs["aggregator"] >> jobs["collate"])
+        
+    # Convert to adjacency list
+    graph = dsl_to_precedence_graph(dsl)
+    visualize_graph(graph)
+        
+    # Define expected graph structure
+    expected_graph = {
+            "analyzer2": {"next": ["transformer"]},
+            "cache_manager": {"next": ["transformer"]},
+            "times": {"next": ["transformer"]},
+            "transformer": {"next": ["formatter"]},
+            "formatter": {"next": ["add", "square"]},
+            "add": {"next": ["aggregator"]},
+            "square": {"next": ["aggregator"]},
+            "aggregator": {"next": ["collate"]},
+            "collate": {"next": []}
+        }
+        
+    assert graph == expected_graph or print_diff(graph, expected_graph, "test_complex_mixed")
+        
+    validate_graph(graph, name="test_complex_mixed")
     
