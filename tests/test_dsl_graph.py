@@ -77,6 +77,9 @@ def test_complex_JobABC_subclass():
     validate_graph(graph, name="test_complex_JobABC_subclass")
 
 def test_complex_mixed():
+    """
+    Test a complex DSL with a mix of JobABC and functions and lambdas.
+    """
     times = lambda x: x*2
     add = lambda x: x+3
     square = lambda x: x**2
