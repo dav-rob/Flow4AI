@@ -48,10 +48,16 @@ class WrappingJob(JobABC):
         # Check if the callable requires parameters
         sig = inspect.signature(self.callable)
         requires_params = bool(sig.parameters)
+        
+        # Check if the only parameter required is 'context' which is auto-provided
+        requires_non_context_params = False
+        if requires_params:
+            non_context_params = [param for param in sig.parameters if param != "context"]
+            requires_non_context_params = bool(non_context_params)
 
-        # Only check for parameters if the callable actually requires them
-        if requires_params and self.name not in params:
-            raise ValueError(f"No parameters found for callable '{self.name}'")
+        # Only check for parameters if the callable requires non-context parameters
+        if requires_non_context_params and self.name not in params:
+            raise ValueError(f"No parameters found for callable '{self.name}'")  
 
         # If no parameters are required, use empty args and kwargs
         if not requires_params or self.name not in params:

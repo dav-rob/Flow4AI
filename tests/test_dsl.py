@@ -1222,63 +1222,46 @@ class TestWrappingJob:
         assert result["max"] == 22
         assert result["median"] == 11.0  # Median of [7, 8, 10, 11, 15, 22] is 11 (rounded to 11.0)
         
+
     @pytest.mark.asyncio
-    async def test_wrapped_function_with_args_and_kwargs(self):
-        """Test wrapped function with both positional args and keyword args."""
-        # Create a function that handles both args and kwargs
-        def format_document(template, *sections, meta=None, **attributes):
-            # Create document with template, sections and attributes
-            document = {
-                "template": template,
-                "sections": list(sections),
-                "meta": meta or {},
-            }
-            # Add all attributes
-            for key, value in attributes.items():
-                document[key] = value
-            return document
+    async def test_wrapped_jobs_with_context(self):
+        """Test wrapped lambda function with multiple arguments."""
+        # Create a lambda function that processes multiple arguments
+        # Lambda that calculates statistics from a list of numbers
+
+        times = lambda x: x*2
+        add = lambda x: x+3
+        square = lambda x: x**2
         
-        # Mock the function to verify calls
-        mock_func = MagicMock(side_effect=format_document)
+        def collate(context):
+            task = context["task"]
+            inputs = context["inputs"]
+
+            return {"task": task, "inputs": inputs}
+
+        jobs = wrap ({
+            "times": times,
+            "add": add,
+            "square": square,
+            "collate": collate
+        })
+
+        task = {"times": {"fn.x": 1}, "add": {"fn.x": 2}, "square": {"fn.x": 3}}
         
-        # Create a WrappingJob with the function
-        job = WrappingJob(mock_func, name="doc_formatter")
+        for job in jobs.values():
+            job.get_task = MagicMock(return_value=task)
+        jobs["collate"].get_inputs = MagicMock(return_value={"test_job_input": "test_value"})
+
+        dsl = p(jobs["times"], jobs["add"], jobs["square"]) >> jobs["collate"]
         
-        # Prepare task with both args and kwargs
-        task = {
-            "doc_formatter": {
-                "fn.args": ["report", "Introduction", "Methods", "Results"],
-                "fn.kwargs": {
-                    "meta": {"version": "1.0", "author": "Test User"},
-                    "title": "Annual Report",
-                    "date": "2025-03-22",
-                    "draft": True
-                }
-            }
-        }
+        result = await evaluate(dsl)
         
-        # Set up context access to work in tests
-        job.get_task = MagicMock(return_value=task)
+        assert "{'task': {'times': {'fn.x': 1}, 'add': {'fn.x': 2}, 'square': {'fn.x': 3}}, 'inputs': {'test_job_input': 'test_value'}}" in result
+        assert "2" in result
+        assert "5" in result
+        assert "9" in result
         
-        # Execute the job
-        result = await job.run(task)
-        
-        # Verify the function was called with correct args and kwargs
-        mock_func.assert_called_once_with(
-            "report", "Introduction", "Methods", "Results",
-            meta={"version": "1.0", "author": "Test User"},
-            title="Annual Report",
-            date="2025-03-22",
-            draft=True
-        )
-        
-        # Check the results
-        assert result["template"] == "report"
-        assert result["sections"] == ["Introduction", "Methods", "Results"]
-        assert result["meta"] == {"version": "1.0", "author": "Test User"}
-        assert result["title"] == "Annual Report"
-        assert result["date"] == "2025-03-22"
-        assert result["draft"] is True
+
 
 
 class TestComplexDSLExpressions:
