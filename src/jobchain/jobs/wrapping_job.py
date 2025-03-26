@@ -6,6 +6,8 @@ from jobchain.job import Task
 
 
 class WrappingJob(JobABC):
+    FN_CONTEXT='j_ctx'
+
     def __init__(
         self,
         callable_obj: Callable,
@@ -52,7 +54,7 @@ class WrappingJob(JobABC):
         # Check if the only parameter required is 'context' which is auto-provided
         requires_non_context_params = False
         if requires_params:
-            non_context_params = [param for param in sig.parameters if param != "context"]
+            non_context_params = [param for param in sig.parameters if param != self.FN_CONTEXT]
             requires_non_context_params = bool(non_context_params)
 
         # Only check for parameters if the callable requires non-context parameters
@@ -66,11 +68,11 @@ class WrappingJob(JobABC):
             callable_params = self._create_callable_params(params[self.name])
 
         # Add context to the kwargs if the callable accepts it
-        if "context" in sig.parameters:
-            callable_params["kwargs"]["context"] = {}
-            callable_params["kwargs"]["context"]["global"] = self.global_ctx
-            callable_params["kwargs"]["context"]["task"] = params
-            callable_params["kwargs"]["context"]["inputs"] = self.get_inputs()
+        if self.FN_CONTEXT in sig.parameters:
+            callable_params["kwargs"][self.FN_CONTEXT] = {}
+            callable_params["kwargs"][self.FN_CONTEXT]["global"] = self.global_ctx
+            callable_params["kwargs"][self.FN_CONTEXT]["task"] = params
+            callable_params["kwargs"][self.FN_CONTEXT]["inputs"] = self.get_inputs()
 
         # Validate parameters against the callable's signature
         self._validate_params(callable_params["args"], callable_params["kwargs"])

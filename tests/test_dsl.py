@@ -1233,9 +1233,9 @@ class TestWrappingJob:
         add = lambda x: x+3
         square = lambda x: x**2
         
-        def collate(context):
-            task = context["task"]
-            inputs = context["inputs"]
+        def collate(j_ctx):
+            task = j_ctx["task"]
+            inputs = j_ctx["inputs"]
 
             return {"task": task, "inputs": inputs}
 
