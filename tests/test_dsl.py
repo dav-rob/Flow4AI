@@ -17,7 +17,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from jobchain import jc_logging as logging
-from jobchain.dsl import Parallel, Serial, p, parallel, s, serial, w, wrap, DSLComponent, JobsDict
+from jobchain.dsl import (DSLComponent, JobsDict, Parallel, Serial, p,
+                          parallel, s, serial, w, wrap)
 from jobchain.job import JobABC
 from jobchain.jobs.wrapping_job import WrappingJob
 from tests.test_utils.graph_evaluation import evaluate
@@ -834,7 +835,7 @@ class TestMixedComposition:
         second_stage = lambda2_job >> text_proc_job
         third_stage = llm_job | lambda3_job
         
-        composition = first_stage >> second_stage >> third_stage
+        dsl:DSLComponent = first_stage >> second_stage >> third_stage
         
         # Set up context access for the wrapped jobs with appropriate parameters
         lambda1_job.get_task = MagicMock(return_value={lambda1_job.name: {"fn.args": ["input_data1"]}})
@@ -843,7 +844,7 @@ class TestMixedComposition:
         text_proc_job.get_task = MagicMock(return_value={}) # text_proc_job.name: {}
         
         # Execute the workflow
-        result = await evaluate(composition)
+        result = await evaluate(dsl)
         logger.info(result)
         
         # Verify the result contains expected components
@@ -889,14 +890,14 @@ class TestMixedComposition:
         part4 = serial(fn5_job, data_job, fn6_job)
         
         # Combine into final graph
-        graph = part3 | wrap(part4)
+        dsl:DSLComponent = part3 | wrap(part4)
         
         # Set up context access for all WrappingJob instances
         for job in [fn1_job, fn2_job, fn3_job, fn4_job, fn5_job, fn6_job]:
             job.get_task = MagicMock(return_value={job.name: {"fn.args": ["test_input"]}})
         
         # Execute the workflow
-        result = await evaluate(graph)
+        result = await evaluate(dsl)
         
         # Verify the result contains expected components
         assert "Executed in parallel" in result
@@ -1252,7 +1253,7 @@ class TestWrappingJob:
             job.get_task = MagicMock(return_value=task)
         jobs["collate"].get_inputs = MagicMock(return_value={"test_job_input": "test_value"})
 
-        dsl = p(jobs["times"], jobs["add"], jobs["square"]) >> jobs["collate"]
+        dsl:DSLComponent = p(jobs["times"], jobs["add"], jobs["square"]) >> jobs["collate"]
         
         result = await evaluate(dsl)
         
@@ -1373,7 +1374,7 @@ class TestComplexDSLExpressions:
         # Instead we'll verify the results match our expectations based on the provided parameters
         
         # Create the complex DSL graph with our DSL operators
-        complex_dsl = (
+        complex_dsl:DSLComponent = (
             # Start with a simple function taking multiple args
             math_op_job>> 
             # Then parallel branch with custom object and lambda

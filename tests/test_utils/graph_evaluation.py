@@ -2,12 +2,12 @@
 Utility functions for evaluating graph objects in tests.
 """
 from jobchain.job import JobABC
-from jobchain.dsl import Parallel, Serial
+from jobchain.dsl import DSLComponent, Parallel, Serial
 
 
 class GraphCreator:
     @staticmethod
-    async def evaluate(graph_obj, prefix="0"):
+    async def evaluate(graph_obj: DSLComponent, prefix="0"):
         """
         Process/evaluate the graph object and return the result.
         This is where you would implement the actual graph processing logic.

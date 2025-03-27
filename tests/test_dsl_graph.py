@@ -67,10 +67,10 @@ def test_complex_JobABC_subclass():
     # DSL by brackets
     main_pipeline = preprocessor >> (analyzer1 | analyzer2) >> transformer >> formatter 
     side_pipeline = init >> (cache_manager | logger)
-    dsl_by_brackets = (main_pipeline | side_pipeline) >> aggregator
+    dsl:DSLComponent = (main_pipeline | side_pipeline) >> aggregator
 
     # Convert to adjacency list
-    graph = dsl_to_precedence_graph(dsl_by_brackets)
+    graph = dsl_to_precedence_graph(dsl)
     visualize_graph(graph)
     
 
