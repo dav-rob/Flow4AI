@@ -1,6 +1,8 @@
 from typing import Any, Dict
 
-from jobchain.dsl import p, wrap
+import pytest
+
+from jobchain.dsl import DSLComponent, JobsDict, p, wrap
 from jobchain.dsl_graph import dsl_to_precedence_graph, visualize_graph
 from jobchain.jc_graph import validate_graph
 from jobchain.job import JobABC
@@ -36,7 +38,7 @@ def test_complex_JobABC_subclass():
     side_pipeline = init >> p(cache_manager, logger)
     
     # Combine pipelines and add an aggregator at the end
-    dsl = p(main_pipeline, side_pipeline) >> aggregator
+    dsl: DSLComponent = p(main_pipeline, side_pipeline) >> aggregator
     
     print(f"DSL: Complex expression with ProcessorJob instances combined with p() and >>")
     
@@ -95,7 +97,7 @@ def test_complex_mixed():
     formatter = ProcessorJob("Formatter", "format")
     cache_manager = ProcessorJob("CacheManager", "cache")
 
-    jobs = wrap({
+    jobs:JobsDict = wrap({
             "analyzer2": analyzer2,
             "cache_manager": cache_manager,
             "times": times,
@@ -107,10 +109,14 @@ def test_complex_mixed():
             "collate": collate
         })
 
-    dsl = (p(jobs["analyzer2"], jobs["cache_manager"], jobs["times"]) >>
-            jobs["transformer"] >> jobs["formatter"] >> 
-            (jobs["add"] | jobs["square"]) >>
-            jobs["aggregator"] >> jobs["collate"])
+    dsl:DSLComponent = (
+        p(jobs["analyzer2"], jobs["cache_manager"], jobs["times"]) 
+        >> jobs["transformer"] 
+        >> jobs["formatter"] 
+        >> (jobs["add"] | jobs["square"]) 
+        >> jobs["aggregator"] 
+        >> jobs["collate"]
+    )
         
     # Convert to adjacency list
     graph = dsl_to_precedence_graph(dsl)
@@ -132,4 +138,50 @@ def test_complex_mixed():
     assert graph == expected_graph or print_diff(graph, expected_graph, "test_complex_mixed")
         
     validate_graph(graph, name="test_complex_mixed")
+
+pytest.mark.skip("Skipping test due to working yet")
+def test_execute_job_graph_from_dsl():
+    """
+    Test a complex DSL with a mix of JobABC and functions and lambdas.
+    """
+    times = lambda x: x*2
+    add = lambda x: x+3
+    square = lambda x: x**2
+    
+    def collate(j_ctx):
+        task = j_ctx["task"]
+        inputs = j_ctx["inputs"]
+        return {"task": task, "inputs": inputs}
+        
+    analyzer2 = ProcessorJob("Analyzer2", "analyze")
+    transformer = ProcessorJob("Transformer", "transform")
+    aggregator = ProcessorJob("Aggregator", "aggregate")
+    formatter = ProcessorJob("Formatter", "format")
+    cache_manager = ProcessorJob("CacheManager", "cache")
+
+    jobs:JobsDict = wrap({
+            "analyzer2": analyzer2,
+            "cache_manager": cache_manager,
+            "times": times,
+            "transformer": transformer,
+            "formatter": formatter,
+            "add": add,
+            "square": square,
+            "aggregator": aggregator,
+            "collate": collate
+        })
+
+    dsl:DSLComponent = (
+        p(jobs["analyzer2"], jobs["cache_manager"], jobs["times"]) 
+        >> jobs["transformer"] 
+        >> jobs["formatter"] 
+        >> (jobs["add"] | jobs["square"]) 
+        >> jobs["aggregator"] 
+        >> jobs["collate"]
+    )
+        
+    # Convert to adjacency list
+    graph = dsl_to_precedence_graph(dsl)
+    
+
     

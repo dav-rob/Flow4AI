@@ -1,10 +1,15 @@
 from functools import reduce
+from typing import Any, Dict, List, Union
 
 from . import jc_logging as logging
 from .job import JobABC
 from .jobs.wrapping_job import WrappingJob
 
 logger = logging.getLogger(__name__)
+
+# Type definitions for DSL components
+DSLComponent = Union[JobABC, 'Parallel', 'Serial']
+JobsDict = Dict[str, JobABC]
 
 class Parallel:
     def __init__(self, *components):
@@ -60,8 +65,8 @@ def wrap(obj=None, **kwargs):
     wrap(obj1) >> wrap(obj2)  # For serial composition
     
     Enhanced functionality:
-    1. Single object wrapping (original behavior):
-       wrap(obj) - wraps the object as before
+    1. Single object wrapping:
+       wrap(obj) - wraps the object in a JobABC subclass WrappingJob
     
     2. Single named object wrapping:
        wrap(object_name=object) or wrap({"object_name": object})

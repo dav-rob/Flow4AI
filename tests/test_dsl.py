@@ -17,7 +17,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from jobchain import jc_logging as logging
-from jobchain.dsl import Parallel, Serial, p, parallel, s, serial, w, wrap
+from jobchain.dsl import Parallel, Serial, p, parallel, s, serial, w, wrap, DSLComponent, JobsDict
 from jobchain.job import JobABC
 from jobchain.jobs.wrapping_job import WrappingJob
 from tests.test_utils.graph_evaluation import evaluate
@@ -942,7 +942,7 @@ class TestMixedComposition:
         middle_part = serial_part1 | serial_part2
         
         # Complete graph
-        graph = job1 >> middle_part >> job11
+        graph: DSLComponent = job1 >> middle_part >> job11
         
         # Set up context access for all WrappingJob instances
         for job in [job1, job2, job3, job4, job5, job6, job7, job8, job9, job10, job11]:
@@ -1507,7 +1507,7 @@ class TestComplexDSLExpressions:
             job.get_task = MagicMock(return_value=task)
         
         # Use the dictionary to create a concise DSL expression
-        dsl = (jobs["add"] >> jobs["mult"]) | (jobs["fmt"] >> jobs["proc"])
+        dsl: DSLComponent = (jobs["add"] >> jobs["mult"]) | (jobs["fmt"] >> jobs["proc"])
         
         # Evaluate the DSL
         result_string = await evaluate(dsl)
