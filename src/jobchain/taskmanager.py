@@ -1,7 +1,7 @@
 import asyncio
 import threading
 from collections import defaultdict, deque
-from typing import Dict, Any, Optional, Union
+from typing import Any, Dict, Optional, Union
 
 import jobchain.jc_logging as logging
 from jobchain.dsl_graph import PrecedenceGraph, dsl_to_precedence_graph
@@ -84,7 +84,7 @@ class TaskManager:
             self.submitted_count += 1
 
         try:
-            # Execute the run method of the JobABC instance
+            # Execute the _execute method of the JobABC instance
             coro = job._execute(task)
         except Exception as e:
             self.logger.error(f"Error processing task: {e}")
@@ -101,6 +101,25 @@ class TaskManager:
         future.add_done_callback(
             lambda f: self._handle_completion(f, job, task)
         )
+
+    def _handle_completion(self, future, job: JobABC, task: Task):
+        try:
+            result = future.result()
+            with self._data_lock:
+                self.completed_count += 1
+                self.completed_results[job.name].append({
+                    "result": result,
+                    "task": task
+                })
+        except Exception as e:
+            self.logger.error(f"Error processing result: {e}")
+            self.logger.info("Detailed stack trace:", exc_info=True)
+            with self._data_lock:
+                self.error_count += 1
+                self.error_results[job.name].append({
+                    "error": e,
+                    "task": task
+                })
     
     def add_dsl(self, graph: DSLComponent, jobs: JobsDict, graph_name: str):
         if not graph_name:
@@ -126,24 +145,7 @@ class TaskManager:
         self.head_jobs.append(head_job)
         self.job_map.update({job.name: job for job in self.head_jobs})
 
-    def _handle_completion(self, future, job: JobABC, task: Task):
-        try:
-            result = future.result()
-            with self._data_lock:
-                self.completed_count += 1
-                self.completed_results[job.name].append({
-                    "result": result,
-                    "task": task
-                })
-        except Exception as e:
-            self.logger.error(f"Error processing result: {e}")
-            self.logger.info("Detailed stack trace:", exc_info=True)
-            with self._data_lock:
-                self.error_count += 1
-                self.error_results[job.name].append({
-                    "error": e,
-                    "task": task
-                })
+
 
     def get_counts(self):
         with self._data_lock:
