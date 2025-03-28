@@ -9,7 +9,9 @@ from .job import JobABC
 logger = logging.getLogger(__name__)
 
 
-def dsl_to_precedence_graph(dsl_obj) -> Dict[str, Dict[str, List[str]]]:
+PrecedenceGraph = Dict[str, Dict[str, List[str]]]
+
+def dsl_to_precedence_graph(dsl_obj) -> PrecedenceGraph:
     """
     Convert a DSL object into a precedence graph with nested dictionary.
     

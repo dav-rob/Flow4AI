@@ -3,7 +3,11 @@ import threading
 from collections import deque
 
 import jobchain.jc_logging as logging
+from jobchain.dsl_graph import PrecedenceGraph, dsl_to_precedence_graph
+from jobchain.jc_graph import validate_graph
 
+from . import JobABC
+from .dsl import DSLComponent, JobsDict
 from .job_loader import JobFactory
 
 
@@ -18,7 +22,8 @@ class TaskManager:
                 cls._instance.__initialized = False
         return cls._instance
 
-    def __init__(self):
+    def __init__(self, file_config=False):
+        self.file_config = file_config
         if not hasattr(self, '_TaskManager__initialized') or not self.__initialized:
             with self._lock:
                 if not hasattr(self, '_TaskManager__initialized') or not self.__initialized:
@@ -30,7 +35,11 @@ class TaskManager:
         self.loop = asyncio.new_event_loop()
         self.thread = threading.Thread(target=self._run_loop, daemon=True)
         self.thread.start()
-        self.head_jobs = JobFactory.get_head_jobs_from_config()
+        if self.file_config:
+            self.head_jobs = JobFactory.get_head_jobs_from_config()
+            self.job_map = {job.name: job for job in self.head_jobs}
+        else:
+            self.job_map = {}
 
         self.submitted_count = 0
         self.completed_count = 0
@@ -64,6 +73,30 @@ class TaskManager:
         future.add_done_callback(
             lambda f: self._handle_completion(f, func, args, kwargs)
         )
+    
+    def add_dsl(self, graph: DSLComponent, jobs: JobsDict, graph_name: str):
+        if not graph_name:
+            raise ValueError("graph_name cannot be None or empty")
+        if graph is None:
+            raise ValueError("graph cannot be None")
+        if not jobs:
+            raise ValueError("jobs cannot be None or empty")
+        precedence_graph: PrecedenceGraph = dsl_to_precedence_graph(graph)
+        self.add_graph(precedence_graph, jobs, graph_name)
+
+    def add_graph(self, precedence_graph: PrecedenceGraph, jobs: JobsDict, graph_name: str):
+        if not graph_name:
+            raise ValueError("graph_name cannot be None or empty")
+        if not jobs:
+            raise ValueError("jobs cannot be None or empty")
+        if precedence_graph is None:
+            raise ValueError("precedence_graph cannot be None")
+        validate_graph(precedence_graph)
+        for (short_job_name, job) in jobs.items():
+            job.name = graph_name + "$$" + "$$" + short_job_name
+        head_job: JobABC = JobFactory.create_job_graph(precedence_graph, jobs)
+        self.head_jobs.append(head_job)
+        self.job_map.update({job.name: job for job in self.head_jobs})
 
     def _handle_completion(self, future, func, args, kwargs):
         try:
