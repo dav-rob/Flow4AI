@@ -1,7 +1,7 @@
 import asyncio
 import threading
 from collections import defaultdict, deque
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import jobchain.jc_logging as logging
 from jobchain.dsl_graph import PrecedenceGraph, dsl_to_precedence_graph
@@ -142,6 +142,74 @@ class TaskManager:
             raise ValueError("jobs cannot be None or empty")
         precedence_graph: PrecedenceGraph = dsl_to_precedence_graph(dsl)
         return self.add_graph(precedence_graph, jobs, graph_name, variant)
+        
+    def add_dsl_dict(self, dsl_dict: Dict) -> List[str]:
+        """
+        Adds multiple graphs to the task manager from a dictionary structure.
+        
+        Args:
+            dsl_dict: A dictionary containing graph definitions, with optional variants.
+                Format can be either:
+                {
+                    "graph1": {
+                        "dev": {
+                            "dsl": dsl1d,
+                            "jobs": jobs1d
+                        },
+                        "prod": {
+                            "dsl": dsl1p,
+                            "jobs": jobs1p
+                        }
+                    }
+                }
+                Or without variants:
+                {
+                    "graph1": {
+                        "dsl": dsl1,
+                        "jobs": jobs1
+                    },
+                    "graph2": {
+                        "dsl": dsl2,
+                        "jobs": jobs2
+                    }
+                }
+        
+        Returns:
+            List[str]: The fully qualified names of all added graphs.
+        
+        Raises:
+            ValueError: If the dictionary structure is invalid or missing required components.
+        """
+        if not dsl_dict:
+            raise ValueError("dsl_dict cannot be None or empty")
+        
+        result = []
+        
+        for graph_name, graph_data in dsl_dict.items():
+            # Check if this is a variant structure or direct dsl/jobs
+            if "dsl" in graph_data and "jobs" in graph_data:
+                # No variants, direct dsl/jobs
+                dsl = graph_data.get("dsl")
+                jobs = graph_data.get("jobs")
+                
+                if dsl is None or not jobs:
+                    raise ValueError(f"Graph '{graph_name}' is missing required 'dsl' or 'jobs'")
+                    
+                graph_id = self.add_dsl(dsl, jobs, graph_name)
+                result.append(graph_id)
+            else:
+                # With variants
+                for variant, variant_data in graph_data.items():
+                    dsl = variant_data.get("dsl")
+                    jobs = variant_data.get("jobs")
+                    
+                    if dsl is None or not jobs:
+                        raise ValueError(f"Graph '{graph_name}' variant '{variant}' is missing required 'dsl' or 'jobs'")
+                        
+                    graph_id = self.add_dsl(dsl, jobs, graph_name, variant)
+                    result.append(graph_id)
+        
+        return result
 
     def add_graph(self, precedence_graph: PrecedenceGraph, jobs: JobsDict, graph_name: str, variant: str = "") -> str:
         """
