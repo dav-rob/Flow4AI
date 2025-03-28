@@ -57,8 +57,9 @@ class TaskManager:
     async def _execute_with_context(self, job: JobABC, task: Task):
         """Execute a job with the job graph context manager.
         
-        This ensures that the job execution happens within the proper context for job graph execution.
-        
+        This ensures that the local async context variables are reset for each
+        coroutine that is executed.
+
         Args:
             job: The job to execute
             task: The task to process
@@ -102,20 +103,7 @@ class TaskManager:
         with self._data_lock:
             self.submitted_count += 1
 
-        try:
-            # Execute the job with context manager instead of directly calling _execute
-            coro = self._execute_with_context(job, task)
-        except Exception as e:
-            self.logger.error(f"Error processing task: {e}")
-            self.logger.info("Detailed stack trace:", exc_info=True)
-            with self._data_lock:
-                self.error_count += 1
-                self.error_results[job.name].append({
-                    "error": e,
-                    "task": task
-                })
-            return
-
+        coro = self._execute_with_context(job, task)
         future = asyncio.run_coroutine_threadsafe(coro, self.loop)
         future.add_done_callback(
             lambda f: self._handle_completion(f, job, task)
