@@ -35,11 +35,10 @@ class TaskManager:
         self.loop = asyncio.new_event_loop()
         self.thread = threading.Thread(target=self._run_loop, daemon=True)
         self.thread.start()
+        self.job_map: Dict[str, JobABC] = {}
         if self.file_config:
             self.head_jobs = JobFactory.get_head_jobs_from_config()
             self.job_map = {job.name: job for job in self.head_jobs}
-        else:
-            self.job_map = {}
 
         self.submitted_count = 0
         self.completed_count = 0
@@ -93,7 +92,7 @@ class TaskManager:
             raise ValueError("precedence_graph cannot be None")
         validate_graph(precedence_graph)
         for (short_job_name, job) in jobs.items():
-            job.name = graph_name + "$$" + "$$" + short_job_name
+            job.name = graph_name + "$$" + "$$" + short_job_name + "$$"
         head_job: JobABC = JobFactory.create_job_graph(precedence_graph, jobs)
         self.head_jobs.append(head_job)
         self.job_map.update({job.name: job for job in self.head_jobs})
