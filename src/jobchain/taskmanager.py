@@ -9,7 +9,7 @@ from jobchain.jc_graph import validate_graph
 
 from . import JobABC
 from .dsl import DSLComponent, JobsDict
-from .job import SPLIT_STR, Task
+from .job import SPLIT_STR, Task, job_graph_context_manager
 from .job_loader import JobFactory
 
 
@@ -54,6 +54,25 @@ class TaskManager:
         asyncio.set_event_loop(self.loop)
         self.loop.run_forever()
 
+    async def _execute_with_context(self, job: JobABC, task: Task):
+        """Execute a job with the job graph context manager.
+        
+        This ensures that the job execution happens within the proper context for job graph execution.
+        
+        Args:
+            job: The job to execute
+            task: The task to process
+            
+        Returns:
+            The result of the job execution
+        """
+        # Create a job set for this job
+        job_set = JobABC.job_set(job)
+        
+        # Execute the job within the context manager
+        async with job_graph_context_manager(job_set):
+            return await job._execute(task)
+            
     def submit(self, task: Task, fq_name: str):
         # Check that job_map is not None or empty
         if not self.job_map:
@@ -84,8 +103,8 @@ class TaskManager:
             self.submitted_count += 1
 
         try:
-            # Execute the _execute method of the JobABC instance
-            coro = job._execute(task)
+            # Execute the job with context manager instead of directly calling _execute
+            coro = self._execute_with_context(job, task)
         except Exception as e:
             self.logger.error(f"Error processing task: {e}")
             self.logger.info("Detailed stack trace:", exc_info=True)
