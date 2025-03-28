@@ -9,7 +9,7 @@ from jobchain.jc_graph import validate_graph
 
 from . import JobABC
 from .dsl import DSLComponent, JobsDict
-from .job import Task
+from .job import SPLIT_STR, Task
 from .job_loader import JobFactory
 
 
@@ -38,10 +38,10 @@ class TaskManager:
         self.thread = threading.Thread(target=self._run_loop, daemon=True)
         self.thread.start()
         self.job_map: Dict[str, JobABC] = {}
+        self.head_jobs: List[JobABC] = []
         if self.file_config:
             self.head_jobs = JobFactory.get_head_jobs_from_config()
             self.job_map = {job.name: job for job in self.head_jobs}
-
         self.submitted_count = 0
         self.completed_count = 0
         self.error_count = 0
@@ -54,14 +54,14 @@ class TaskManager:
         asyncio.set_event_loop(self.loop)
         self.loop.run_forever()
 
-    def submit(self, task: Task, graph_name: str):
+    def submit(self, task: Task, fq_name: str):
         # Check that job_map is not None or empty
         if not self.job_map:
             self.logger.error("job_map is None or empty")
             return
             
         # Get the JobABC instance from the job_map
-        job_key = f"{graph_name}$$$$$$"
+        job_key = fq_name
         job = None
         
         # Find the job by matching the start of the name
@@ -71,11 +71,11 @@ class TaskManager:
                 break
                 
         if job is None:
-            self.logger.error(f"No job found for graph_name: {graph_name}")
+            self.logger.error(f"No job found for graph_name: {fq_name}")
             with self._data_lock:
                 self.error_count += 1
                 self.error_results[job_key].append({
-                    "error": ValueError(f"No job found for graph_name: {graph_name}"),
+                    "error": ValueError(f"No job found for graph_name: {fq_name}"),
                     "task": task
                 })
             return
@@ -232,7 +232,7 @@ class TaskManager:
             raise ValueError("precedence_graph cannot be None")
         validate_graph(precedence_graph)
         for (short_job_name, job) in jobs.items():
-            job.name = graph_name + JobABC.SPLIT_STR + variant + JobABC.SPLIT_STR + short_job_name
+            job.name = JobABC.create_FQName(graph_name, variant, short_job_name)
         head_job: JobABC = JobFactory.create_job_graph(precedence_graph, jobs)
         self.head_jobs.append(head_job)
         self.job_map.update({job.name: job for job in self.head_jobs})

@@ -1,3 +1,4 @@
+import time
 from typing import Any, Dict
 
 import pytest
@@ -6,6 +7,7 @@ from jobchain.dsl import DSLComponent, JobsDict, p, wrap
 from jobchain.dsl_graph import dsl_to_precedence_graph, visualize_graph
 from jobchain.jc_graph import validate_graph
 from jobchain.job import JobABC
+from jobchain.taskmanager import TaskManager
 from tests.test_utils.graph_evaluation import print_diff
 
 
@@ -139,7 +141,7 @@ def test_complex_mixed():
         
     validate_graph(graph, name="test_complex_mixed")
 
-pytest.mark.skip("Skipping test due to working yet")
+
 def test_execute_job_graph_from_dsl():
     """
     Test a complex DSL with a mix of JobABC and functions and lambdas.
@@ -180,8 +182,24 @@ def test_execute_job_graph_from_dsl():
         >> jobs["collate"]
     )
         
-    # Convert to adjacency list
-    graph = dsl_to_precedence_graph(dsl)
+    tm = TaskManager()
+    fq_name =tm.add_dsl(dsl, jobs, "test_execute_job_graph_from_dsl")
+    print(fq_name)
+    task = {"times": {"fn.x": 1}, "add": {"fn.x": 2}, "square": {"fn.x": 3}}
+    tm.submit(task,fq_name)
+    time.sleep(5)
+    
+    # Print results
+    print("Task counts:", tm.get_counts())
+    results = tm.pop_results()
+    
+    print("\nCompleted tasks:")
+    for result in results["completed"]:
+        print(f"- {result[1]['func'].__name__}: {result[0]}")
+    
+    print("\nErrors:")
+    for error in results["errors"]:
+        print(f"- {error[1]['func'].__name__}: {error[0]}")
     
 
     
