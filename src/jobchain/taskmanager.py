@@ -265,4 +265,28 @@ class TaskManager:
                 'completed': completed,
                 'errors': errors
             }
+            
+    def wait_for_completion(self, timeout=10, check_interval=0.1):
+        """
+        Wait for all submitted tasks to complete or error out.
+        
+        Args:
+            timeout: Maximum time to wait in seconds. Defaults to 10 seconds.
+            check_interval: How often to check for completion in seconds. Defaults to 0.1 seconds.
+            
+        Returns:
+            bool: True if all tasks completed or errored, False if timed out
+        """
+        import time
+        start_time = time.time()
+        
+        while (time.time() - start_time) < timeout:
+            counts = self.get_counts()
+            if counts['submitted'] > 0 and counts['submitted'] == (counts['completed'] + counts['errors']):
+                return True
+            time.sleep(check_interval)
+            
+        # Check one last time before returning
+        counts = self.get_counts()
+        return counts['submitted'] == (counts['completed'] + counts['errors'])
 

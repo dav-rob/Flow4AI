@@ -187,19 +187,29 @@ def test_execute_job_graph_from_dsl():
     print(fq_name)
     task = {"times": {"fn.x": 1}, "add": {"fn.x": 2}, "square": {"fn.x": 3}}
     tm.submit(task,fq_name)
-    time.sleep(5)
+    success = tm.wait_for_completion()
+    assert success, "Timed out waiting for tasks to complete"
     
     # Print results
     print("Task counts:", tm.get_counts())
     results = tm.pop_results()
     
     print("\nCompleted tasks:")
-    for result in results["completed"]:
-        print(f"- {result[1]['func'].__name__}: {result[0]}")
+    for job_name, job_results in results["completed"].items():
+        for result_data in job_results:
+            print(f"- {job_name}: {result_data['result']}")
     
     print("\nErrors:")
-    for error in results["errors"]:
-        print(f"- {error[1]['func'].__name__}: {error[0]}")
+    if results["errors"]:
+        error_messages = []
+        for job_name, job_errors in results["errors"].items():
+            for error_data in job_errors:
+                error_msg = f"- {job_name}: {error_data['error']}"
+                print(error_msg)
+                error_messages.append(error_msg)
+        
+        # Raise exception with all errors
+        raise Exception("Errors occurred during job execution:\n" + "\n".join(error_messages))
     
 
     
