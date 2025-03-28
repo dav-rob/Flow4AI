@@ -1,6 +1,7 @@
 import asyncio
 import threading
-from collections import deque
+from collections import defaultdict, deque
+from typing import Dict, Any, Optional, Union
 
 import jobchain.jc_logging as logging
 from jobchain.dsl_graph import PrecedenceGraph, dsl_to_precedence_graph
@@ -8,6 +9,7 @@ from jobchain.jc_graph import validate_graph
 
 from . import JobABC
 from .dsl import DSLComponent, JobsDict
+from .job import Task
 from .job_loader import JobFactory
 
 
@@ -43,8 +45,8 @@ class TaskManager:
         self.submitted_count = 0
         self.completed_count = 0
         self.error_count = 0
-        self.completed_results = deque()
-        self.error_results = deque()
+        self.completed_results = defaultdict(list)
+        self.error_results = defaultdict(list)
 
         self._data_lock = threading.Lock()
 
@@ -52,25 +54,52 @@ class TaskManager:
         asyncio.set_event_loop(self.loop)
         self.loop.run_forever()
 
-    def submit(self, func, *args, **kwargs):
+    def submit(self, task: Task, graph_name: str):
+        # Check that job_map is not None or empty
+        if not self.job_map:
+            self.logger.error("job_map is None or empty")
+            return
+            
+        # Get the JobABC instance from the job_map
+        job_key = f"{graph_name}$$$$$$"
+        job = None
+        
+        # Find the job by matching the start of the name
+        for key, j in self.job_map.items():
+            if key.startswith(job_key):
+                job = j
+                break
+                
+        if job is None:
+            self.logger.error(f"No job found for graph_name: {graph_name}")
+            with self._data_lock:
+                self.error_count += 1
+                self.error_results[job_key].append({
+                    "error": ValueError(f"No job found for graph_name: {graph_name}"),
+                    "task": task
+                })
+            return
+
         with self._data_lock:
             self.submitted_count += 1
 
         try:
-            coro = func(*args, **kwargs)
+            # Execute the run method of the JobABC instance
+            coro = job._execute(task)
         except Exception as e:
-            self.logger.error(f"Error processing result: {e}")
+            self.logger.error(f"Error processing task: {e}")
             self.logger.info("Detailed stack trace:", exc_info=True)
             with self._data_lock:
                 self.error_count += 1
-                self.error_results.append(
-                    (e, {'func': func, 'args': args, 'kwargs': kwargs})
-                )
+                self.error_results[job.name].append({
+                    "error": e,
+                    "task": task
+                })
             return
 
         future = asyncio.run_coroutine_threadsafe(coro, self.loop)
         future.add_done_callback(
-            lambda f: self._handle_completion(f, func, args, kwargs)
+            lambda f: self._handle_completion(f, job, task)
         )
     
     def add_dsl(self, graph: DSLComponent, jobs: JobsDict, graph_name: str):
@@ -97,22 +126,24 @@ class TaskManager:
         self.head_jobs.append(head_job)
         self.job_map.update({job.name: job for job in self.head_jobs})
 
-    def _handle_completion(self, future, func, args, kwargs):
+    def _handle_completion(self, future, job: JobABC, task: Task):
         try:
             result = future.result()
             with self._data_lock:
                 self.completed_count += 1
-                self.completed_results.append(
-                    (result, {'func': func, 'args': args, 'kwargs': kwargs})
-                )
+                self.completed_results[job.name].append({
+                    "result": result,
+                    "task": task
+                })
         except Exception as e:
             self.logger.error(f"Error processing result: {e}")
             self.logger.info("Detailed stack trace:", exc_info=True)
             with self._data_lock:
                 self.error_count += 1
-                self.error_results.append(
-                    (e, {'func': func, 'args': args, 'kwargs': kwargs})
-                )
+                self.error_results[job.name].append({
+                    "error": e,
+                    "task": task
+                })
 
     def get_counts(self):
         with self._data_lock:
@@ -124,8 +155,8 @@ class TaskManager:
 
     def pop_results(self):
         with self._data_lock:
-            completed = list(self.completed_results)
-            errors = list(self.error_results)
+            completed = dict(self.completed_results)
+            errors = dict(self.error_results)
             self.completed_results.clear()
             self.error_results.clear()
             return {
