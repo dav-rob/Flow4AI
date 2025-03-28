@@ -8,6 +8,9 @@ from typing import Any, Dict, Optional, Type, Union
 from . import jc_logging as logging
 from .utils.otel_wrapper import trace_function
 
+SPLIT_STR = "$$"
+
+
 # DSL imports moved inline to avoid circular imports
 
 
@@ -186,6 +189,13 @@ class JobABC(ABC, metaclass=JobMeta):
             # If other is a raw object, wrap it first
             return Serial(self, WrappingJob(other))
     
+    @classmethod
+    def create_FQName(cls, graph_name, parameter_name, short_graph_job_name):
+        """
+            Creates a unique, fully qualified name from the graph, parameter and job names.
+        """
+        unique_job_name = graph_name + SPLIT_STR + parameter_name + SPLIT_STR + short_graph_job_name + SPLIT_STR
+        return unique_job_name
 
     @classmethod
     def parse_job_loader_name(cls, name: str) -> Dict[str, str]:
@@ -200,7 +210,7 @@ class JobABC(ABC, metaclass=JobMeta):
                  or {'parsing_message': 'UNSUPPORTED NAME FORMAT'} if invalid
         """
         try:
-            parts = name.split("$$")
+            parts = name.split(SPLIT_STR)
             if len(parts) != 4 or parts[3] != "" or not parts[0]:
                 return {"parsing_message": "UNSUPPORTED NAME FORMAT"}
                 

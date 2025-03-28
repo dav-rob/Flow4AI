@@ -121,17 +121,41 @@ class TaskManager:
                     "task": task
                 })
     
-    def add_dsl(self, graph: DSLComponent, jobs: JobsDict, graph_name: str):
+    def add_dsl(self, dsl: DSLComponent, jobs: JobsDict, graph_name: str, variant: str = "") -> str:
+        """
+        Adds a graph to the task manager.
+        
+        Args:
+            dsl: the dsl defining the data flow between jobs.
+            jobs: A dictionary of jobs.
+            graph_name: The name of the graph.
+            variant: The variant of the graph e.g. "dev", "prod"
+        
+        Returns:
+            str: The fully qualified name of the graph.
+        """
         if not graph_name:
             raise ValueError("graph_name cannot be None or empty")
-        if graph is None:
+        if dsl is None:
             raise ValueError("graph cannot be None")
         if not jobs:
             raise ValueError("jobs cannot be None or empty")
-        precedence_graph: PrecedenceGraph = dsl_to_precedence_graph(graph)
-        self.add_graph(precedence_graph, jobs, graph_name)
+        precedence_graph: PrecedenceGraph = dsl_to_precedence_graph(dsl)
+        return self.add_graph(precedence_graph, jobs, graph_name, variant)
 
-    def add_graph(self, precedence_graph: PrecedenceGraph, jobs: JobsDict, graph_name: str):
+    def add_graph(self, precedence_graph: PrecedenceGraph, jobs: JobsDict, graph_name: str, variant: str = "") -> str:
+        """
+        Adds a graph to the task manager.
+        
+        Args:
+            precedence_graph: A precedence graph that defines the data flow between jobs.
+            jobs: A dictionary of jobs.
+            graph_name: The name of the graph.
+            variant: The variant of the graph e.g. "dev", "pr
+        
+        Returns:
+            str: The fully qualified name of the graph.
+        """
         if not graph_name:
             raise ValueError("graph_name cannot be None or empty")
         if not jobs:
@@ -140,10 +164,11 @@ class TaskManager:
             raise ValueError("precedence_graph cannot be None")
         validate_graph(precedence_graph)
         for (short_job_name, job) in jobs.items():
-            job.name = graph_name + "$$" + "$$" + short_job_name + "$$"
+            job.name = graph_name + JobABC.SPLIT_STR + variant + JobABC.SPLIT_STR + short_job_name
         head_job: JobABC = JobFactory.create_job_graph(precedence_graph, jobs)
         self.head_jobs.append(head_job)
         self.job_map.update({job.name: job for job in self.head_jobs})
+        return head_job.name
 
 
 
