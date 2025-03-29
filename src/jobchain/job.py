@@ -367,7 +367,7 @@ class JobABC(ABC, metaclass=JobMeta):
                     f"Received: {list(job_state.inputs.keys())}"
                 )
 
-        result = await self.run(job_state.inputs)
+        result = await self.run(task)
         self.logger.debug(f"Job {self.name} finished running")
 
         if self.save_result:

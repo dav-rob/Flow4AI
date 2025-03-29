@@ -12,7 +12,8 @@ class TextCapitalizeJob(JobABC):
     def __init__(self, name: Optional[str] = None, properties: Dict[str, Any] = {}):
         super().__init__(name, properties)
     
-    async def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        inputs = self.get_inputs()
         task_id = inputs.get('task_id', 'unknown')
         logging.info(f"[TASK_TRACK] TextCapitalizeJob START task_id: {task_id}")
         logging.debug(f"TextCapitalizeJob full task: {inputs}")
@@ -38,7 +39,8 @@ class TextReverseJob(JobABC):
     def __init__(self, name: Optional[str] = None, properties: Dict[str, Any] = {}):
         super().__init__(name, properties)
     
-    async def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        inputs = self.get_inputs()
         logging.debug(f"TextReverseJob full task: {inputs}")
         
         # Get task data from previous job
@@ -72,7 +74,8 @@ class TextWrapJob(JobABC):
     def __init__(self, name: Optional[str] = None, properties: Dict[str, Any] = {}):
         super().__init__(name, properties)
     
-    async def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        inputs = self.get_inputs()
         logging.debug(f"TextWrapJob full task: {inputs}")
         
         # Get task data from previous job

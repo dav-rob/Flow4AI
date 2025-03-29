@@ -150,7 +150,7 @@ def test_execute_job_graph_from_dsl():
     add = lambda x: x+3
     square = lambda x: x**2
     
-    def collate(j_ctx):
+    def test_context(j_ctx):
         task = j_ctx["task"]
         inputs = j_ctx["inputs"]
         return {"task": task, "inputs": inputs}
@@ -170,16 +170,20 @@ def test_execute_job_graph_from_dsl():
             "add": add,
             "square": square,
             "aggregator": aggregator,
-            "collate": collate
+            "test_context": test_context
         })
+
+    jobs["times"].save_result = True
+    jobs["add"].save_result = True
+    jobs["square"].save_result = True
 
     dsl:DSLComponent = (
         p(jobs["analyzer2"], jobs["cache_manager"], jobs["times"]) 
         >> jobs["transformer"] 
         >> jobs["formatter"] 
         >> (jobs["add"] | jobs["square"]) 
+        >> jobs["test_context"]
         >> jobs["aggregator"] 
-        >> jobs["collate"]
     )
         
     tm = TaskManager()
@@ -211,5 +215,10 @@ def test_execute_job_graph_from_dsl():
         # Raise exception with all errors
         raise Exception("Errors occurred during job execution:\n" + "\n".join(error_messages))
     
-
+    print("\nResults:")
+    print(results["completed"].values())
+    result_dict = list(results["completed"].values())[0][0]["result"] # [0]= first job, [0]= result dict for that job
+    assert result_dict["result"] == "Processor test_execute_job_graph_from_dsl$$$$aggregator$$ of type aggregate"
+    assert result_dict["task_pass_through"] == task
+    assert result_dict["SAVED_RESULTS"] == {"times": 2, "add": 5, "square": 9}
     

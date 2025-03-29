@@ -57,15 +57,17 @@ class WrappingJob(JobABC):
             non_context_params = [param for param in sig.parameters if param != self.FN_CONTEXT]
             requires_non_context_params = bool(non_context_params)
 
+        parsed_name = JobABC.parse_job_name(self.name)
+        short_name = self.name if parsed_name == "UNSUPPORTED NAME FORMAT" else parsed_name
         # Only check for parameters if the callable requires non-context parameters
-        if requires_non_context_params and self.name not in params:
-            raise ValueError(f"No parameters found for callable '{self.name}'")  
+        if requires_non_context_params and short_name not in params:
+            raise ValueError(f"No parameters found for callable '{short_name}'")  
 
         # If no parameters are required, use empty args and kwargs
-        if not requires_params or self.name not in params:
+        if not requires_params or short_name not in params:
             callable_params = {"args": [], "kwargs": {}}
         else:
-            callable_params = self._create_callable_params(params[self.name])
+            callable_params = self._create_callable_params(params[short_name])
 
         # Add context to the kwargs if the callable accepts it
         if self.FN_CONTEXT in sig.parameters:
