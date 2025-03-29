@@ -1,5 +1,6 @@
 import asyncio
 import os
+from unittest.mock import MagicMock
 
 import pytest
 import yaml
@@ -65,13 +66,14 @@ async def test_job_instantiation_and_execution(job_factory: JobFactory):
         job_type="MockJob",
         job_def={"properties": {"test_param": "test_value"}}
     )
+    mock_job.get_inputs = MagicMock(return_value={"test_job_input": "test_value"})
     
     # Verify job creation
     assert mock_job is not None
     assert mock_job.name == "test_mock_job"
     
     # Run the job with required inputs
-    result = await mock_job.run(inputs={"test_input": "test_value"})
+    result = await mock_job.run(task={})
     assert result is not None
     assert mock_job.name in result
 

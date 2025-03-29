@@ -55,7 +55,8 @@ async def test_concurrency_by_expected_returns():
 
 
 class A(JobABC):
-  async def run(self, inputs: Dict[str, Any]) -> Any:
+  async def run(self, task: Dict[str, Any]) -> Any:
+    inputs = self.get_inputs()
     print(f"\nA expected inputs: {self.expected_inputs}")
     print(f"A data inputs: {inputs}")
     dataA:dict = {
@@ -66,7 +67,8 @@ class A(JobABC):
     return dataA
 
 class B(JobABC):
-  async def run(self, inputs: Dict[str, Any]) -> Any:
+  async def run(self, task: Dict[str, Any]) -> Any:
+    inputs = self.get_inputs()
     print(f"\nB expected inputs: {self.expected_inputs}")
     print(f"B data inputs: {inputs}")
     dataB:dict = {
@@ -77,7 +79,8 @@ class B(JobABC):
     return dataB
 
 class C(JobABC):
-  async def run(self, inputs: Dict[str, Any]) -> Any:
+  async def run(self, task: Dict[str, Any]) -> Any:
+    inputs = self.get_inputs()
     print(f"\nC expected inputs: {self.expected_inputs}")
     print(f"C data inputs: {inputs}")
     dataC:dict = {
@@ -88,7 +91,8 @@ class C(JobABC):
     return dataC
 
 class D(JobABC):
-  async def run(self, inputs: Dict[str, Any]) -> Any:
+  async def run(self, task: Dict[str, Any]) -> Any:
+    inputs = self.get_inputs()
     print(f"\nD expected inputs: {self.expected_inputs}")
     print(f"D data inputs: {inputs}")
     dataD:dict = {

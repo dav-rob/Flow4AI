@@ -115,7 +115,8 @@ def collect_result(results):
 
 
 class A(JobABC):
-  async def run(self, inputs: Dict[str, Any]) -> Any:
+  async def run(self, task: Dict[str, Any]) -> Any:
+    inputs = self.get_inputs()
     print(f"\nA expected inputs: {self.expected_inputs}")
     print(f"A data inputs: {inputs}")
     dataA:dict = {
@@ -126,7 +127,8 @@ class A(JobABC):
     return dataA
 
 class B(JobABC):
-  async def run(self, inputs: Dict[str, Any]) -> Any:
+  async def run(self, task: Dict[str, Any]) -> Any:
+    inputs = self.get_inputs()
     print(f"\nB expected inputs: {self.expected_inputs}")
     print(f"B data inputs: {inputs}")
     dataB:dict = {
@@ -137,7 +139,8 @@ class B(JobABC):
     return dataB
 
 class C(JobABC):
-  async def run(self, inputs: Dict[str, Any]) -> Any:
+  async def run(self, task: Dict[str, Any]) -> Any:
+    inputs = self.get_inputs()
     print(f"\nC expected inputs: {self.expected_inputs}")
     print(f"C data inputs: {inputs}")
     dataC:dict = {
@@ -148,7 +151,8 @@ class C(JobABC):
     return dataC
 
 class D(JobABC):
-  async def run(self, inputs: Dict[str, Any]) -> Any:
+  async def run(self, task: Dict[str, Any]) -> Any:
+    inputs = self.get_inputs()
     print(f"\nD expected inputs: {self.expected_inputs}")
     print(f"D data inputs: {inputs}")
     dataD:dict = {
@@ -159,27 +163,27 @@ class D(JobABC):
     return dataD
 
 class E(MockJob):
-    async def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(self, task: Dict[str, Any]) -> Dict[str, Any]:
         return {'result': f'processed by {self.name}'}
 
 class F(MockJob):
-    async def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(self, task: Dict[str, Any]) -> Dict[str, Any]:
         return {'result': f'processed by {self.name}'}
 
 class G(MockJob):
-    async def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(self, task: Dict[str, Any]) -> Dict[str, Any]:
         return {'result': f'processed by {self.name}'}
 
 class H(MockJob):
-    async def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(self, task: Dict[str, Any]) -> Dict[str, Any]:
         return {'result': f'processed by {self.name}'}
 
 class I(MockJob):
-    async def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(self, task: Dict[str, Any]) -> Dict[str, Any]:
         return {'result': f'processed by {self.name}'}
 
 class J(MockJob):
-    async def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(self, task: Dict[str, Any]) -> Dict[str, Any]:
         return {'result': f'processed by {self.name}'}
 
 jobs = {
