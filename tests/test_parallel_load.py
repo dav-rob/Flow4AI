@@ -23,11 +23,11 @@ class DelayedJob(JobABC):
         super().__init__(name)
         self.time_delay = time_delay
 
-    async def run(self, inputs) -> dict:
+    async def run(self, task) -> dict:
         """Execute a delayed job with tracing."""
-        logger.info(f"Executing DelayedJob for {inputs} with delay {self.time_delay}")
+        logger.info(f"Executing DelayedJob for {task} with delay {self.time_delay}")
         await asyncio.sleep(self.time_delay)  # Use specified delay
-        return {"task": inputs, "status": "complete"}
+        return {"task": task, "status": "complete"}
 
 def create_delayed_job(params: dict) -> JobABC:
     time_delay = params.get('time_delay', 1.0)
