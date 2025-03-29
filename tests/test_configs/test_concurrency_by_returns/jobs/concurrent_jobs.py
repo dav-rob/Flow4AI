@@ -26,17 +26,17 @@ class ConcurrencyTestJob(JobABC):
         offset = random.random() * 0.1  # Random offset within the decile
         return base + offset
 
-    async def run(self, inputs):
+    async def run(self, task):
         await asyncio.sleep(self.get_random_sleep_duration())
         received_data = []
         if not self.is_head_job(): 
             for short_job_name in self.test_inputs: # self.test_input is guaranteed to be in the order it is loaded in
-                data = self.get_input_from(inputs,short_job_name)
+                data = self.get_input_from(task,short_job_name)
                 if not data:
                     logging.error(f"Failed to get input from {short_job_name}")
                     raise Exception(f"Job {self.name} failed to get input from {short_job_name}")
                 received_data.append(data['result']) # return from run() from parent job is a str it is converted to dict.
-        task = self.get_task(inputs)
+        #task = self.get_task(task)
         await asyncio.sleep(self.get_random_sleep_duration())
         short_job_name = self.parse_job_name(self.name)
         received_data.append(f"{short_job_name}")

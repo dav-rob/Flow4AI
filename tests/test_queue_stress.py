@@ -23,18 +23,18 @@ class StressTestJob(JobABC):
     def __init__(self):
         super().__init__(name="StressTestJob")
     
-    async def run(self, inputs):
-        inputs = inputs[self.name] if isinstance(inputs, dict) and self.name in inputs else inputs
-        if isinstance(inputs, dict):
-            if inputs.get('memory_intensive'):
+    async def run(self, task):
+        task = task[self.name] if isinstance(task, dict) and self.name in task else task
+        if isinstance(task, dict):
+            if task.get('memory_intensive'):
                 # Create temporary large data
-                large_data = [i for i in range(inputs.get('size', 1000000))]
-                return {'task': inputs, 'data_size': len(large_data)}
-            if inputs.get('cpu_intensive'):
+                large_data = [i for i in range(task.get('size', 1000000))]
+                return {'task': task, 'data_size': len(large_data)}
+            if task.get('cpu_intensive'):
                 # Perform CPU-intensive calculation
-                result = sum(i * i for i in range(inputs.get('iterations', 1000000)))
-                return {'task': inputs, 'result': result}
-        return {'task': inputs, 'completed': True}
+                result = sum(i * i for i in range(task.get('iterations', 1000000)))
+                return {'task': task, 'result': result}
+        return {'task': task, 'completed': True}
 
 def get_process_memory(pid):
     """Get memory usage of a specific process"""

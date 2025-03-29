@@ -21,9 +21,9 @@ class ResultTimingJob(JobABC):
         super().__init__("Result Timing Job")
         self.executed_tasks = set()
 
-    async def run(self, inputs) -> dict:
+    async def run(self, task) -> dict:
         # Extract the actual task from the wrapped task
-        actual_task = inputs.get(self.name, inputs)
+        actual_task = task.get(self.name, task)
         # Record task execution using the task string
         if isinstance(actual_task, dict) and 'task' in actual_task:
             task_str = actual_task['task']

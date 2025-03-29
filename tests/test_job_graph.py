@@ -20,10 +20,10 @@ class DelayedMockJob(MockJob):
         super().__init__(name=name)
         self.delay = delay
 
-    async def run(self, inputs):
-        inputs = inputs[self.name]  # Get the task from inputs dict
+    async def run(self, task):
+        task = task[self.name]  # Get the task from inputs dict
         await asyncio.sleep(self.delay)
-        return {'input': inputs, 'output': f'processed by {self.name}'}
+        return {'input': task, 'output': f'processed by {self.name}'}
 
 def test_job_name_always_present():
     # Test with explicit name

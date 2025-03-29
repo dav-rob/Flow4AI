@@ -233,10 +233,10 @@ def test_tracer_factory_detailed_on(trace_file, setup_file_exporter):
 def test_job_metaclass_tracing(trace_file, setup_file_exporter):
     """Test that JobABC metaclass properly applies detailed tracing"""
     class TestJob(JobABC):
-        async def run(self, inputs):
+        async def run(self, task):
             # strings are converted to dicts with {'task':,<the string>}
             # Extract just the task data we need
-            task_data = inputs['task'] if isinstance(inputs, dict) else inputs
+            task_data = task['task'] if isinstance(task, dict) else task
             return {"result": task_data}
             
     async def run_job(job_set):
