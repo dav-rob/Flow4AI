@@ -1,7 +1,7 @@
 import asyncio
 import threading
 from collections import defaultdict, deque
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Callable
 
 import jobchain.jc_logging as logging
 from jobchain.dsl_graph import PrecedenceGraph, dsl_to_precedence_graph
@@ -24,8 +24,9 @@ class TaskManager:
                 cls._instance.__initialized = False
         return cls._instance
 
-    def __init__(self, file_config=False):
+    def __init__(self, file_config=False, completion_callback: Optional[Callable[[Any], None]] = None):
         self.file_config = file_config
+        self._completion_callback = completion_callback
         if not hasattr(self, '_TaskManager__initialized') or not self.__initialized:
             with self._lock:
                 if not hasattr(self, '_TaskManager__initialized') or not self.__initialized:
@@ -110,12 +111,22 @@ class TaskManager:
         )
 
     def _handle_completion(self, future, job: JobABC, task: Task):
+        result = None
+        exception = None
         try:
             result = future.result()
             with self._data_lock:
                 self.completed_count += 1
                 self.completed_results[job.name].append(result)
+                
+            if self._completion_callback:
+                try:
+                    self._completion_callback(result)
+                except Exception as callback_e:
+                    self.logger.error(f"Error executing completion callback for job {job.name}, task {task.task_id}: {callback_e}", exc_info=True)
+       
         except Exception as e:
+            exception = e
             self.logger.error(f"Error processing result: {e}")
             self.logger.info("Detailed stack trace:", exc_info=True)
             with self._data_lock:
@@ -124,7 +135,8 @@ class TaskManager:
                     "error": e,
                     "task": task
                 })
-    
+
+
     def add_dsl(self, dsl: DSLComponent, jobs: JobsDict, graph_name: str, variant: str = "") -> str:
         """
         Adds a graph to the task manager.
@@ -286,4 +298,3 @@ class TaskManager:
         # Check one last time before returning
         counts = self.get_counts()
         return counts['submitted'] == (counts['completed'] + counts['errors'])
-
