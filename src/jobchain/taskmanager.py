@@ -1,7 +1,7 @@
 import asyncio
 import threading
 from collections import defaultdict, deque
-from typing import Any, Dict, List, Optional, Union, Callable
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import jobchain.jc_logging as logging
 from jobchain.dsl_graph import PrecedenceGraph, dsl_to_precedence_graph
@@ -17,7 +17,7 @@ class TaskManager:
     _instance = None
     _lock = threading.Lock()  # Class-level lock for singleton creation
 
-    def __new__(cls):
+    def __new__(cls, *args, **kwargs):  # Accept arbitrary arguments
         with cls._lock:
             if cls._instance is None:
                 cls._instance = super().__new__(cls)
@@ -120,10 +120,8 @@ class TaskManager:
                 self.completed_results[job.name].append(result)
                 
             if self._completion_callback:
-                try:
-                    self._completion_callback(result)
-                except Exception as callback_e:
-                    self.logger.error(f"Error executing completion callback for job {job.name}, task {task.task_id}: {callback_e}", exc_info=True)
+                #try: don't catch the exception let it bubble up
+                self._completion_callback(result)
        
         except Exception as e:
             exception = e

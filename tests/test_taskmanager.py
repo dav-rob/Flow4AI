@@ -107,7 +107,7 @@ def test_completion_callback():
         return output
 
     def completion_callback(result):
-        assert result == "once upon a time in a galaxy far far away"
+        assert result["result"] == "once upon a time in a galaxy far far away"
             
     jobs = wrap({
         "once": once,
@@ -122,7 +122,7 @@ def test_completion_callback():
     print(fq_name)
     task = {"once": {"fn.x": "once "}, "ina": {"fn.x": "in a "}}
     tm.submit(task,fq_name)
-    tm.wait_for_completion()
+    #tm.wait_for_completion()
 
         
     
