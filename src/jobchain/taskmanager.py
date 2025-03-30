@@ -114,10 +114,7 @@ class TaskManager:
             result = future.result()
             with self._data_lock:
                 self.completed_count += 1
-                self.completed_results[job.name].append({
-                    "result": result,
-                    "task": task
-                })
+                self.completed_results[job.name].append(result)
         except Exception as e:
             self.logger.error(f"Error processing result: {e}")
             self.logger.info("Detailed stack trace:", exc_info=True)

@@ -217,7 +217,7 @@ def test_execute_job_graph_from_dsl():
     
     print("\nResults:")
     print(results["completed"].values())
-    result_dict = list(results["completed"].values())[0][0]["result"] # [0]= first job, [0]= result dict for that job
+    result_dict = list(results["completed"].values())[0][0] # [0]= first job
     assert result_dict["result"] == "Processor test_execute_job_graph_from_dsl$$$$aggregator$$ of type aggregate"
     assert result_dict["task_pass_through"] == task
     assert result_dict["SAVED_RESULTS"] == {"times": 2, "add": 5, "square": 9}
