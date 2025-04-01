@@ -24,9 +24,9 @@ class TaskManager:
                 cls._instance.__initialized = False
         return cls._instance
 
-    def __init__(self, file_config=False, completion_callback: Optional[Callable[[Any], None]] = None):
+    def __init__(self, file_config=False, on_complete: Optional[Callable[[Any], None]] = None):
         self.file_config = file_config
-        self._completion_callback = completion_callback
+        self.on_complete = on_complete
         if not hasattr(self, '_TaskManager__initialized') or not self.__initialized:
             with self._lock:
                 if not hasattr(self, '_TaskManager__initialized') or not self.__initialized:
@@ -119,9 +119,9 @@ class TaskManager:
                 self.completed_count += 1
                 self.completed_results[job.name].append(result)
                 
-            if self._completion_callback:
+            if self.on_complete:
                 #try: don't catch the exception let it bubble up
-                self._completion_callback(result)
+                self.on_complete(result)
        
         except Exception as e:
             exception = e

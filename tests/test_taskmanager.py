@@ -1,9 +1,14 @@
-
+import asyncio
+import time
 from typing import Any, Dict
 
+import jobchain.jc_logging as logging
 from jobchain.dsl import DSLComponent, JobsDict, p, wrap
 from jobchain.job import JobABC
 from jobchain.taskmanager import TaskManager
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class ProcessorJob(JobABC):
@@ -101,7 +106,8 @@ def test_completion_callback():
     once = lambda x: x + "upon a time"
     ina = lambda x: x + "galaxy far far away"
 
-    def collate(j_ctx):
+    async def collate(j_ctx):
+        await asyncio.sleep(2)
         inputs = j_ctx["inputs"]
         output = f"{inputs['once']['result']} {inputs['ina']['result']}"
         return output
@@ -117,12 +123,52 @@ def test_completion_callback():
 
     dsl =(jobs["once"] | jobs["ina"] ) >> jobs["collate"]
         
-    tm = TaskManager(completion_callback=completion_callback)
+    tm = TaskManager(on_complete=completion_callback)
     fq_name =tm.add_dsl(dsl, jobs, "test_completion_callback")
     print(fq_name)
     task = {"once": {"fn.x": "once "}, "ina": {"fn.x": "in a "}}
     tm.submit(task,fq_name)
-    #tm.wait_for_completion()
+    tm.wait_for_completion()
 
-        
-    
+class DelayedJob(JobABC):
+    async def run(self, task):
+        short_name = self.parse_job_name(self.name)
+        delay = task[short_name]
+        logger.info(f"Executing DelayedJob for {task} with delay {delay}")
+        await asyncio.sleep(delay)
+        return {"status": f"{self.name} complete"}
+
+def create_tm(graph_name:str):
+    jobs = {"delayed": DelayedJob("delayed")}
+    dsl = jobs["delayed"]
+    tm = TaskManager(on_complete=lambda x: print(f"received {x}"))
+    fq_name = tm.add_dsl(dsl, jobs, graph_name)
+    return tm, fq_name
+
+def test_delay(delay):
+    tm, fq_name = create_tm("test_parallel_execution" + str(delay))
+    task = {"delayed": delay}
+    start_time = time.perf_counter()
+    for i in range(10):
+        tm.submit(task, fq_name)
+    tm.wait_for_completion()
+    end_time = time.perf_counter()
+    execution_time = end_time - start_time
+    logger.info(f"Execution time: {execution_time}")
+    return execution_time, tm
+
+def test_parallel_execution():
+    execution_time, tm = test_delay(1.0)
+    result_count = tm.get_counts()
+    assert result_count["errors"] == 0, f"{result_count['errors']} errors occurred during job execution"
+    assert execution_time < 1.5
+
+    execution_time, tm = test_delay(2.0)
+    result_count = tm.get_counts()
+    assert result_count["errors"] == 0, f"{result_count['errors']} errors occurred during job execution"
+    assert execution_time < 2.5
+
+
+
+
+
