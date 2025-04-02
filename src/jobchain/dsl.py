@@ -66,17 +66,14 @@ def wrap(obj=None, **kwargs):
     
     Enhanced functionality:
     1. Single object wrapping:
-       wrap(obj) - wraps the object in a JobABC subclass WrappingJob
-    
-    2. Single named object wrapping:
-       wrap(object_name=object) or wrap({"object_name": object})
        - For JobABC instances: sets the name property and returns the instance
        - For Serial/Parallel: returns the object unchanged
        - For other objects: creates a WrappingJob with the given name
     
-    3. Multiple object wrapping:
+    2. dict (kwargs) object wrapping:
        wrap(obj_a_name=obj_a, obj_b_name=obj_b) or wrap({"obj_a_name": obj_a, "obj_b_name": obj_b})
-       - Returns a collection of wrapped objects following the rules in case 2
+       - Returns a collection of wrapped objects following the rules in case 1
+       - If only one item, returns a dict with the name as key and the wrapped object as value
     """
     # Case 1: Only keyword arguments provided (no positional argument)
     if obj is None and kwargs:
@@ -109,8 +106,8 @@ def wrap(obj=None, **kwargs):
                 result[name] = WrappingJob(value, name)
         
         # If only one item, return just that item
-        if len(result) == 1:
-            return next(iter(result.values()))
+        # if len(result) == 1:
+        #     return next(iter(result.values()))
         return result
     
     # Case 3: Original behavior - single object
