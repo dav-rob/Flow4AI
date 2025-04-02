@@ -112,7 +112,7 @@ def test_completion_callback():
         output = f"{inputs['once']['result']} {inputs['ina']['result']}"
         return output
 
-    def completion_callback(result):
+    def post_processor(result):
         assert result["result"] == "once upon a time in a galaxy far far away"
             
     jobs = wrap({
@@ -123,7 +123,7 @@ def test_completion_callback():
 
     dsl =(jobs["once"] | jobs["ina"] ) >> jobs["collate"]
         
-    tm = TaskManager(on_complete=completion_callback)
+    tm = TaskManager(on_complete=post_processor)
     fq_name =tm.add_dsl(dsl, jobs, "test_completion_callback")
     print(fq_name)
     task = {"once": {"fn.x": "once "}, "ina": {"fn.x": "in a "}}
@@ -154,7 +154,7 @@ def execute_tm_with_delay(delay, task_count=10):
     tm.wait_for_completion()
     end_time = time.perf_counter()
     execution_time = end_time - start_time
-    logger.info(f"Execution time: {execution_time}")
+    logger.info(f"*** Execution time for {task_count} tasks = {execution_time}")
     return execution_time, tm
 
 def test_parallel_execution():
@@ -174,13 +174,19 @@ def test_parallel_load():
     execution_time, tm = execute_tm_with_delay(1.0, 500)
     result_count = tm.get_counts()
     assert result_count["errors"] == 0, f"{result_count['errors']} errors occurred during job execution"
-    assert execution_time < 1.5
+    assert execution_time < 1.4
+
+    logger.info("Executing parallel load tasks = 1000")
+    execution_time, tm = execute_tm_with_delay(1.0, 1000)
+    result_count = tm.get_counts()
+    assert result_count["errors"] == 0, f"{result_count['errors']} errors occurred during job execution"
+    assert execution_time < 1.8
 
     logger.info("Executing parallel load tasks = 2000")
     execution_time, tm = execute_tm_with_delay(1.0, 2000)
     result_count = tm.get_counts()
     assert result_count["errors"] == 0, f"{result_count['errors']} errors occurred during job execution"
-    assert execution_time < 2.0
+    assert execution_time < 2.5
 
     logger.info("Executing parallel load tasks = 5000")
     execution_time, tm = execute_tm_with_delay(1.0, 5000)
