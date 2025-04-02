@@ -134,22 +134,22 @@ class DelayedJob(JobABC):
     async def run(self, task):
         short_name = self.parse_job_name(self.name)
         delay = task[short_name]
-        logger.info(f"Executing DelayedJob for {task} with delay {delay}")
+        logger.debug(f"Executing DelayedJob for {task} with delay {delay}")
         await asyncio.sleep(delay)
         return {"status": f"{self.name} complete"}
 
 def create_tm(graph_name:str):
-    jobs = {"delayed": DelayedJob("delayed")}
+    jobs = wrap({"delayed": DelayedJob()})
     dsl = jobs["delayed"]
-    tm = TaskManager(on_complete=lambda x: print(f"received {x}"))
+    tm = TaskManager(on_complete=lambda x: logger.debug(f"received {x}"))
     fq_name = tm.add_dsl(dsl, jobs, graph_name)
     return tm, fq_name
 
-def test_delay(delay):
+def execute_tm_with_delay(delay, task_count=10):
     tm, fq_name = create_tm("test_parallel_execution" + str(delay))
     task = {"delayed": delay}
     start_time = time.perf_counter()
-    for i in range(10):
+    for i in range(task_count):
         tm.submit(task, fq_name)
     tm.wait_for_completion()
     end_time = time.perf_counter()
@@ -158,15 +158,35 @@ def test_delay(delay):
     return execution_time, tm
 
 def test_parallel_execution():
-    execution_time, tm = test_delay(1.0)
+    execution_time, tm = execute_tm_with_delay(1.0)
     result_count = tm.get_counts()
     assert result_count["errors"] == 0, f"{result_count['errors']} errors occurred during job execution"
     assert execution_time < 1.5
 
-    execution_time, tm = test_delay(2.0)
+    execution_time, tm = execute_tm_with_delay(2.0)
     result_count = tm.get_counts()
     assert result_count["errors"] == 0, f"{result_count['errors']} errors occurred during job execution"
     assert execution_time < 2.5
+
+
+def test_parallel_load():
+    logger.info("Executing parallel load tasks = 500")
+    execution_time, tm = execute_tm_with_delay(1.0, 500)
+    result_count = tm.get_counts()
+    assert result_count["errors"] == 0, f"{result_count['errors']} errors occurred during job execution"
+    assert execution_time < 1.5
+
+    logger.info("Executing parallel load tasks = 2000")
+    execution_time, tm = execute_tm_with_delay(1.0, 2000)
+    result_count = tm.get_counts()
+    assert result_count["errors"] == 0, f"{result_count['errors']} errors occurred during job execution"
+    assert execution_time < 2.0
+
+    logger.info("Executing parallel load tasks = 5000")
+    execution_time, tm = execute_tm_with_delay(1.0, 5000)
+    result_count = tm.get_counts()
+    assert result_count["errors"] == 0, f"{result_count['errors']} errors occurred during job execution"
+    assert execution_time < 4.0
 
 
 
