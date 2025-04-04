@@ -139,8 +139,7 @@ class DelayedJob(JobABC):
         return {"status": f"{self.name} complete"}
 
 def create_tm(graph_name:str):
-    jobs = {"delayed": DelayedJob("delayed")}
-    dsl = jobs["delayed"]
+    dsl = DelayedJob("delayed")
     tm = TaskManager(on_complete=lambda x: logger.debug(f"received {x}"))
     fq_name = tm.add_dsl(dsl, graph_name)
     return tm, fq_name
