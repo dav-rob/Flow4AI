@@ -68,7 +68,7 @@ def test_execute_job_graph_from_dsl():
     tm = TaskManager()
     fq_name =tm.add_dsl(dsl, "test_execute_job_graph_from_dsl")
     print(fq_name)
-    task = {"times": {"fn.x": 1}, "add": {"fn.x": 2}, "square": {"fn.x": 3}}
+    task = {"times.x": 1, "add.x": 2, "square.x": 3}
     tm.submit(task,fq_name)
     success = tm.wait_for_completion()
     assert success, "Timed out waiting for tasks to complete"
@@ -126,7 +126,7 @@ def test_completion_callback():
     tm = TaskManager(on_complete=post_processor)
     fq_name =tm.add_dsl(dsl, "test_completion_callback")
     print(fq_name)
-    task = {"once": {"fn.x": "once "}, "ina": {"fn.x": "in a "}}
+    task = {"once.x": "once ", "ina.x": "in a "}
     tm.submit(task,fq_name)
     tm.wait_for_completion()
 
