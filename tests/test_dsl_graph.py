@@ -221,4 +221,103 @@ def test_execute_job_graph_from_dsl():
     assert result_dict["result"] == "Processor test_execute_job_graph_from_dsl$$$$aggregator$$ of type aggregate"
     assert result_dict["task_pass_through"] == task
     assert result_dict["SAVED_RESULTS"] == {"times": 2, "add": 5, "square": 9}
+
+
+# Test using the shorthand parameter notation
+def test_execute_with_task_params():
+    """
+    Tests job graph execution defined via DSL using shorthand parameter notation
+    for wrapped callables (e.g., {"job.x": value} or {"job": {"x": value}}).
+    """
+    # Define simple callables
+    times = lambda x: x * 2
+    add = lambda x, y=1: x + y # Add a default arg to test args/kwargs override
+    square = lambda x: x**2
+    join = lambda **kwargs: "_".join(map(str, sorted(kwargs.values()))) # Test kwargs
+
+    jobs: JobsDict = wrap({
+        "times": times,
+        "add": add,
+        "square": square,
+        "join": join
+    })
+
+    jobs["times"].save_result = True
+    jobs["add"].save_result = True
+    jobs["square"].save_result = True
+    jobs["join"].save_result = True
+
+
+    # Define DSL Graph (simple linear)
+    dsl: DSLComponent = (
+        jobs["times"]
+        >> jobs["add"]
+        >> jobs["square"]
+        >> jobs["join"]
+    )
+
+    tm = TaskManager()
+    fq_name = tm.add_dsl(dsl, "test_shorthand_params")
+
+    task = {
+        "times": {"x": 5},                   # times(x=5) -> 10
+        "add": {"args": [100], "y": 5},      # add(100, y=5) -> 105 (overrides default y=1), Note: 'args' implicitly takes precedence over named params for positionals
+        "square": {"x": 3},                  # square(x=3) -> 9 # This would be overridden by output of add
+        "join": {"kwargs": {"a": 1, "b": 2, "c": 3}} # join(result=square_output, extra="data") # Result from square (e.g., 105^2) will be passed implicitly if not specified
+    }
+
+    # Submit task and wait
+    tm.submit(task, fq_name)
+    success = tm.wait_for_completion()
+    assert success, "Timed out waiting for tasks to complete"
     
+    results = tm.pop_results()
+    result_dict = list(results["completed"].values())[0][0] # [0]= first job
+    assert result_dict["result"] == "Processor test_shorthand_params$$$$join$$ of type join"
+    assert result_dict["task_pass_through"] == task
+    assert result_dict["SAVED_RESULTS"] == {"times": 10, "add": 105, "square": 9, "join": "1_2_3"}
+
+def test_execute_with_shorthand_task_params():
+    """
+    Tests job graph execution defined via DSL using shorthand parameter notation
+    for wrapped callables (e.g., {"job.x": value} or {"job": {"x": value}}).
+    """
+    # Define simple callables
+    times = lambda x: x * 2
+    add = lambda x, y=1: x + y # Add a default arg to test args/kwargs override
+    square = lambda x: x**2
+    join = lambda **kwargs: "_".join(map(str, sorted(kwargs.values()))) # Test kwargs
+
+    jobs: JobsDict = wrap({
+        "times": times,
+        "add": add,
+        "square": square,
+        "join": join
+    })
+
+    jobs["times"].save_result = True
+    jobs["add"].save_result = True
+    jobs["square"].save_result = True
+    jobs["join"].save_result = True
+
+
+    # Define DSL Graph (simple linear)
+    dsl: DSLComponent = (
+        jobs["times"]
+        >> jobs["add"]
+        >> jobs["square"]
+        >> jobs["join"]
+    )
+
+    tm = TaskManager()
+    fq_name = tm.add_dsl(dsl, "test_shorthand_params")
+    task = {"times.x": 5,"add.args": [100], "add.y": 5, "square.x": 3, "join.kwargs": {"a": 1, "b": 2, "c": 3}} 
+    tm.submit(task, fq_name)
+    success = tm.wait_for_completion()
+    assert success, "Timed out waiting for  tasks to complete"
+    
+    results = tm.pop_results()
+    result_dict = list(results["completed"].values())[0][0] # [0]= first job
+    assert result_dict["result"] == "Processor test_shorthand_params$$$$join$$ of type join"
+    assert result_dict["task_pass_through"] == task
+    assert result_dict["SAVED_RESULTS"] == {"times": 10, "add": 105, "square": 9, "join": "1_2_3"}
