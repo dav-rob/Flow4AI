@@ -45,7 +45,7 @@ def test_complex_JobABC_subclass():
     print(f"DSL: Complex expression with ProcessorJob instances combined with p() and >>")
     
     # Convert to adjacency list
-    graph = dsl_to_precedence_graph(dsl)
+    graph, jobs = dsl_to_precedence_graph(dsl)
     visualize_graph(graph)
     
     # Define expected graph structure
@@ -72,7 +72,7 @@ def test_complex_JobABC_subclass():
     dsl:DSLComponent = (main_pipeline | side_pipeline) >> aggregator
 
     # Convert to adjacency list
-    graph = dsl_to_precedence_graph(dsl)
+    graph, jobs = dsl_to_precedence_graph(dsl)
     visualize_graph(graph)
     
 
@@ -121,7 +121,7 @@ def test_complex_mixed():
     )
         
     # Convert to adjacency list
-    graph = dsl_to_precedence_graph(dsl)
+    graph, jobs = dsl_to_precedence_graph(dsl)
     visualize_graph(graph)
         
     # Define expected graph structure
@@ -187,7 +187,7 @@ def test_execute_job_graph_from_dsl():
     )
         
     tm = TaskManager()
-    fq_name =tm.add_dsl(dsl, jobs, "test_execute_job_graph_from_dsl")
+    fq_name =tm.add_dsl(dsl, "test_execute_job_graph_from_dsl")
     print(fq_name)
     task = {"times": {"fn.x": 1}, "add": {"fn.x": 2}, "square": {"fn.x": 3}}
     tm.submit(task,fq_name)

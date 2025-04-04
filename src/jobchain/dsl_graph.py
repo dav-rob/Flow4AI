@@ -1,9 +1,9 @@
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from jobchain.jobs.wrapping_job import WrappingJob
 
 from . import jc_logging as logging
-from .dsl import Parallel, Serial
+from .dsl import Parallel, Serial, JobsDict
 from .job import JobABC
 
 logger = logging.getLogger(__name__)
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 PrecedenceGraph = Dict[str, Dict[str, List[str]]]
 
-def dsl_to_precedence_graph(dsl_obj) -> PrecedenceGraph:
+def dsl_to_precedence_graph(dsl_obj) -> Tuple[PrecedenceGraph, JobsDict]:
     """
     Convert a DSL object into a precedence graph with nested dictionary.
     
@@ -38,11 +38,12 @@ def dsl_to_precedence_graph(dsl_obj) -> PrecedenceGraph:
     
     # Initialize the graph with empty adjacency nested dictionaries using string representation of jobs
     graph = {job.name: {'next': []} for job in jobs}
+    jobs: JobsDict = {job.name: job for job in jobs}
     
     # Build connections based on DSL structure using the new format
     build_connections(dsl_obj, graph, nested=True)
     
-    return graph
+    return graph, jobs
 
 
 

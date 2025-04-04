@@ -135,7 +135,7 @@ class TaskManager:
                 })
 
 
-    def add_dsl(self, dsl: DSLComponent, jobs: JobsDict, graph_name: str, variant: str = "") -> str:
+    def add_dsl(self, dsl: DSLComponent, graph_name: str, variant: str = "") -> str:
         """
         Adds a graph to the task manager.
         
@@ -152,10 +152,8 @@ class TaskManager:
             raise ValueError("graph_name cannot be None or empty")
         if dsl is None:
             raise ValueError("graph cannot be None")
-        if not jobs:
-            raise ValueError("jobs cannot be None or empty")
-        precedence_graph: PrecedenceGraph = dsl_to_precedence_graph(dsl)
-        return self.add_graph(precedence_graph, jobs, graph_name, variant)
+        graph, jobs = dsl_to_precedence_graph(dsl)
+        return self.add_graph(graph, jobs, graph_name, variant)
         
     def add_dsl_dict(self, dsl_dict: Dict) -> List[str]:
         """
@@ -167,24 +165,20 @@ class TaskManager:
                 {
                     "graph1": {
                         "dev": {
-                            "dsl": dsl1d,
-                            "jobs": jobs1d
+                            "dsl": dsl1d
                         },
                         "prod": {
-                            "dsl": dsl1p,
-                            "jobs": jobs1p
+                            "dsl": dsl1p
                         }
                     }
                 }
                 Or without variants:
                 {
                     "graph1": {
-                        "dsl": dsl1,
-                        "jobs": jobs1
+                        "dsl": dsl1
                     },
                     "graph2": {
-                        "dsl": dsl2,
-                        "jobs": jobs2
+                        "dsl": dsl2
                     }
                 }
         
@@ -201,26 +195,24 @@ class TaskManager:
         
         for graph_name, graph_data in dsl_dict.items():
             # Check if this is a variant structure or direct dsl/jobs
-            if "dsl" in graph_data and "jobs" in graph_data:
+            if "dsl" in graph_data:
                 # No variants, direct dsl/jobs
                 dsl = graph_data.get("dsl")
-                jobs = graph_data.get("jobs")
                 
-                if dsl is None or not jobs:
+                if dsl is None:
                     raise ValueError(f"Graph '{graph_name}' is missing required 'dsl' or 'jobs'")
                     
-                graph_id = self.add_dsl(dsl, jobs, graph_name)
+                graph_id = self.add_dsl(dsl, graph_name)
                 result.append(graph_id)
             else:
                 # With variants
                 for variant, variant_data in graph_data.items():
                     dsl = variant_data.get("dsl")
-                    jobs = variant_data.get("jobs")
                     
-                    if dsl is None or not jobs:
+                    if dsl is None:
                         raise ValueError(f"Graph '{graph_name}' variant '{variant}' is missing required 'dsl' or 'jobs'")
                         
-                    graph_id = self.add_dsl(dsl, jobs, graph_name, variant)
+                    graph_id = self.add_dsl(dsl, graph_name, variant)
                     result.append(graph_id)
         
         return result

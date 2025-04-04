@@ -66,7 +66,7 @@ def test_execute_job_graph_from_dsl():
     )
         
     tm = TaskManager()
-    fq_name =tm.add_dsl(dsl, jobs, "test_execute_job_graph_from_dsl")
+    fq_name =tm.add_dsl(dsl, "test_execute_job_graph_from_dsl")
     print(fq_name)
     task = {"times": {"fn.x": 1}, "add": {"fn.x": 2}, "square": {"fn.x": 3}}
     tm.submit(task,fq_name)
@@ -124,7 +124,7 @@ def test_completion_callback():
     dsl =(jobs["once"] | jobs["ina"] ) >> jobs["collate"]
         
     tm = TaskManager(on_complete=post_processor)
-    fq_name =tm.add_dsl(dsl, jobs, "test_completion_callback")
+    fq_name =tm.add_dsl(dsl, "test_completion_callback")
     print(fq_name)
     task = {"once": {"fn.x": "once "}, "ina": {"fn.x": "in a "}}
     tm.submit(task,fq_name)
@@ -142,7 +142,7 @@ def create_tm(graph_name:str):
     jobs = {"delayed": DelayedJob("delayed")}
     dsl = jobs["delayed"]
     tm = TaskManager(on_complete=lambda x: logger.debug(f"received {x}"))
-    fq_name = tm.add_dsl(dsl, jobs, graph_name)
+    fq_name = tm.add_dsl(dsl, graph_name)
     return tm, fq_name
 
 def execute_tm_with_delay(delay, task_count=10):
