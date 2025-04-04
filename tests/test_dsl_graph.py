@@ -223,7 +223,6 @@ def test_execute_job_graph_from_dsl():
     assert result_dict["SAVED_RESULTS"] == {"times": 2, "add": 5, "square": 9}
 
 
-# Test using the shorthand parameter notation
 def test_execute_with_task_params():
     """
     Tests job graph execution defined via DSL using shorthand parameter notation
@@ -245,7 +244,6 @@ def test_execute_with_task_params():
     jobs["times"].save_result = True
     jobs["add"].save_result = True
     jobs["square"].save_result = True
-    jobs["join"].save_result = True
 
 
     # Define DSL Graph (simple linear)
@@ -273,9 +271,9 @@ def test_execute_with_task_params():
     
     results = tm.pop_results()
     result_dict = list(results["completed"].values())[0][0] # [0]= first job
-    assert result_dict["result"] == "Processor test_shorthand_params$$$$join$$ of type join"
+    assert result_dict["result"] == "1_2_3"
     assert result_dict["task_pass_through"] == task
-    assert result_dict["SAVED_RESULTS"] == {"times": 10, "add": 105, "square": 9, "join": "1_2_3"}
+    assert result_dict["SAVED_RESULTS"] == {"times": 10, "add": 105, "square": 9}
 
 def test_execute_with_shorthand_task_params():
     """
@@ -298,7 +296,6 @@ def test_execute_with_shorthand_task_params():
     jobs["times"].save_result = True
     jobs["add"].save_result = True
     jobs["square"].save_result = True
-    jobs["join"].save_result = True
 
 
     # Define DSL Graph (simple linear)
@@ -318,6 +315,6 @@ def test_execute_with_shorthand_task_params():
     
     results = tm.pop_results()
     result_dict = list(results["completed"].values())[0][0] # [0]= first job
-    assert result_dict["result"] == "Processor test_shorthand_params$$$$join$$ of type join"
+    assert result_dict["result"] == "1_2_3"
     assert result_dict["task_pass_through"] == task
-    assert result_dict["SAVED_RESULTS"] == {"times": 10, "add": 105, "square": 9, "join": "1_2_3"}
+    assert result_dict["SAVED_RESULTS"] == {"times": 10, "add": 105, "square": 9}

@@ -47,6 +47,9 @@ class WrappingJob(JobABC):
 
         params = task if task else self.get_task()  # if calling run() directly in tests use get_task(), "if task" is falsey so fails on {}
 
+        # Process shorthand dot notation params (e.g., "job.param": value)
+        params = self._process_shorthand_params(params)
+
         # Check if the callable requires parameters
         sig = inspect.signature(self.callable)
         requires_params = bool(sig.parameters)
@@ -87,6 +90,40 @@ class WrappingJob(JobABC):
 
         return await self._execute_callable(args, kwargs)
 
+    def _process_shorthand_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Process shorthand dot notation params (e.g., "job.param": value) and
+        convert them to the standard nested format.
+        
+        Args:
+            params: Dictionary of parameters that may contain shorthand notation
+            
+        Returns:
+            Updated parameters dictionary with shorthand notation expanded
+        """
+        result = params.copy()
+        dot_params = {}
+        
+        # Find and collect all shorthand dot notation parameters
+        for key, value in params.items():
+            if '.' in key and not key.startswith('fn.'):
+                job_name, param_name = key.split('.', 1)
+                if job_name not in dot_params:
+                    dot_params[job_name] = {}
+                dot_params[job_name][param_name] = value
+                del result[key]  # Remove the dot notation key from the result
+                
+        # Merge the dot params with the existing job params
+        for job_name, job_params in dot_params.items():
+            if job_name in result:
+                # If the job already exists in the params, merge the parameters
+                result[job_name].update(job_params)
+            else:
+                # Otherwise, create a new entry
+                result[job_name] = job_params
+                
+        return result
+        
     def _create_callable_params(self, params: Dict[str, Any]) -> Dict[str, List[Any]]:
         """
         Extract and normalize parameters for the callable, supporting multiple styles.
@@ -101,19 +138,26 @@ class WrappingJob(JobABC):
         args = self.default_args.copy()
         kwargs = self.default_kwargs.copy()
 
-        # Case 1: Explicit args list
+        # Case 1: Explicit args list via 'fn.args' (legacy) or 'args' (new)
         if "fn.args" in params:
             args = params["fn.args"]
+        elif "args" in params:
+            args = params["args"]
 
-        # Case 2: Explicit kwargs dictionary
+        # Case 2: Explicit kwargs dictionary via 'fn.kwargs' (legacy) or 'kwargs' (new)
         if "fn.kwargs" in params:
             kwargs.update(params["fn.kwargs"])
+        elif "kwargs" in params:
+            kwargs.update(params["kwargs"])
 
-        # Case 3: Named parameters with fn. prefix
+        # Case 3: Named parameters with fn. prefix (legacy)
         for key, value in params.items():
             if key.startswith("fn.") and key not in ["fn.args", "fn.kwargs"]:
                 param_name = key[3:]  # Remove "fn." prefix
                 kwargs[param_name] = value
+            # Case 4: Direct parameter passing (new)
+            elif key not in ["args", "kwargs"]:
+                kwargs[key] = value
 
         return {"args": args, "kwargs": kwargs}
 
