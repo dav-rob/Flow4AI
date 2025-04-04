@@ -106,8 +106,8 @@ def wrap(obj=None, **kwargs):
                 result[name] = WrappingJob(value, name)
         
         # If only one item, return just that item
-        # if len(result) == 1:
-        #     return next(iter(result.values()))
+        if len(result) == 1:
+            return next(iter(result.values()))
         return result
     
     # Case 3: Original behavior - single object
