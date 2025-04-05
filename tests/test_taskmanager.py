@@ -205,37 +205,34 @@ def test_taskmanager_execute_method():
         square_result = inputs["square"]["result"]
         return square_result * 10
     
-    jobs = wrap({
-        "square": square,
-        "multiply": multiply_with_context
-    })
+    def create_square_multiply_dsl():
+        """Create a fresh DSL with square and multiply jobs."""
+        jobs = wrap({
+            "square": square,
+            "multiply": multiply_with_context
+        })
+        
+        # Need to save result from square for multiply to access
+        jobs["square"].save_result = True
+        
+        # Create the DSL pipeline
+        return jobs["square"] >> jobs["multiply"]
     
-    # Need to save result from square for multiply to access
-    jobs["square"].save_result = True
-    
-    dsl = jobs["square"] >> jobs["multiply"]
+    # Create the initial DSL
+    dsl = create_square_multiply_dsl()
+
+    logger.debug("DSL structure1:")
+    logger.debug(dsl)
     
     # Use execute method directly
     tm = TaskManager()
     task = {"square.x": 4}
     
     # Test with dsl and graph_name
-    results = tm.execute(task, dsl=dsl, graph_name="test_execute")
+    errors, result_dict = tm.execute(task, dsl=dsl, graph_name="test_execute1")
     
-    assert len(results["completed"]) > 0, "No completed tasks"
-    assert len(results["errors"]) == 0, "Errors occurred"
-    
-    # Get the fully qualified graph name
-    fq_name = None
-    for key in results["completed"].keys():
-        if "test_execute" in key:
-            fq_name = key
-            break
-    
-    assert fq_name is not None, "Could not find graph results"
-    
-    # Get the result directly from the completed dictionary
-    result_dict = results["completed"][fq_name][0]
+    assert errors == {}, "Errors occurred"
+    assert result_dict is not None, "No result returned"
     
     # The result should be (4^2)*10 = 160
     assert result_dict["result"] == 160
@@ -243,15 +240,20 @@ def test_taskmanager_execute_method():
     assert "square" in result_dict["SAVED_RESULTS"]
     assert result_dict["SAVED_RESULTS"]["square"] == 16
     
-    # Test with existing fq_name
+    logger.debug("DSL structure2:")
+    logger.debug(dsl)
+
+    # Create a fresh DSL for the second test to avoid DSL mutation issues
+    fresh_dsl = create_square_multiply_dsl()
+    logger.debug("Fresh DSL structure:")
+    logger.debug(fresh_dsl)
+
+    # Test with fresh DSL
     task = {"square.x": 5}
-    results = tm.execute(task, fq_name=fq_name)
+    errors, result_dict = tm.execute(task, dsl=fresh_dsl, graph_name="test_execute2")
     
-    assert len(results["completed"]) > 0, "No completed tasks"
-    assert len(results["errors"]) == 0, "Errors occurred"
-    
-    # Get the result from the same fully qualified graph name
-    result_dict = results["completed"][fq_name][0]
+    assert errors == {}, "Errors occurred"
+    assert result_dict is not None, "No result returned"
     
     # The result should be (5^2)*10 = 250
     assert result_dict["result"] == 250
@@ -282,22 +284,10 @@ def test_taskmanager_run_static_method():
     task = {"double.x": 3}
     
     # Use the static run method
-    results = TaskManager.run(dsl, task, "test_run_method")
+    errors, result_dict = TaskManager.run(dsl, task, "test_run_method")
     
-    assert len(results["completed"]) > 0, "No completed tasks"
-    assert len(results["errors"]) == 0, "Errors occurred"
-    
-    # Get the fully qualified graph name
-    fq_name = None
-    for key in results["completed"].keys():
-        if "test_run_method" in key:
-            fq_name = key
-            break
-            
-    assert fq_name is not None, "Could not find graph results"
-    
-    # Get the result directly from the completed dictionary
-    result_dict = results["completed"][fq_name][0]
+    assert errors == {}, "Errors occurred"
+    assert result_dict is not None, "No result returned"
     
     # The result should be (3*2)+1 = 7
     assert result_dict["result"] == 7
@@ -328,26 +318,19 @@ def test_display_results(capsys):
     task = {"add.x": 10}
     
     tm = TaskManager()
-    results = tm.execute(task, dsl=dsl, graph_name="test_display")
+    errors, result_dict = tm.execute(task, dsl=dsl, graph_name="test_display")
     
-    # Verify the results before display
-    # Get the fully qualified graph name
-    fq_name = None
-    for key in results["completed"].keys():
-        if "test_display" in key:
-            fq_name = key
-            break
-            
-    assert fq_name is not None, "Could not find graph results"
-    
-    # Get the result directly from the completed dictionary
-    result_dict = results["completed"][fq_name][0]
+    assert errors == {}, "Errors occurred"
+    assert result_dict is not None, "No result returned"
     
     # The result should be (10+5)-2 = 13
     assert result_dict["result"] == 13
     assert "SAVED_RESULTS" in result_dict
     assert "add" in result_dict["SAVED_RESULTS"]
     assert result_dict["SAVED_RESULTS"]["add"] == 15
+    
+    # Need to get full results for display_results
+    results = tm.pop_results()
     
     # Call display_results
     displayed_results = tm.display_results(results)

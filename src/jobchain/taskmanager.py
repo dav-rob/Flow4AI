@@ -301,7 +301,8 @@ class TaskManager:
             timeout: Maximum time to wait for completion
             
         Returns:
-            Dictionary with completed and error results
+            A tuple of (errors, result) where errors is a list of error dictionaries and
+            result is the result dictionary of the completed job(s)
         
         Raises:
             ValueError: If required parameters are missing
@@ -332,7 +333,12 @@ class TaskManager:
             
             raise Exception("Errors occurred during job execution:\n" + "\n".join(error_messages))
             
-        return results
+        # Extract the result directly using the known fq_name
+        result = None
+        if results["completed"] and fq_name in results["completed"] and results["completed"][fq_name]:
+            result = results["completed"][fq_name][0]
+            
+        return (results["errors"], result)
         
     def get_result(self, results=None, job_name_filter=None):
         """
@@ -369,6 +375,40 @@ class TaskManager:
         result = self.get_result(results, job_name_filter)
         if result and "result" in result:
             return result["result"]
+        return None
+        
+    def get_result_by_graph_name(self, graph_name, results=None):
+        """
+        Get the result dictionary for a specific graph by name.
+        
+        This simplifies result extraction by handling the lookup of the fully qualified name.
+        Note: This method is primarily for backward compatibility - new code should use execute
+        which directly returns the result.
+        
+        Args:
+            graph_name: The graph name used when adding the DSL or executing the task
+            results: Results dictionary from pop_results() or None to use latest results
+            
+        Returns:
+            The result dictionary for the matched graph, or None if not found
+        """
+        if results is None:
+            results = self.pop_results()
+            
+        # Find the fully qualified name based on the graph name
+        fq_name = None
+        for key in results["completed"].keys():
+            if graph_name in key:
+                fq_name = key
+                break
+                
+        if fq_name is None:
+            return None
+            
+        # Get the result dictionary
+        if results["completed"][fq_name]:
+            return results["completed"][fq_name][0]
+            
         return None
         
     # Methods to support a fluent interface
@@ -419,7 +459,8 @@ class TaskManager:
             timeout: Maximum time to wait for completion
             
         Returns:
-            Results dictionary
+            A tuple of (errors, result) where errors is a list of error dictionaries and
+            result is the result dictionary of the completed job(s)
         
         Raises:
             TimeoutError: If tasks don't complete within the timeout period
