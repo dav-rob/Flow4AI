@@ -32,14 +32,6 @@ class TaskManager:
                 if not hasattr(self, '_TaskManager__initialized') or not self.__initialized:
                     self._initialize()
                     self.__initialized = True
-    
-    def __enter__(self):
-        """Context manager entry point."""
-        return self
-        
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit point."""
-        pass  # Resources are handled by the event loop thread
 
     def _initialize(self):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -433,8 +425,8 @@ class TaskManager:
             TimeoutError: If tasks don't complete within the timeout period
             Exception: If any errors occurred during execution
         """
-        with cls() as tm:
-            return tm.execute(task, dsl=dsl, graph_name=graph_name, timeout=timeout)
+        tm = cls()
+        return tm.execute(task, dsl=dsl, graph_name=graph_name, timeout=timeout)
 
     def display_results(self, results=None):
         """
@@ -447,7 +439,7 @@ class TaskManager:
             The results dictionary for chaining
         """
         try:
-            from IPython.display import display, HTML, Markdown
+            from IPython.display import HTML, Markdown, display
             jupyter_available = True
         except ImportError:
             jupyter_available = False

@@ -194,54 +194,6 @@ def test_parallel_load():
     assert execution_time < 4.0
 
 
-def test_taskmanager_context_manager():
-    """Test that TaskManager works properly as a context manager."""
-    # Define a 'times' function that just doubles its input
-    def times(x):
-        return x*2
-        
-    # Define a function that properly uses context to get input from previous job
-    def add_with_context(j_ctx):
-        # Get the inputs from the previous job
-        inputs = j_ctx["inputs"]
-        # Get the times result from inputs
-        times_result = inputs["times"]["result"]
-        # Add 3 to the result
-        return times_result + 3
-    
-    jobs = wrap({
-        "times": times,
-        "add": add_with_context
-    })
-    
-    # Save the result from times so it can be accessed by the add job
-    jobs["times"].save_result = True
-    
-    dsl = jobs["times"] >> jobs["add"]
-    
-    # Use TaskManager as a context manager
-    with TaskManager() as tm:
-        fq_name = tm.add_dsl(dsl, "test_context_manager")
-        # Only need to provide parameter for the 'times' job
-        task = {"times.x": 5}
-        tm.submit(task, fq_name)
-        success = tm.wait_for_completion()
-        assert success, "Timed out waiting for tasks to complete"
-        
-        results = tm.pop_results()
-        assert len(results["completed"]) > 0, "No completed tasks"
-        assert len(results["errors"]) == 0, "Errors occurred"
-        
-        # Extract the result from the job chain
-        # For now let's just take the last job's result
-        result_dict = results["completed"][fq_name][0]
-        
-        # The result should be (5*2)+3 = 13
-        assert result_dict["result"] == 13
-        assert result_dict["task_pass_through"] == task
-        assert result_dict["SAVED_RESULTS"] == {"times": 10}
-
-
 def test_taskmanager_execute_method():
     """Test the execute method of TaskManager which simplifies the workflow."""
     # Define functions that properly work together in a chain
