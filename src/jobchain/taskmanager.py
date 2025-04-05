@@ -32,6 +32,14 @@ class TaskManager:
                 if not hasattr(self, '_TaskManager__initialized') or not self.__initialized:
                     self._initialize()
                     self.__initialized = True
+    
+    def __enter__(self):
+        """Context manager entry point."""
+        return self
+        
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit point."""
+        pass  # Resources are handled by the event loop thread
 
     def _initialize(self):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -288,3 +296,192 @@ class TaskManager:
         # Check one last time before returning
         counts = self.get_counts()
         return counts['submitted'] == (counts['completed'] + counts['errors'])
+        
+    def execute(self, task, dsl=None, graph_name=None, fq_name=None, timeout=10):
+        """
+        Simplified execution method that handles the entire workflow.
+        
+        Args:
+            task: The task to process
+            dsl: Optional DSL component (if not using an existing graph)
+            graph_name: Name for the graph if providing a DSL
+            fq_name: Fully qualified name for an existing graph
+            timeout: Maximum time to wait for completion
+            
+        Returns:
+            Dictionary with completed and error results
+        
+        Raises:
+            ValueError: If required parameters are missing
+            TimeoutError: If tasks don't complete within the timeout period
+            Exception: If any errors occurred during execution
+        """
+        if dsl and graph_name:
+            fq_name = self.add_dsl(dsl, graph_name)
+            
+        if not fq_name:
+            raise ValueError("Either provide both dsl and graph_name or an fq_name")
+            
+        self.submit(task, fq_name)
+        success = self.wait_for_completion(timeout=timeout)
+        
+        if not success:
+            raise TimeoutError(f"Timed out waiting for tasks to complete after {timeout} seconds")
+            
+        results = self.pop_results()
+        
+        # Check for errors and raise if present
+        if results["errors"]:
+            error_messages = []
+            for job_name, job_errors in results["errors"].items():
+                for error_data in job_errors:
+                    error_msg = f"{job_name}: {error_data['error']}"
+                    error_messages.append(error_msg)
+            
+            raise Exception("Errors occurred during job execution:\n" + "\n".join(error_messages))
+            
+        return results
+        
+    def get_result(self, results=None, job_name_filter=None):
+        """
+        Extract a specific result from the completed results.
+        
+        Args:
+            results: Results dictionary from pop_results() or None to use latest results
+            job_name_filter: Optional string to filter job names (e.g., "add" to match jobs containing "add")
+            
+        Returns:
+            The result data dictionary for the matched job, or None if not found
+        """
+        if results is None:
+            results = self.pop_results()
+            
+        # Simple implementation - just find the job with the matching name
+        for job_name, job_results in results["completed"].items():
+            if job_name_filter is None or job_name_filter in job_name:
+                if job_results:  # Make sure there's at least one result
+                    return job_results[0]
+        return None
+        
+    def get_result_value(self, results=None, job_name_filter=None):
+        """
+        Extract just the result value from a specific job result.
+        
+        Args:
+            results: Results dictionary from pop_results() or None to use latest results
+            job_name_filter: Optional string to filter job names
+            
+        Returns:
+            The value of the "result" key for the matched job, or None if not found
+        """
+        result = self.get_result(results, job_name_filter)
+        if result and "result" in result:
+            return result["result"]
+        return None
+        
+    # Methods to support a fluent interface
+    
+    def add_and_submit(self, dsl, task, graph_name="default_graph"):
+        """
+        Add a DSL component and submit a task in one step.
+        
+        Args:
+            dsl: The DSL component defining the job graph
+            task: Task dictionary to process
+            graph_name: Name for the graph
+            
+        Returns:
+            self for method chaining
+        """
+        fq_name = self.add_dsl(dsl, graph_name)
+        self.submit(task, fq_name)
+        return self
+        
+    def wait(self, timeout=10):
+        """
+        Wait for completion and check for success.
+        
+        Args:
+            timeout: Maximum time to wait in seconds
+            
+        Returns:
+            self for method chaining
+            
+        Raises:
+            TimeoutError: If tasks don't complete within the timeout period
+        """
+        success = self.wait_for_completion(timeout=timeout)
+        if not success:
+            raise TimeoutError(f"Timed out waiting for tasks to complete after {timeout} seconds")
+        return self
+
+    @classmethod
+    def run(cls, dsl, task, graph_name="default_graph", timeout=10):
+        """
+        Static helper method for one-line execution of a DSL graph with a task.
+        
+        Args:
+            dsl: The DSL component defining the job graph
+            task: Task dictionary to process
+            graph_name: Name for the graph
+            timeout: Maximum time to wait for completion
+            
+        Returns:
+            Results dictionary
+        
+        Raises:
+            TimeoutError: If tasks don't complete within the timeout period
+            Exception: If any errors occurred during execution
+        """
+        with cls() as tm:
+            return tm.execute(task, dsl=dsl, graph_name=graph_name, timeout=timeout)
+
+    def display_results(self, results=None):
+        """
+        Display results in a Jupyter/Colab-friendly format with rich formatting.
+        
+        Args:
+            results: Results dictionary from pop_results() or None to use latest results
+            
+        Returns:
+            The results dictionary for chaining
+        """
+        try:
+            from IPython.display import display, HTML, Markdown
+            jupyter_available = True
+        except ImportError:
+            jupyter_available = False
+            
+        if results is None:
+            results = self.pop_results()
+        
+        if jupyter_available:
+            # Display in rich Jupyter format
+            if results["completed"]:
+                display(Markdown("## Completed Tasks"))
+                for job_name, job_results in results["completed"].items():
+                    display(Markdown(f"### {job_name}"))
+                    for result_data in job_results:
+                        display(result_data["result"])
+            
+            if results["errors"]:
+                display(Markdown("## Errors"))
+                for job_name, job_errors in results["errors"].items():
+                    display(Markdown(f"### {job_name}"))
+                    for error_data in job_errors:
+                        display(HTML(f"<div style='color:red'>{error_data['error']}</div>"))
+        else:
+            # Fallback to plain text output
+            if results["completed"]:
+                print("\nCompleted tasks:")
+                for job_name, job_results in results["completed"].items():
+                    for result_data in job_results:
+                        print(f"- {job_name}: {result_data['result']}")
+            
+            if results["errors"]:
+                print("\nErrors:")
+                for job_name, job_errors in results["errors"].items():
+                    for error_data in job_errors:
+                        print(f"- {job_name}: {error_data['error']}")
+        
+        return results

@@ -194,6 +194,284 @@ def test_parallel_load():
     assert execution_time < 4.0
 
 
+def test_taskmanager_context_manager():
+    """Test that TaskManager works properly as a context manager."""
+    # Define a 'times' function that just doubles its input
+    def times(x):
+        return x*2
+        
+    # Define a function that properly uses context to get input from previous job
+    def add_with_context(j_ctx):
+        # Get the inputs from the previous job
+        inputs = j_ctx["inputs"]
+        # Get the times result from inputs
+        times_result = inputs["times"]["result"]
+        # Add 3 to the result
+        return times_result + 3
+    
+    jobs = wrap({
+        "times": times,
+        "add": add_with_context
+    })
+    
+    # Save the result from times so it can be accessed by the add job
+    jobs["times"].save_result = True
+    
+    dsl = jobs["times"] >> jobs["add"]
+    
+    # Use TaskManager as a context manager
+    with TaskManager() as tm:
+        fq_name = tm.add_dsl(dsl, "test_context_manager")
+        # Only need to provide parameter for the 'times' job
+        task = {"times.x": 5}
+        tm.submit(task, fq_name)
+        success = tm.wait_for_completion()
+        assert success, "Timed out waiting for tasks to complete"
+        
+        results = tm.pop_results()
+        assert len(results["completed"]) > 0, "No completed tasks"
+        assert len(results["errors"]) == 0, "Errors occurred"
+        
+        # Extract the result from the job chain
+        # For now let's just take the last job's result
+        result_dict = results["completed"][fq_name][0]
+        
+        # The result should be (5*2)+3 = 13
+        assert result_dict["result"] == 13
+        assert result_dict["task_pass_through"] == task
+        assert result_dict["SAVED_RESULTS"] == {"times": 10}
 
 
+def test_taskmanager_execute_method():
+    """Test the execute method of TaskManager which simplifies the workflow."""
+    # Define functions that properly work together in a chain
+    def square(x):
+        return x**2
+        
+    def multiply_with_context(j_ctx):
+        inputs = j_ctx["inputs"]
+        square_result = inputs["square"]["result"]
+        return square_result * 10
+    
+    jobs = wrap({
+        "square": square,
+        "multiply": multiply_with_context
+    })
+    
+    # Need to save result from square for multiply to access
+    jobs["square"].save_result = True
+    
+    dsl = jobs["square"] >> jobs["multiply"]
+    
+    # Use execute method directly
+    tm = TaskManager()
+    task = {"square.x": 4}
+    
+    # Test with dsl and graph_name
+    results = tm.execute(task, dsl=dsl, graph_name="test_execute")
+    
+    assert len(results["completed"]) > 0, "No completed tasks"
+    assert len(results["errors"]) == 0, "Errors occurred"
+    
+    # Get the fully qualified graph name
+    fq_name = None
+    for key in results["completed"].keys():
+        if "test_execute" in key:
+            fq_name = key
+            break
+    
+    assert fq_name is not None, "Could not find graph results"
+    
+    # Get the result directly from the completed dictionary
+    result_dict = results["completed"][fq_name][0]
+    
+    # The result should be (4^2)*10 = 160
+    assert result_dict["result"] == 160
+    assert "SAVED_RESULTS" in result_dict
+    assert "square" in result_dict["SAVED_RESULTS"]
+    assert result_dict["SAVED_RESULTS"]["square"] == 16
+    
+    # Test with existing fq_name
+    task = {"square.x": 5}
+    results = tm.execute(task, fq_name=fq_name)
+    
+    assert len(results["completed"]) > 0, "No completed tasks"
+    assert len(results["errors"]) == 0, "Errors occurred"
+    
+    # Get the result from the same fully qualified graph name
+    result_dict = results["completed"][fq_name][0]
+    
+    # The result should be (5^2)*10 = 250
+    assert result_dict["result"] == 250
+    assert "SAVED_RESULTS" in result_dict
+    assert "square" in result_dict["SAVED_RESULTS"]
+    assert result_dict["SAVED_RESULTS"]["square"] == 25
+
+
+def test_taskmanager_run_static_method():
+    """Test the static run method of TaskManager for one-line execution."""
+    def double(x):
+        return x*2
+        
+    def increment_with_context(j_ctx):
+        inputs = j_ctx["inputs"]
+        double_result = inputs["double"]["result"]
+        return double_result + 1
+    
+    jobs = wrap({
+        "double": double,
+        "increment": increment_with_context
+    })
+    
+    # Save result for the context
+    jobs["double"].save_result = True
+    
+    dsl = jobs["double"] >> jobs["increment"]
+    task = {"double.x": 3}
+    
+    # Use the static run method
+    results = TaskManager.run(dsl, task, "test_run_method")
+    
+    assert len(results["completed"]) > 0, "No completed tasks"
+    assert len(results["errors"]) == 0, "Errors occurred"
+    
+    # Get the fully qualified graph name
+    fq_name = None
+    for key in results["completed"].keys():
+        if "test_run_method" in key:
+            fq_name = key
+            break
+            
+    assert fq_name is not None, "Could not find graph results"
+    
+    # Get the result directly from the completed dictionary
+    result_dict = results["completed"][fq_name][0]
+    
+    # The result should be (3*2)+1 = 7
+    assert result_dict["result"] == 7
+    assert "SAVED_RESULTS" in result_dict
+    assert "double" in result_dict["SAVED_RESULTS"]
+    assert result_dict["SAVED_RESULTS"]["double"] == 6
+
+
+def test_display_results(capsys):
+    """Test the display_results method for plain text output."""
+    def add(x):
+        return x + 5
+        
+    def subtract_with_context(j_ctx):
+        inputs = j_ctx["inputs"]
+        add_result = inputs["add"]["result"]
+        return add_result - 2
+    
+    jobs = wrap({
+        "add": add,
+        "subtract": subtract_with_context
+    })
+    
+    # Save result for context
+    jobs["add"].save_result = True
+    
+    dsl = jobs["add"] >> jobs["subtract"]
+    task = {"add.x": 10}
+    
+    tm = TaskManager()
+    results = tm.execute(task, dsl=dsl, graph_name="test_display")
+    
+    # Verify the results before display
+    # Get the fully qualified graph name
+    fq_name = None
+    for key in results["completed"].keys():
+        if "test_display" in key:
+            fq_name = key
+            break
+            
+    assert fq_name is not None, "Could not find graph results"
+    
+    # Get the result directly from the completed dictionary
+    result_dict = results["completed"][fq_name][0]
+    
+    # The result should be (10+5)-2 = 13
+    assert result_dict["result"] == 13
+    assert "SAVED_RESULTS" in result_dict
+    assert "add" in result_dict["SAVED_RESULTS"]
+    assert result_dict["SAVED_RESULTS"]["add"] == 15
+    
+    # Call display_results
+    displayed_results = tm.display_results(results)
+    
+    # Capture stdout
+    captured = capsys.readouterr()
+    
+    # Verify the output contains expected text
+    assert "Completed tasks:" in captured.out
+    assert "test_display" in captured.out
+    
+    # Verify the returned results are the same as input
+    assert displayed_results == results
+    
+    # Verify we can call display_results without providing results
+    # Use the same graph name as above
+    task = {"add.x": 20}
+    tm.submit(task, fq_name)
+    success = tm.wait_for_completion()
+    assert success, "Timed out waiting for tasks to complete"
+    
+    # Call display_results without providing results
+    tm.display_results()
+    
+    # Capture stdout
+    captured = capsys.readouterr()
+    
+    # Verify the output contains expected text
+    assert "Completed tasks:" in captured.out
+
+
+def test_error_handling_in_execute():
+    """Test that the execute method properly handles errors."""
+    def failing_job(x):
+        raise ValueError("This job intentionally fails")
+    
+    # Create job dictionary with the failing job
+    job_dict = {}
+    single_job = wrap({"failing": failing_job})
+    
+    # Create a DSL with just this single job
+    dsl = single_job
+    task = {"failing.x": 1}
+    
+    tm = TaskManager()
+    
+    # The execute method should raise an exception when a job fails
+    try:
+        tm.execute(task, dsl=dsl, graph_name="test_error_handling")
+        assert False, "execute() did not raise an exception when a job failed"
+    except Exception as e:
+        assert "This job intentionally fails" in str(e), "Unexpected error message"
+
+
+def test_timeout_handling_in_execute():
+    """Test that the execute method properly handles timeouts."""
+    async def slow_job(x):
+        await asyncio.sleep(2)  # Sleep for 2 seconds
+        return x
+    
+    # Create the DSL directly
+    single_job = wrap({"slow": slow_job})
+    
+    # For a single job, just use the job itself as the DSL
+    dsl = single_job
+    task = {"slow.x": 1}
+    
+    tm = TaskManager()
+    
+    # The execute method should raise a TimeoutError when timeout is exceeded
+    try:
+        # Set timeout to 0.1 seconds, which is less than the 2-second sleep
+        tm.execute(task, dsl=dsl, graph_name="test_timeout", timeout=0.1)
+        assert False, "execute() did not raise a TimeoutError when timeout was exceeded"
+    except TimeoutError:
+        pass  # Expected behavior
+    except Exception as e:
+        assert False, f"Unexpected exception: {e}"
 
