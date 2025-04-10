@@ -838,9 +838,9 @@ class TestMixedComposition:
         dsl:DSLComponent = first_stage >> second_stage >> third_stage
         
         # Set up context access for the wrapped jobs with appropriate parameters
-        lambda1_job.get_task = MagicMock(return_value={lambda1_job.name: {"fn.args": ["input_data1"]}})
-        lambda2_job.get_task = MagicMock(return_value={lambda2_job.name: {"fn.args": ["input_data2"]}})
-        lambda3_job.get_task = MagicMock(return_value={lambda3_job.name: {"fn.args": ["input_data3"]}})
+        lambda1_job.get_task = MagicMock(return_value={lambda1_job.name: {"args": ["input_data1"]}})
+        lambda2_job.get_task = MagicMock(return_value={lambda2_job.name: {"args": ["input_data2"]}})
+        lambda3_job.get_task = MagicMock(return_value={lambda3_job.name: {"args": ["input_data3"]}})
         text_proc_job.get_task = MagicMock(return_value={}) # text_proc_job.name: {}
         
         # Execute the workflow
@@ -894,7 +894,7 @@ class TestMixedComposition:
         
         # Set up context access for all WrappingJob instances
         for job in [fn1_job, fn2_job, fn3_job, fn4_job, fn5_job, fn6_job]:
-            job.get_task = MagicMock(return_value={job.name: {"fn.args": ["test_input"]}})
+            job.get_task = MagicMock(return_value={job.name: {"args": ["test_input"]}})
         
         # Execute the workflow
         result = await evaluate(dsl)
@@ -947,7 +947,7 @@ class TestMixedComposition:
         
         # Set up context access for all WrappingJob instances
         for job in [job1, job2, job3, job4, job5, job6, job7, job8, job9, job10, job11]:
-            job.get_task = MagicMock(return_value={job.name: {"fn.args": ["test_input"]}})
+            job.get_task = MagicMock(return_value={job.name: {"args": ["test_input"]}})
         
         # Execute the workflow
         result = await evaluate(graph)
@@ -1018,7 +1018,7 @@ class TestWrappingJob:
         job = WrappingJob(mock_func, name="multi_arg_func")
         
         # Prepare task with positional arguments
-        task = {"multi_arg_func": {"fn.args": [5, 7, 3]}}
+        task = {"multi_arg_func": {"args": [5, 7, 3]}}
         
         # Set up context access to work in tests
         job.get_task = MagicMock(return_value=task)
@@ -1063,7 +1063,7 @@ class TestWrappingJob:
         job = WrappingJob(mock_func, name="custom_obj_func")
         
         # Prepare task with custom object as argument
-        task = {"custom_obj_func": {"fn.args": [custom_obj, 3]}}
+        task = {"custom_obj_func": {"args": [custom_obj, 3]}}
         
         # Set up context access to work in tests
         job.get_task = MagicMock(return_value=task)
@@ -1097,8 +1097,8 @@ class TestWrappingJob:
         # Prepare task with keyword arguments - two ways to provide kwargs
         task = {
             "config_formatter": {
-                # Method 1: Using fn.kwargs dictionary
-                "fn.kwargs": {
+                # Method 1: Using kwargs dictionary
+                "kwargs": {
                     "prefix": "setting_", 
                     "color": "blue", 
                     "size": "large", 
@@ -1130,7 +1130,7 @@ class TestWrappingJob:
         
     @pytest.mark.asyncio
     async def test_wrapped_function_with_fn_prefix_kwargs(self):
-        """Test wrapped function with kwargs using fn. prefix notation."""
+        """Test wrapped function with kwargs using  prefix notation."""
         # Create a function that processes keyword arguments
         def config_processor(mode, timeout=30, debug=False):
             return {
@@ -1147,13 +1147,13 @@ class TestWrappingJob:
         # Create a WrappingJob with the function
         job = WrappingJob(mock_func, name="processor")
         
-        # Prepare task with fn. prefix notation for kwargs
+        # Prepare task with  prefix notation for kwargs
         task = {
             "processor": {
-                # Method 2: Using fn. prefix for individual parameters
-                "fn.mode": "production",
-                "fn.timeout": 60,
-                "fn.debug": True
+                # Method 2: Using  prefix for individual parameters
+                "mode": "production",
+                "timeout": 60,
+                "debug": True
             }
         }
         
@@ -1196,8 +1196,8 @@ class TestWrappingJob:
         # Prepare task with arguments for the lambda
         task = {
             "stats_calculator": {
-                "fn.args": [[10, 15, 7, 22, 8, 11]],  # List of numbers as first arg
-                "fn.kwargs": {
+                "args": [[10, 15, 7, 22, 8, 11]],  # List of numbers as first arg
+                "kwargs": {
                     "calc_median": True,
                     "round_to": 1
                 }
@@ -1247,7 +1247,7 @@ class TestWrappingJob:
             "collate": collate
         })
 
-        task = {"times": {"fn.x": 1}, "add": {"fn.x": 2}, "square": {"fn.x": 3}}
+        task = {"times": {"x": 1}, "add": {"x": 2}, "square": {"x": 3}}
         
         for job in jobs.values():
             job.get_task = MagicMock(return_value=task)
@@ -1257,7 +1257,7 @@ class TestWrappingJob:
         
         result = await evaluate(dsl)
         
-        assert "{'task': {'times': {'fn.x': 1}, 'add': {'fn.x': 2}, 'square': {'fn.x': 3}}, 'inputs': {'test_job_input': 'test_value'}}" in result
+        assert "{'task': {'times': {'x': 1}, 'add': {'x': 2}, 'square': {'x': 3}}, 'inputs': {'test_job_input': 'test_value'}}" in result
         assert "2" in result
         assert "5" in result
         assert "9" in result
@@ -1331,30 +1331,30 @@ class TestComplexDSLExpressions:
         task = {
             # Parameters for math_op
             "math_op": {
-                "fn.args": [5, 7, 3]
+                "args": [5, 7, 3]
             },
             # Parameters for process_data_point
             "process_data_point": {
-                "fn.args": [data_point],
-                "fn.kwargs": {"scaling_factor": 2.0}
+                "args": [data_point],
+                "kwargs": {"scaling_factor": 2.0}
             },
             # Parameters for format_lambda
             "format_lambda": {
-                "fn.args": ["test"],
-                "fn.prefix": "<< ",
-                "fn.suffix": " >>"
+                "args": ["test"],
+                "prefix": "<< ",
+                "suffix": " >>"
             },
             # Parameters for config_builder
             "config_builder": {
-                "fn.kwargs": {
+                "kwargs": {
                     "mode": "testing",
                     "debug": True
                 }
             },
             # Parameters for transform_data
             "transform_data": {
-                "fn.args": [{"value": "sample", "score": 10}, "uppercase", "double"],
-                "fn.kwargs": {
+                "args": [{"value": "sample", "score": 10}, "uppercase", "double"],
+                "kwargs": {
                     "metadata": {"source": "test"},
                     "format": "json",
                     "version": 2
@@ -1481,16 +1481,16 @@ class TestComplexDSLExpressions:
         # Create the task with parameters using the names we'll use in our DSL
         task = {
             "add": {
-                "fn.args": [10, 5]
+                "args": [10, 5]
             },
             "mult": {
-                "fn.args": [15],
-                "fn.factor": 2
+                "args": [15],
+                "factor": 2
             },
             "fmt": {
-                "fn.args": ["Formatted"],
-                "fn.prefix": "[[ ",
-                "fn.suffix": " ]]"
+                "args": ["Formatted"],
+                "prefix": "[[ ",
+                "suffix": " ]]"
             },
             "proc": {
                 "data": "test data"
