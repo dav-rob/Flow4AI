@@ -6,8 +6,7 @@ import os
 import time
 import pytest
 
-from jobchain import jc_logging as logging
-from tests.test_opentelemetry import force_cleanup_all_trace_files
+import jobchain.jc_logging as logging
 
 logger = logging.getLogger(__name__)
 
@@ -21,11 +20,27 @@ def test_zzz_ensure_all_trace_files_cleaned():
     # First delay to allow any pending async operations to complete
     time.sleep(2.0)
     
-    # Perform the aggressive cleanup
-    force_cleanup_all_trace_files()
+    # Perform direct cleanup of trace files
+    test_dir = "tests"
+    try:
+        # Look for any temp_otel_trace files or rotated versions
+        otel_files = [f for f in os.listdir(test_dir) 
+                    if f.startswith("temp_otel_trace")]
+        
+        logger.info(f"Found {len(otel_files)} trace files to remove")
+        
+        for trace_file in otel_files:
+            file_path = os.path.join(test_dir, trace_file)
+            try:
+                if os.path.exists(file_path):
+                    os.unlink(file_path)
+                    logger.info(f"Removed trace file: {trace_file}")
+            except (FileNotFoundError, PermissionError) as e:
+                logger.error(f"Error during cleanup of {trace_file}: {e}")
+    except Exception as e:
+        logger.error(f"Error during cleanup: {e}")
     
     # Verify all files were actually removed
-    test_dir = "tests"
     remaining = [f for f in os.listdir(test_dir) if f.startswith("temp_otel_trace")]
     
     if remaining:
@@ -33,7 +48,16 @@ def test_zzz_ensure_all_trace_files_cleaned():
         # Do a second attempt with longer delay
         logger.info("Attempting final cleanup again with longer delay")
         time.sleep(5.0)
-        force_cleanup_all_trace_files()
+        
+        # Second cleanup attempt for remaining files
+        for trace_file in remaining:
+            file_path = os.path.join(test_dir, trace_file)
+            try:
+                if os.path.exists(file_path):
+                    os.unlink(file_path)
+                    logger.info(f"Removed trace file in second pass: {trace_file}")
+            except (FileNotFoundError, PermissionError) as e:
+                logger.error(f"Error during second cleanup of {trace_file}: {e}")
         
         # Final verification
         remaining = [f for f in os.listdir(test_dir) if f.startswith("temp_otel_trace")]
