@@ -1,20 +1,14 @@
 """
-JobChain Graph module for handling directed acyclic graphs with subgraphs.
+Flow4AI Graph module for handling directed acyclic graphs with subgraphs.
+(Formerly JobChain Graph module)
 Provides functionality for graph traversal, cycle detection, and validation.
 """
 
-import warnings
+from typing import Any, Dict, List, Optional, Set, Tuple
 
-# Import all functionality from flow4ai.f4a_graph
-from flow4ai.f4a_graph import *
+from . import f4a_logging
 
-# Emit deprecation warning
-warnings.warn(
-    "The 'jobchain.jc_graph' module is deprecated. "
-    "Please use 'flow4ai.f4a_graph' instead.",
-    DeprecationWarning,
-    stacklevel=2
-)
+logging = f4a_logging.getLogger(__name__)
 
 
 def has_cycle(graph: Dict[str, Dict[str, Any]], node: str, 
