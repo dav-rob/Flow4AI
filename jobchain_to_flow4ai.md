@@ -1,6 +1,6 @@
-# jobchain_to_flow4ai Features
+# jobchain_to_flow4ai Migration Plan
 
-This document tracks the implementation status of jobchain_to_flow4ai features in our examples.
+This document tracks the phased implementation of the jobchain_to_flow4ai migration.
 
 ## Implementation Status Legend
 
@@ -9,7 +9,44 @@ This document tracks the implementation status of jobchain_to_flow4ai features i
 - [ ] Feature not implemented
 - [~] Feature skipped (see explanation)
 
-## jobchain_to_flow4ai Features
+## Migration Strategy
+
+To make this migration manageable and minimize test breakage, we'll implement the changes in phases. Each phase builds on the previous one while maintaining test integrity where possible.
+
+### Phase 1: Core Configuration & Setup Files
+- [ ] Update `setup.py` with dual package support (both 'jobchain' and 'flow4ai')
+- [ ] Create a compatibility layer in `src/__init__.py` that allows both import styles
+- [ ] Create the `src/flow4ai` directory structure parallel to `src/jobchain`
+- [ ] Copy core module files to the new structure (keeping both versions for now)
+- [ ] Update documentation files to reflect the new name
+- [ ] Add tests to verify dual-package compatibility
+
+### Phase 2: Module File Duplication with Compatibility
+- [ ] Rename the `jc_` prefix to `f4a_` in the new structure (e.g., `jc_logging.py` → `f4a_logging.py`)
+- [ ] Update the package_data reference in `setup.py` to include both "jobchain" and "flow4ai"
+- [ ] Create compatibility imports in the old structure to forward to the new structure
+- [ ] Add deprecation warnings when using old imports
+- [ ] Update the logging system to support both `jobchain.log` and `flow4ai.log`
+
+### Phase 3: Class Names and Update Examples
+- [ ] Create `Flow4AI` class that extends from `JobChain` for compatibility
+- [ ] Update examples to use the new imports and class names
+- [ ] Create a subset of tests that use the new imports
+- [ ] Update environment variables to support both `JOBCHAIN_` and `FLOW4AI_` prefixes
+
+### Phase 4: Gradual Test Migration
+- [ ] Migrate tests in small batches (25% at a time)
+- [ ] For each batch, update imports and class references
+- [ ] Update configuration loading to support both `jobchain` and `flow4ai` directories
+- [ ] Update test paths from `test_jc_config` to `test_f4a_config` while maintaining both
+
+### Phase 5: Complete Migration and Cleanup
+- [ ] Remove compatibility layers and transition fully to new names
+- [ ] Update all remaining documentation
+- [ ] Remove old directory structure and deprecated code
+- [ ] Clean up dual configuration support
+
+## Detailed Changes Required
 
 ### Package and Module Names
 - [ ] Update `setup.py` to change package name from 'jobchain' to 'flow4ai'
