@@ -1,8 +1,7 @@
-import copy
 from typing import Any, Dict, Union
 
-from jobchain import jc_logging as logging
-from jobchain.job import JobABC, Task
+from flow4ai import jc_logging as logging
+from flow4ai.job import JobABC, Task
 
 logger = logging.getLogger(__name__)
 

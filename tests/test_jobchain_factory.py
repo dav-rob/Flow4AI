@@ -12,10 +12,10 @@ from typing import List
 
 import pytest
 
-import jobchain.jc_logging as logging
-from jobchain.job import JobABC
-from jobchain.job_chain import JobChainFactory
-from jobchain.job_loader import ConfigLoader
+from flow4ai import jc_logging as logging
+from flow4ai.job import JobABC
+from flow4ai.job_chain import JobChainFactory
+from flow4ai.job_loader import ConfigLoader
 
 # Global results list for picklable result processing
 RESULTS: List[dict] = []

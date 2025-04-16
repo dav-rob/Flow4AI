@@ -1,7 +1,7 @@
 import re
 import string
 
-import jobchain.jc_logging as logging
+from flow4ai import jc_logging as logging
 
 logger = logging.getLogger(__name__)
 

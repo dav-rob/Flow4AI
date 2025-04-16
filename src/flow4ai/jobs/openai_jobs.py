@@ -4,11 +4,11 @@ from typing import Any, Dict, Optional, Union
 from aiolimiter import AsyncLimiter
 from openai import AsyncOpenAI
 
-import jobchain.jc_logging as logging
-from jobchain.job import JobABC
-from jobchain.job_loader import JobFactory
-from jobchain.utils.api_utils import get_api_key
-from jobchain.utils.llm_utils import check_response_errors, clean_prompt
+from flow4ai.jc_logging import logging
+from flow4ai.job import JobABC
+from flow4ai.job_loader import JobFactory
+from flow4ai.utils.api_utils import get_api_key
+from flow4ai.utils.llm_utils import clean_prompt
 
 logger = logging.getLogger("OpenAIJob")
 

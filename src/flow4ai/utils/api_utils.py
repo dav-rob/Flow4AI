@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
 
-import jobchain.jc_logging as logging
+from flow4ai import jc_logging as logging
 
 logger = logging.getLogger(__name__)
 
