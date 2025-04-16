@@ -1,5 +1,5 @@
-from jobchain.job import JobABC
-from jobchain.job_chain import JobChain
+from flow4ai.job import JobABC
+from flow4ai.job_chain import JobChain
 from tests.test_utils.simple_job import SimpleJob
 
 

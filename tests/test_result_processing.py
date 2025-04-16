@@ -6,14 +6,9 @@
 import asyncio
 import os
 import time
-from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict
 
-import pytest
-
-from jobchain import jc_logging as logging
-from jobchain.job import JobABC
-from jobchain.job_chain import JobChain
+from flow4ai.job import JobABC
+from flow4ai.job_chain import JobChain
 
 
 class ResultTimingJob(JobABC):
