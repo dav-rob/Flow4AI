@@ -3,9 +3,9 @@ import os
 
 import pytest
 
-from jobchain import jc_logging as logging
-from jobchain.job import JobABC, Task
-from jobchain.job_chain import JobChain
+from flow4ai import jc_logging as logging
+from flow4ai.job import JobABC, Task
+from flow4ai.job_chain import JobChain
 
 
 class DebugDelayedJob(JobABC):

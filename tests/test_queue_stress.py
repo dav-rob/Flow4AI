@@ -13,9 +13,9 @@ import time
 import psutil
 import pytest
 
-from jobchain import jc_logging as logging
-from jobchain.job import JobABC
-from jobchain.job_chain import JobChain
+from flow4ai import jc_logging as logging
+from flow4ai.job import JobABC
+from flow4ai.job_chain import JobChain
 
 
 class StressTestJob(JobABC):

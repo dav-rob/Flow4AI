@@ -1,8 +1,8 @@
 """
 Utility functions for evaluating graph objects in tests.
 """
-from jobchain.job import JobABC
-from jobchain.dsl import DSLComponent, Parallel, Serial
+from flow4ai.job import JobABC
+from flow4ai.dsl import DSLComponent, Parallel, Serial
 
 
 class GraphCreator:
