@@ -6,9 +6,9 @@ from typing import Any, Dict
 
 import pytest
 
-import jobchain.jc_logging as logging
-from jobchain.job_chain import JobChain
-from jobchain.job_loader import ConfigLoader
+from flow4ai import jc_logging as logging
+from flow4ai.job_chain import JobChain
+from flow4ai.job_loader import ConfigLoader
 
 test_tasks = [
         {
