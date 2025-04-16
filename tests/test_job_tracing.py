@@ -1,7 +1,7 @@
 import inspect
 from typing import Any, Dict
 
-from jobchain.job import JobABC, _has_own_traced_execute, _is_traced
+from flow4ai.job import JobABC, _has_own_traced_execute, _is_traced
 
 
 class Level1Job(JobABC):

@@ -15,8 +15,8 @@ import asyncio
 
 import pytest
 
-from jobchain.job import JobABC
-from jobchain.job_chain import JobChain
+from flow4ai.job import JobABC
+from flow4ai.job_chain import JobChain
 
 
 class ErrorTestJob(JobABC):
