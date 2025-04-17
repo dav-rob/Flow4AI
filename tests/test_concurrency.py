@@ -8,8 +8,8 @@ from typing import Any, Dict
 import pytest
 
 from flow4ai import f4a_logging as logging
+from flow4ai.flowmanagerMP import FlowManagerMP
 from flow4ai.job import JobABC, Task, job_graph_context_manager
-from flow4ai.job_chain import JobChain
 from flow4ai.job_loader import ConfigLoader, JobFactory
 
 
@@ -31,12 +31,12 @@ async def test_concurrency_by_expected_returns():
     ConfigLoader._set_directories([config_dir])
     
     # Create JobChain with parallel processing
-    job_chain = JobChain(result_processing_function=collector)
-    logging.info(f"Names of jobs in head job: {job_chain.get_job_graph_mapping()}")
+    flowmanagerMP = FlowManagerMP(result_processing_function=collector)
+    logging.info(f"Names of jobs in head job: {flowmanagerMP.get_job_graph_mapping()}")
 
     def submit_task(range_val:int):
         for i in range(range_val):
-            job_chain.submit_task({'task': f'{i}'})
+            flowmanagerMP.submit_task({'task': f'{i}'})
 
     def check_results():
         for result in shared_results:
@@ -48,7 +48,7 @@ async def test_concurrency_by_expected_returns():
 
     submit_task(300)
 
-    job_chain.mark_input_completed() # this waits for all results to be returned
+    flowmanagerMP.mark_input_completed() # this waits for all results to be returned
 
     check_results()
 

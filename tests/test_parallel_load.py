@@ -7,8 +7,8 @@ import pytest
 import yaml
 
 from flow4ai import f4a_logging as logging
+from flow4ai.flowmanagerMP import FlowManagerMP
 from flow4ai.job import JobABC
-from flow4ai.job_chain import JobChain
 from flow4ai.utils.otel_wrapper import TracerFactory
 from tests.test_utils.simple_job import SimpleJobFactory
 
@@ -59,18 +59,18 @@ async def run_parallel_load_test(num_tasks: int) -> float:
     """
     start_time = time.perf_counter()
     
-    job_chain_context = {
+    flowmanagerMP_context = {
             "type": "file",
             "params": {"time_delay": 0.01}  # Very small delay for load testing
         }
-    loaded_job = SimpleJobFactory.load_job(job_chain_context)
-    job_chain = JobChain(loaded_job, dummy_result_processor)
+    loaded_job = SimpleJobFactory.load_job(flowmanagerMP_context)
+    flowmanagerMP = FlowManagerMP(loaded_job, dummy_result_processor)
 
     # Submit all tasks immediately
     for i in range(num_tasks):
-        job_chain.submit_task(f"Task_{i}")
+        flowmanagerMP.submit_task(f"Task_{i}")
     # Indicate there is no more input data to process to initiate shutdown
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
 
     execution_time = time.perf_counter() - start_time
     logger.info(f"\nExecution time for {num_tasks} tasks: {execution_time:.2f}s")
@@ -86,12 +86,12 @@ async def run_sustained_load_test(tasks_per_second: int, duration: int) -> tuple
     Returns:
         tuple[float, float]: (average_latency, max_latency) in seconds
     """
-    job_chain_context = {
+    flowmanagerMP_context = {
         "type": "file",
         "params": {"time_delay": 0.05}  # 50ms baseline processing time
     }
-    loaded_job = SimpleJobFactory.load_job(job_chain_context)
-    job_chain = JobChain(loaded_job, dummy_result_processor)
+    loaded_job = SimpleJobFactory.load_job(flowmanagerMP_context)
+    flowmanagerMP = FlowManagerMP(loaded_job, dummy_result_processor)
     
     start_time = time.perf_counter()
     latencies = []
@@ -103,7 +103,7 @@ async def run_sustained_load_test(tasks_per_second: int, duration: int) -> tuple
     task_count = 0
     while time.perf_counter() - start_time < duration:
         task_start = time.perf_counter()
-        job_chain.submit_task(f"SustainedTask_{task_count}")
+        flowmanagerMP.submit_task(f"SustainedTask_{task_count}")
         task_count += 1
         
         # Record latency
@@ -114,7 +114,7 @@ async def run_sustained_load_test(tasks_per_second: int, duration: int) -> tuple
         await asyncio.sleep(sleep_time)
     
     # Mark completion and calculate metrics
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     avg_latency = sum(latencies) / len(latencies)
     max_latency = max(latencies)
     

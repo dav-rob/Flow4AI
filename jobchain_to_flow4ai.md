@@ -20,7 +20,7 @@ This document tracks the implementation status of jobchain_to_flow4ai features
 ### Import Statements
 - [x] Update all absolute imports (e.g., `import jobchain.f4a_logging as logging` to `import flow4ai.f4a_logging as logging`)
 - [x] Update all relative imports (e.g., `from . import f4a_logging as logging` to `from . import f4a_logging as logging`)
-- [x] Update JobChain class imports (e.g., `from jobchain.job_chain import JobChain` to `from flow4ai.job_chain import JobChain`)
+- [x] Update JobChain class imports (e.g., `from jobchain.flowmanagerMP import JobChain` to `from flow4ai.flowmanagerMP import JobChain`)
 
 ### Class Names
 - [ ] Rename `JobChain` class to `Flow4AI` throughout the codebase
@@ -55,4 +55,4 @@ This document tracks the implementation status of jobchain_to_flow4ai features
 ### Examples
 - [ ] Update all example imports from `jobchain` to `flow4ai`
 - [ ] Update example documentation from `JobChain` to `Flow4AI`
-- [ ] Update example instantiations from `job_chain = JobChain()` to `flow = Flow4AI()`
+- [ ] Update example instantiations from `flowmanagerMP = JobChain()` to `flow = Flow4AI()`

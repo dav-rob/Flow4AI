@@ -14,8 +14,8 @@ import psutil
 import pytest
 
 from flow4ai import f4a_logging as logging
+from flow4ai.flowmanagerMP import FlowManagerMP
 from flow4ai.job import JobABC
-from flow4ai.job_chain import JobChain
 
 
 class StressTestJob(JobABC):
@@ -51,14 +51,14 @@ def test_queue_high_volume():
         results.append(result)
     
     job = StressTestJob()
-    job_chain = JobChain(job, collect_result, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(job, collect_result, serial_processing=True)
     
     # Submit a high volume of tasks
     num_tasks = 10000
     for i in range(num_tasks):
-        job_chain.submit_task({job.name: {'task_id': i}}, job_name=job.name)
+        flowmanagerMP.submit_task({job.name: {'task_id': i}}, job_name=job.name)
     
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     
     assert len(results) == num_tasks
     assert len({r['task']['task_id'] for r in results}) == num_tasks
@@ -70,13 +70,13 @@ def test_queue_memory_pressure():
         results.append(result)
     
     job = StressTestJob()
-    job_chain = JobChain(job, collect_result, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(job, collect_result, serial_processing=True)
     initial_memory = get_process_memory(os.getpid())
     
     # Submit memory-intensive tasks
     num_tasks = 50
     for i in range(num_tasks):
-        job_chain.submit_task({
+        flowmanagerMP.submit_task({
             job.name: {
                 'task_id': i,
                 'memory_intensive': True,
@@ -84,7 +84,7 @@ def test_queue_memory_pressure():
             }
         }, job_name=job.name)
     
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     
     # Verify all tasks completed
     assert len(results) == num_tasks
@@ -102,18 +102,18 @@ def test_queue_backpressure():
         results.append(result)
     
     job = StressTestJob()
-    job_chain = JobChain(job, slow_result_processor, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(job, slow_result_processor, serial_processing=True)
     
     # Submit tasks faster than they can be processed
     num_tasks = 100
     start_time = time.time()
     
     for i in range(num_tasks):
-        job_chain.submit_task({job.name: {'task_id': i}}, job_name=job.name)
+        flowmanagerMP.submit_task({job.name: {'task_id': i}}, job_name=job.name)
         if i % 10 == 0:
             time.sleep(0.001)  # Small delay to prevent overwhelming
     
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     
     # Verify all tasks eventually complete
     assert len(results) == num_tasks
@@ -127,18 +127,18 @@ def test_queue_cpu_intensive():
     def collect_result(result):
         results.append(result)
     
-    job_chain = JobChain(StressTestJob(), collect_result, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(StressTestJob(), collect_result, serial_processing=True)
     
     # Submit CPU-intensive tasks
     num_tasks = 4  # Number of CPU cores typically available
     for i in range(num_tasks):
-        job_chain.submit_task({
+        flowmanagerMP.submit_task({
             'task_id': i,
             'cpu_intensive': True,
             'iterations': 5000000
         })
     
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     
     assert len(results) == num_tasks
     # Verify all tasks produced valid results
@@ -151,7 +151,7 @@ def test_queue_mixed_workload():
         results.append(result)
     
     job = StressTestJob()
-    job_chain = JobChain(job, collect_result, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(job, collect_result, serial_processing=True)
     
     # Submit mix of different task types
     tasks = [
@@ -163,9 +163,9 @@ def test_queue_mixed_workload():
     ]
     
     for task in tasks:
-        job_chain.submit_task({job.name: task}, job_name=job.name)
+        flowmanagerMP.submit_task({job.name: task}, job_name=job.name)
     
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     
     assert len(results) == len(tasks)
     # Verify each task type completed correctly

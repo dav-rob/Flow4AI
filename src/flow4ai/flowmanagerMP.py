@@ -17,9 +17,9 @@ from .job_loader import ConfigLoader, JobFactory
 from .utils.monitor_utils import should_log_task_stats
 
 
-class JobChain:
+class FlowManagerMP:
     """
-    JobChain executes up to thousands of tasks in parallel using one or more Jobs passed into constructor.
+    FlowManagerMP executes up to thousands of tasks in parallel using one or more Jobs passed into constructor.
     Optionally passes results to a pre-existing result processing function after task completion.
 
     Args:
@@ -348,9 +348,9 @@ class JobChain:
         logger.debug(f'Processing data type: {type(data)}')
 
         if isinstance(data, dict):
-            return {k: JobChain._replace_pydantic_models(v) for k, v in data.items()}
+            return {k: FlowManagerMP._replace_pydantic_models(v) for k, v in data.items()}
         elif isinstance(data, list):
-            return [JobChain._replace_pydantic_models(item) for item in data]
+            return [FlowManagerMP._replace_pydantic_models(item) for item in data]
         elif isinstance(data, BaseModel):
             logger.info(f'Converting pydantic model {data.__class__.__name__}')
             return data.model_dump_json()
@@ -403,7 +403,7 @@ class JobChain:
                 job_set = JobABC.job_set(job) #TODO: create a map of job to jobset in _async_worker
                 async with job_graph_context_manager(job_set):
                     result = await job._execute(task)
-                    processed_result = JobChain._replace_pydantic_models(result)
+                    processed_result = FlowManagerMP._replace_pydantic_models(result)
                     logger.info(f"[TASK_TRACK] Completed task {task_id}, returned by job {processed_result[JobABC.RETURN_JOB]}")
 
                     result_queue.put(processed_result)
@@ -531,11 +531,11 @@ class JobChain:
 
 class JobChainFactory:
     _instance = None
-    _job_chain = None
+    _flowmanagerMP = None
 
     def __init__(self, *args, **kwargs):
         if not JobChainFactory._instance:
-            self._job_chain = JobChain(*args, **kwargs)
+            self._flowmanagerMP = FlowManagerMP(*args, **kwargs)
             JobChainFactory._instance = self
 
     @classmethod
@@ -557,7 +557,7 @@ class JobChainFactory:
       return cls._instance
 
     @staticmethod
-    def get_instance()->JobChain:
+    def get_instance()->FlowManagerMP:
         if not JobChainFactory._instance:
             raise RuntimeError("JobChainFactory not initialized")
-        return JobChainFactory._instance._job_chain
+        return JobChainFactory._instance._flowmanagerMP

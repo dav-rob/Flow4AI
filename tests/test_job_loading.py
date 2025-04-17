@@ -7,8 +7,8 @@ import yaml
 
 from flow4ai import f4a_logging as logging
 from flow4ai.f4a_graph import validate_graph
+from flow4ai.flowmanagerMP import FlowManagerMP  # Import JobChain
 from flow4ai.job import JobABC, Task, job_graph_context_manager
-from flow4ai.job_chain import JobChain  # Import JobChain
 from flow4ai.job_loader import ConfigLoader, ConfigurationError, JobFactory
 
 # Test configuration
@@ -352,17 +352,17 @@ async def test_head_jobs_in_jobchain_serial():
         logging.info(f"Processed result: {result}")
     
     # Create JobChain with serial processing to ensure deterministic results
-    job_chain = JobChain(job=None, result_processing_function=result_processor, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(job=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
-    head_jobs = job_chain.get_job_names()
+    head_jobs = flowmanagerMP.get_job_names()
     
     # Submit tasks for each job
     for job in head_jobs:
-        job_chain.submit_task({"task": "Test task"}, job_name=job)
+        flowmanagerMP.submit_task({"task": "Test task"}, job_name=job)
     
     # Mark input as completed and wait for all tasks to finish
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     
     # Convert shared list to regular list for sorting
     results_list = list(results)
@@ -414,17 +414,17 @@ async def test_head_jobs_in_jobchain_parallel():
     ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config")])
     
     # Create JobChain with parallel processing (default)
-    job_chain = JobChain(job=None, result_processing_function=process_result)
+    flowmanagerMP = FlowManagerMP(job=None, result_processing_function=process_result)
     
     # Get head jobs from config to know their names
-    head_jobs = job_chain.get_job_names()
+    head_jobs = flowmanagerMP.get_job_names()
     
     # Submit tasks for each job
     for job in head_jobs:
-        job_chain.submit_task({"task": "Test task"}, job_name=job)
+        flowmanagerMP.submit_task({"task": "Test task"}, job_name=job)
     
     # Mark input as completed and wait for all processing to finish
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     
     # Read results file and verify contents
     with open("count_parallel_results", "r") as f:
@@ -477,7 +477,7 @@ async def test_single_job_multiple_prompts():
     ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_single_job")])
     
     # Create JobChain with parallel processing (default)
-    job_chain = JobChain(result_processing_function=process_prompts)
+    flowmanagerMP = FlowManagerMP(result_processing_function=process_prompts)
 
     prompts = ["what is the capital of france",
     "what is the capital of germany",
@@ -486,10 +486,10 @@ async def test_single_job_multiple_prompts():
     ]
 
     for prompt in prompts:
-        job_chain.submit_task({"prompt": prompt})
+        flowmanagerMP.submit_task({"prompt": prompt})
     
     # Mark input as completed and wait for all processing to finish
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
 
 @pytest.mark.asyncio
 async def test_malformed_configuration():
@@ -546,18 +546,18 @@ async def test_pydantic_jobs_in_jobchain_serial():
         logging.info(f"Processed result: {result}")
     
     # Create JobChain with serial processing to ensure deterministic results
-    job_chain = JobChain(job=None, result_processing_function=result_processor, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(job=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
-    head_jobs = job_chain.get_job_names()
+    head_jobs = flowmanagerMP.get_job_names()
     
     # Submit tasks for each job
     for job in head_jobs:
-        job_chain.submit_task({"prompt": "Create a male user."}, job_name=job)
-        job_chain.submit_task({"prompt": "Create a female user."}, job_name=job)
+        flowmanagerMP.submit_task({"prompt": "Create a male user."}, job_name=job)
+        flowmanagerMP.submit_task({"prompt": "Create a female user."}, job_name=job)
     
     # Mark input as completed and wait for all tasks to finish
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     
     # Convert shared list to regular list for sorting
     results_list = list(results)
@@ -595,10 +595,10 @@ async def test_multiple_head_jobs_in_jobchain_serial(caplog):
         logging.info(f"Processed result: {result}")
     
     # Create JobChain with serial processing to ensure deterministic results
-    job_chain = JobChain(job=None, result_processing_function=result_processor, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(job=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
-    head_jobs = job_chain.get_job_names()
+    head_jobs = flowmanagerMP.get_job_names()
     logging.info(f"Identified head jobs: {head_jobs}")
     
     # Verify there is exactly two head job (the DefaultHeadJob), one for each parameter group
@@ -610,11 +610,11 @@ async def test_multiple_head_jobs_in_jobchain_serial(caplog):
         assert parsed_name == "DefaultHeadJob", \
             f"Parsed name mismatch. Expected 'DefaultHeadJob' got {parsed_name}"
         logging.info(f"Submitting task for job: {job}")
-        job_chain.submit_task({"task": "Multi-head test task"}, job_name=job)
+        flowmanagerMP.submit_task({"task": "Multi-head test task"}, job_name=job)
     
     # Mark input as completed and wait for all tasks to finish
     logging.info("Marking input as completed")
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     # JobChain automatically waits for completion when mark_input_completed is called
     logging.info("Job chain completed")
     
@@ -660,10 +660,10 @@ async def test_multiple_tail_jobs_in_jobchain_serial(caplog):
         logging.info(f"Processed result: {result}")
     
     # Create JobChain with serial processing to ensure deterministic results
-    job_chain = JobChain(job=None, result_processing_function=result_processor, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(job=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
-    head_jobs = job_chain.get_job_names()
+    head_jobs = flowmanagerMP.get_job_names()
     logging.info(f"Identified head jobs: {head_jobs}")
     
     # Print head job name for debugging
@@ -679,11 +679,11 @@ async def test_multiple_tail_jobs_in_jobchain_serial(caplog):
     
     # Submit tasks for the head job
     logging.info(f"Submitting task for job: {head_job_name}")
-    job_chain.submit_task({"task": "Multi-tail test task"}, job_name=head_job_name)
+    flowmanagerMP.submit_task({"task": "Multi-tail test task"}, job_name=head_job_name)
     
     # Mark input as completed and wait for all tasks to finish
     logging.info("Marking input as completed")
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     # JobChain automatically waits for completion when mark_input_completed is called
     logging.info("Job chain completed")
     
@@ -732,10 +732,10 @@ async def test_multiple_tail_jobs_2_parameters(caplog):
         logging.info(f"Processed result: {result}")
     
     # Create JobChain with serial processing to ensure deterministic results
-    job_chain = JobChain(job=None, result_processing_function=result_processor, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(job=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
-    head_jobs = job_chain.get_job_names()
+    head_jobs = flowmanagerMP.get_job_names()
     logging.info(f"Identified head jobs: {head_jobs}")
     
     # Verify there is exactly two head jobs
@@ -745,11 +745,11 @@ async def test_multiple_tail_jobs_2_parameters(caplog):
         logging.debug(f"Head job name: {head_job_name}")
         # Submit tasks for the head job
         logging.info(f"Submitting task for job: {head_job_name}")
-        job_chain.submit_task({"task": "Multi-tail test task"}, job_name=head_job_name)
+        flowmanagerMP.submit_task({"task": "Multi-tail test task"}, job_name=head_job_name)
     
     # Mark input as completed and wait for all tasks to finish
     logging.info("Marking input as completed")
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     # JobChain automatically waits for completion when mark_input_completed is called
     logging.info("Job chain completed")
     
@@ -799,10 +799,10 @@ async def test_simple_parallel_jobs_in_jobchain_serial(caplog):
         logging.info(f"Processed result: {result}")
     
     # Create JobChain with serial processing to ensure deterministic results
-    job_chain = JobChain(job=None, result_processing_function=result_processor, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(job=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
-    head_jobs = job_chain.get_job_names()
+    head_jobs = flowmanagerMP.get_job_names()
     logging.info(f"Identified head jobs: {head_jobs}")
     
     # Verify there is exactly one head job (the DefaultHeadJob)
@@ -817,11 +817,11 @@ async def test_simple_parallel_jobs_in_jobchain_serial(caplog):
     
     # Submit tasks for the head job
     logging.info(f"Submitting task for job: {head_job_name}")
-    job_chain.submit_task({"task": "Simple parallel test task"}, job_name=head_job_name)
+    flowmanagerMP.submit_task({"task": "Simple parallel test task"}, job_name=head_job_name)
     
     # Mark input as completed and wait for all tasks to finish
     logging.info("Marking input as completed")
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     # JobChain automatically waits for completion when mark_input_completed is called
     logging.info("Job chain completed")
     
@@ -862,17 +862,17 @@ async def test_save_result():
         logging.info(f"Processed result: {result}")
     
     # Create JobChain with serial processing to ensure deterministic results
-    job_chain = JobChain(job=None, result_processing_function=result_processor, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(job=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
-    head_jobs = job_chain.get_job_names()
+    head_jobs = flowmanagerMP.get_job_names()
     
     # Submit tasks for each job
     for job in head_jobs:
-        job_chain.submit_task({"task": "Test task"}, job_name=job)
+        flowmanagerMP.submit_task({"task": "Test task"}, job_name=job)
     
     # Mark input as completed and wait for all tasks to finish
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     
     # Convert shared list to regular list for sorting
     results_list = list(results)

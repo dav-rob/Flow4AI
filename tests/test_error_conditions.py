@@ -15,8 +15,8 @@ import asyncio
 
 import pytest
 
+from flow4ai.flowmanagerMP import FlowManagerMP
 from flow4ai.job import JobABC
-from flow4ai.job_chain import JobChain
 
 
 class ErrorTestJob(JobABC):
@@ -51,7 +51,7 @@ def test_basic_error_handling():
         else:
             results.append(result)
     
-    job_chain = JobChain(ErrorTestJob(), collect_result, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(ErrorTestJob(), collect_result, serial_processing=True)
     
     # Submit mix of successful and failing tasks
     tasks = [
@@ -62,9 +62,9 @@ def test_basic_error_handling():
     ]
     
     for task in tasks:
-        job_chain.submit_task(task)
+        flowmanagerMP.submit_task(task)
     
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     
     # Verify successful tasks completed
     assert len(results) == 2
@@ -79,7 +79,7 @@ def test_timeout_handling():
     def collect_result(result):
         results.append(result)
     
-    job_chain = JobChain(ErrorTestJob(), collect_result, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(ErrorTestJob(), collect_result, serial_processing=True)
     
     # Submit tasks with varying timeouts
     tasks = [
@@ -89,9 +89,9 @@ def test_timeout_handling():
     ]
     
     for task in tasks:
-        job_chain.submit_task(task)
+        flowmanagerMP.submit_task(task)
     
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     
     # Verify all tasks eventually completed
     assert len(results) == 3
@@ -103,21 +103,21 @@ def test_timeout_handling():
 
 def test_process_termination():
     """Test handling of process termination"""
-    job_chain = JobChain(ErrorTestJob())
+    flowmanagerMP = FlowManagerMP(ErrorTestJob())
     
     # Submit a long-running task
-    job_chain.submit_task({'ErrorTestJob': {'task_id': 1, 'timeout': 1.0}})
+    flowmanagerMP.submit_task({'ErrorTestJob': {'task_id': 1, 'timeout': 1.0}})
     
     # Force terminate the process
-    job_chain.job_executor_process.terminate()
+    flowmanagerMP.job_executor_process.terminate()
     
     # Verify cleanup handles terminated process
-    job_chain._cleanup()
-    assert not job_chain.job_executor_process.is_alive()
+    flowmanagerMP._cleanup()
+    assert not flowmanagerMP.job_executor_process.is_alive()
 
 def test_invalid_input():
     """Test handling of invalid input data"""
-    job_chain = JobChain(ErrorTestJob())
+    flowmanagerMP = FlowManagerMP(ErrorTestJob())
     
     # Test various invalid inputs
     invalid_inputs = [
@@ -130,47 +130,47 @@ def test_invalid_input():
     ]
     
     for invalid_input in invalid_inputs:
-        job_chain.submit_task(invalid_input)
+        flowmanagerMP.submit_task(invalid_input)
     
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     # Should complete without raising exceptions
 
 def test_resource_cleanup():
     """Test proper cleanup of resources"""
-    job_chain = JobChain(ErrorTestJob())
+    flowmanagerMP = FlowManagerMP(ErrorTestJob())
     
     # Submit some tasks
     for i in range(5):
-        job_chain.submit_task({'ErrorTestJob': {'task_id': i}})
+        flowmanagerMP.submit_task({'ErrorTestJob': {'task_id': i}})
     
     # Get queue references
-    task_queue = job_chain._task_queue
-    result_queue = job_chain._result_queue
+    task_queue = flowmanagerMP._task_queue
+    result_queue = flowmanagerMP._result_queue
     
     # Cleanup
-    job_chain._cleanup()
+    flowmanagerMP._cleanup()
     
     # Verify queues are closed
     assert task_queue._closed
     assert result_queue._closed
     
     # Verify processes are terminated
-    assert not job_chain.job_executor_process.is_alive()
-    if job_chain.result_processor_process:
-        assert not job_chain.result_processor_process.is_alive()
+    assert not flowmanagerMP.job_executor_process.is_alive()
+    if flowmanagerMP.result_processor_process:
+        assert not flowmanagerMP.result_processor_process.is_alive()
 
 def test_error_in_result_processing():
     """Test handling of errors in result processing function"""
     def failing_processor(result):
         raise Exception("Result processing error")
     
-    job_chain = JobChain(ErrorTestJob(), failing_processor, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(ErrorTestJob(), failing_processor, serial_processing=True)
     
     # Submit tasks
     for i in range(3):
-        job_chain.submit_task({'ErrorTestJob': {'task_id': i}})
+        flowmanagerMP.submit_task({'ErrorTestJob': {'task_id': i}})
     
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     # Should complete without hanging or crashing
 
 def test_memory_error_handling():
@@ -179,12 +179,12 @@ def test_memory_error_handling():
     def collect_result(result):
         results.append(result)
     
-    job_chain = JobChain(ErrorTestJob(), collect_result, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(ErrorTestJob(), collect_result, serial_processing=True)
     
     # Submit task that will cause memory error
-    job_chain.submit_task({'ErrorTestJob': {'task_id': 1, 'memory_error': True}})
+    flowmanagerMP.submit_task({'ErrorTestJob': {'task_id': 1, 'memory_error': True}})
     
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     
     # Process should handle the memory error gracefully
     assert len(results) == 0  # No results should be processed
@@ -195,12 +195,12 @@ def test_unpicklable_result():
     def collect_result(result):
         results.append(result)
     
-    job_chain = JobChain(ErrorTestJob(), collect_result, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(ErrorTestJob(), collect_result, serial_processing=True)
     
     # Submit task that returns unpicklable result
-    job_chain.submit_task({'ErrorTestJob': {'task_id': 1, 'invalid_result': True}})
+    flowmanagerMP.submit_task({'ErrorTestJob': {'task_id': 1, 'invalid_result': True}})
     
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     
     # Process should handle the pickling error gracefully
     assert len(results) == 0  # No results should be processed

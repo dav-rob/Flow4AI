@@ -12,8 +12,8 @@ import asyncio
 
 import pytest
 
+from flow4ai.flowmanagerMP import FlowManagerMP
 from flow4ai.job import JobABC
-from flow4ai.job_chain import JobChain
 
 
 class AsyncTestJob(JobABC):
@@ -38,7 +38,7 @@ async def test_concurrent_task_execution():
     def collect_result(result):
         results.append(result)
     
-    job_chain = JobChain(AsyncTestJob(), collect_result, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(AsyncTestJob(), collect_result, serial_processing=True)
     
     # Submit tasks with different delays
     tasks = [
@@ -48,9 +48,9 @@ async def test_concurrent_task_execution():
     ]
     
     for task in tasks:
-        job_chain.submit_task(task)
+        flowmanagerMP.submit_task(task)
     
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     
     # Verify all tasks completed
     assert len(results) == 3
@@ -63,29 +63,29 @@ async def test_concurrent_task_execution():
 @pytest.mark.asyncio
 async def test_async_task_cancellation():
     """Test proper cleanup of cancelled async tasks"""
-    job_chain = JobChain(AsyncTestJob())
+    flowmanagerMP = FlowManagerMP(AsyncTestJob())
     
     # Submit a long-running task
-    job_chain.submit_task({'AsyncTestJob': {'delay': 1.0}})
+    flowmanagerMP.submit_task({'AsyncTestJob': {'delay': 1.0}})
     
     # Force cleanup before completion
-    job_chain._cleanup()
+    flowmanagerMP._cleanup()
     
     # Verify process termination
-    assert not job_chain.job_executor_process.is_alive()
-    assert job_chain._task_queue._closed
+    assert not flowmanagerMP.job_executor_process.is_alive()
+    assert flowmanagerMP._task_queue._closed
 
 @pytest.mark.asyncio
 async def test_event_loop_handling():
     """Test proper event loop creation and cleanup"""
-    job_chain = JobChain(AsyncTestJob())
+    flowmanagerMP = FlowManagerMP(AsyncTestJob())
     
     # Submit a simple task
-    job_chain.submit_task({'AsyncTestJob': {'task_id': 1}})
-    job_chain.mark_input_completed()
+    flowmanagerMP.submit_task({'AsyncTestJob': {'task_id': 1}})
+    flowmanagerMP.mark_input_completed()
     
     # Verify process cleanup
-    assert not job_chain.job_executor_process.is_alive()
+    assert not flowmanagerMP.job_executor_process.is_alive()
 
 @pytest.mark.asyncio
 async def test_async_exception_handling():
@@ -95,7 +95,7 @@ async def test_async_exception_handling():
     def collect_result(result):
         results.append(result)
     
-    job_chain = JobChain(AsyncTestJob(), collect_result, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(AsyncTestJob(), collect_result, serial_processing=True)
     
     # Submit mix of successful and failing tasks
     tasks = [
@@ -105,9 +105,9 @@ async def test_async_exception_handling():
     ]
     
     for task in tasks:
-        job_chain.submit_task(task)
+        flowmanagerMP.submit_task(task)
     
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     
     # Only successful tasks should have results
     assert len(results) == 2
@@ -121,14 +121,14 @@ async def test_parallel_task_limit():
     def collect_result(result):
         results.append(result)
     
-    job_chain = JobChain(AsyncTestJob(), collect_result, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(AsyncTestJob(), collect_result, serial_processing=True)
     
     # Submit many quick tasks
     num_tasks = 100
     for i in range(num_tasks):
-        job_chain.submit_task({'AsyncTestJob': {'task_id': i, 'delay': 0.01}})
+        flowmanagerMP.submit_task({'AsyncTestJob': {'task_id': i, 'delay': 0.01}})
     
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     
     # All tasks should complete
     assert len(results) == num_tasks

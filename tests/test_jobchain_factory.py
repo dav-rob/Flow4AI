@@ -13,8 +13,8 @@ from typing import List
 import pytest
 
 from flow4ai import f4a_logging as logging
+from flow4ai.flowmanagerMP import JobChainFactory
 from flow4ai.job import JobABC
-from flow4ai.job_chain import JobChainFactory
 from flow4ai.job_loader import ConfigLoader
 
 # Global results list for picklable result processing
@@ -97,7 +97,7 @@ class UnpicklableState:
 def reset_factory():
     """Reset JobChainFactory between tests"""
     JobChainFactory._instance = None
-    JobChainFactory._job_chain = None
+    JobChainFactory._flowmanagerMP = None
     RESULTS.clear()  # Clear global results
     # Clean up temp file if exists
     if os.path.exists('temp.log'):
@@ -142,7 +142,7 @@ async def test_concurrent_task_execution():
     
     # Initialize factory with a new JobChain
     JobChainFactory(AsyncTestJob(), collect_result, serial_processing=True)
-    job_chain = JobChainFactory.get_instance()
+    flowmanagerMP = JobChainFactory.get_instance()
     
     # Submit tasks with different delays
     tasks = [
@@ -152,9 +152,9 @@ async def test_concurrent_task_execution():
     ]
     
     for task in tasks:
-        job_chain.submit_task(task)
+        flowmanagerMP.submit_task(task)
     
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     
     # Verify all tasks completed
     assert len(results) == 3
@@ -176,52 +176,52 @@ async def test_job_instantiation_and_execution():
     
     # Create a job chain through the factory
     JobChainFactory(BasicTestJob(), collect_result, serial_processing=True)
-    job_chain = JobChainFactory.get_instance()
+    flowmanagerMP = JobChainFactory.get_instance()
     
     # Submit a simple task
-    job_chain.submit_task({'BasicTestJob': {}})
-    job_chain.mark_input_completed()
+    flowmanagerMP.submit_task({'BasicTestJob': {}})
+    flowmanagerMP.mark_input_completed()
     
     # Verify job execution
     assert len(results) == 1
     assert results[0]['BasicTestJob'] == "completed"
     
     # Verify we can get the same instance again
-    same_job_chain = JobChainFactory.get_instance()
-    assert same_job_chain is job_chain
+    same_flowmanagerMP = JobChainFactory.get_instance()
+    assert same_flowmanagerMP is flowmanagerMP
 
 
 def test_parallel_execution():
     """Test true parallel execution performance using JobChainFactory"""
-    async def run_job_chain(delay: float) -> float:
+    async def run_flowmanagerMP(delay: float) -> float:
         """Run job chain with specified delay and return execution time"""
         start_time = time.perf_counter()
         
         # Create job chain through factory with picklable result processor
         JobChainFactory(DelayedJob(delay), picklable_result_processor)
-        job_chain = JobChainFactory.get_instance()
+        flowmanagerMP = JobChainFactory.get_instance()
         
         # Feed 10 tasks with a delay between each to simulate data gathering
         for i in range(10):
-            job_chain.submit_task(f"Task {i}")
+            flowmanagerMP.submit_task(f"Task {i}")
             await asyncio.sleep(0.2)  # Simulate time taken to gather data
             
-        job_chain.mark_input_completed()
+        flowmanagerMP.mark_input_completed()
         
         execution_time = time.perf_counter() - start_time
         logging.info(f"Execution time for delay {delay}s: {execution_time:.2f}s")
         return execution_time
     
     # Test with 1 second delay
-    time_1s = asyncio.run(run_job_chain(1.0))
+    time_1s = asyncio.run(run_flowmanagerMP(1.0))
     
     # Reset factory for second test
     JobChainFactory._instance = None
-    JobChainFactory._job_chain = None
+    JobChainFactory._flowmanagerMP = None
     RESULTS.clear()
     
     # Test with 2 second delay
-    time_2s = asyncio.run(run_job_chain(2.0))
+    time_2s = asyncio.run(run_flowmanagerMP(2.0))
     
     # Calculate the ratio of execution times
     time_ratio = time_2s / time_1s
@@ -260,25 +260,25 @@ def test_serial_result_processor_with_unpicklable():
     # Test parallel mode (should fail)
     with pytest.raises(TypeError) as exc_info:
         JobChainFactory(ResultTimingJob(), unpicklable_processor, serial_processing=False)
-        job_chain = JobChainFactory.get_instance()
-        job_chain.submit_task("Task 1")
-        job_chain.mark_input_completed()
+        flowmanagerMP = JobChainFactory.get_instance()
+        flowmanagerMP.submit_task("Task 1")
+        flowmanagerMP.mark_input_completed()
     assert "pickle" in str(exc_info.value).lower()
     
     # Reset factory for serial mode test
     JobChainFactory._instance = None
-    JobChainFactory._job_chain = None
+    JobChainFactory._flowmanagerMP = None
     
     # Test serial mode (should work)
     JobChainFactory(ResultTimingJob(), unpicklable_processor, serial_processing=True)
-    job_chain = JobChainFactory.get_instance()
+    flowmanagerMP = JobChainFactory.get_instance()
     
     # Submit tasks
     for i in range(3):
-        job_chain.submit_task({"ResultTimingJob": f"Task {i}"})
+        flowmanagerMP.submit_task({"ResultTimingJob": f"Task {i}"})
         time.sleep(0.1)
     
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
     
     # Verify results were logged
     with open('temp.log', 'r') as f:

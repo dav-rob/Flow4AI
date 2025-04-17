@@ -2,8 +2,8 @@ import asyncio
 import time
 from typing import Any, Dict
 
+from flow4ai.flowmanagerMP import FlowManagerMP
 from flow4ai.job import JobABC, Task, job_graph_context_manager
-from flow4ai.job_chain import JobChain
 from flow4ai.job_loader import JobFactory
 from flow4ai.jobs.default_jobs import DefaultHeadJob
 
@@ -86,11 +86,11 @@ def test_parallel_execution_multiple_jobs():
         results = []
         def result_collector(result):
             results.append(result)
-        job_chain = JobChain(jobs, result_collector, serial_processing=True)
+        flowmanagerMP = FlowManagerMP(jobs, result_collector, serial_processing=True)
         for task in tasks:
             job_name = next(iter(task.keys()))  # Get the job name from the task dict
-            job_chain.submit_task(task, job_name=job_name)
-        job_chain.mark_input_completed()
+            flowmanagerMP.submit_task(task, job_name=job_name)
+        flowmanagerMP.mark_input_completed()
         
         end_time = time.time()
         execution_time = end_time - start_time

@@ -4,8 +4,8 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from flowmanagerMP import JobChain
 from job import JobABC
-from job_chain import JobChain
 
 
 # Example of a valid standalone function that can be pickled
@@ -64,9 +64,9 @@ def run_with_invalid_instance():
         print("\nTrying to use processor with JobChain:")
         job = ExampleJob()
         # This will fail because processor has unpicklable state
-        job_chain = JobChain(job, processor.process_result)
-        job_chain.submit_task("test")
-        job_chain.mark_input_completed()
+        flowmanagerMP = JobChain(job, processor.process_result)
+        flowmanagerMP.submit_task("test")
+        flowmanagerMP.mark_input_completed()
     except Exception as e:
         print(f"Failed to use processor with JobChain: {e}")
     finally:
@@ -92,9 +92,9 @@ def demonstrate_valid_usage():
         print("Function successfully pickled!")
         
         job = ExampleJob()
-        job_chain = JobChain(job, valid_result_processor)
-        job_chain.submit_task("test1")
-        job_chain.mark_input_completed()
+        flowmanagerMP = JobChain(job, valid_result_processor)
+        flowmanagerMP.submit_task("test1")
+        flowmanagerMP.mark_input_completed()
     except Exception as e:
         print(f"Unexpected error: {e}")
     
@@ -105,9 +105,9 @@ def demonstrate_valid_usage():
         print("Instance method successfully pickled!")
         
         job = ExampleJob()
-        job_chain = JobChain(job, valid_processor.process_result)
-        job_chain.submit_task("test2")
-        job_chain.mark_input_completed()
+        flowmanagerMP = JobChain(job, valid_processor.process_result)
+        flowmanagerMP.submit_task("test2")
+        flowmanagerMP.mark_input_completed()
     except Exception as e:
         print(f"Unexpected error: {e}")
 

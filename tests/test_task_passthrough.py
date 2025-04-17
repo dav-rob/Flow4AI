@@ -7,7 +7,7 @@ from typing import Any, Dict
 import pytest
 
 from flow4ai import f4a_logging as logging
-from flow4ai.job_chain import JobChain
+from flow4ai.flowmanagerMP import FlowManagerMP
 from flow4ai.job_loader import ConfigLoader
 
 test_tasks = [
@@ -149,22 +149,22 @@ def test_task_passthrough():
             ConfigLoader._set_directories([config_dir])
             
             # Create JobChain with parallel processing
-            job_chain = JobChain(result_processing_function=collector)
+            flowmanagerMP = FlowManagerMP(result_processing_function=collector)
             
             # Submit text processing tasks with unique identifiers
             submitted_tasks = []
 
-            head_jobs = job_chain.get_job_names()
+            head_jobs = flowmanagerMP.get_job_names()
             
             for i, task in enumerate(test_tasks):
                 submitted_tasks.append(task)
                 logging.info(f"Submitting task: {task}")
                 # Use a different graph for each task
                 graph_num = i + 1
-                job_chain.submit_task(task, job_name=f'text_processing_graph{graph_num}$$$$text_capitalize$$')
+                flowmanagerMP.submit_task(task, job_name=f'text_processing_graph{graph_num}$$$$text_capitalize$$')
             
             # Mark completion and wait for processing
-            job_chain.mark_input_completed()
+            flowmanagerMP.mark_input_completed()
             
             # Read results from file
             with open(results_file, 'r') as f:
@@ -238,10 +238,10 @@ def test_multiple_task_submissions():
             ConfigLoader._set_directories([config_dir])
             
             # Create JobChain with parallel processing
-            job_chain = JobChain(result_processing_function=collector)
+            flowmanagerMP = FlowManagerMP(result_processing_function=collector)
             
             # Get all head jobs
-            head_jobs = job_chain.get_job_names()
+            head_jobs = flowmanagerMP.get_job_names()
             
             # Submit text processing tasks with unique identifiers
             num_iterations = 2
@@ -256,10 +256,10 @@ def test_multiple_task_submissions():
                         task_copy['task_id'] = f"{task['task_id']}_head{head_job}_iter{iteration}"
                         submitted_tasks.append(task_copy)
                         logging.info(f"Submitting task {task_copy['task_id']} to head job {head_job}")
-                        job_chain.submit_task(task_copy, job_name=head_job)
+                        flowmanagerMP.submit_task(task_copy, job_name=head_job)
             
             # Mark completion and wait for processing
-            job_chain.mark_input_completed()
+            flowmanagerMP.mark_input_completed()
             
             # Read results from file
             with open(results_file, 'r') as f:

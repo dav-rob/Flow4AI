@@ -35,7 +35,7 @@ class Processor:
         self.db.save(result)
 
 processor = Processor()
-job_chain = JobChain(job, processor.process_result, serial_processing=True)
+flowmanagerMP = JobChain(job, processor.process_result, serial_processing=True)
 ```
 
 

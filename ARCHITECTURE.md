@@ -9,17 +9,17 @@ JobChain is a sophisticated Python framework designed for parallel and asynchron
 ### Starting and terminating a JobChain
 - Anywhere in you code, within a function, create a JobChain instance:
   ```python
-  job_chain = JobChain()
+  flowmanagerMP = JobChain()
   ```
   The JobChain will configure itself with multiple job types from the configuration file.  The JobChainFactory creates a singleton instance of JobChain for convenience.
 
 - Submit tasks to the JobChain from many places to many different jobs:
   ```python
-  job_chain.submit_task(task, job_name='job_name')
+  flowmanagerMP.submit_task(task, job_name='job_name')
   ```
 - Mark the JobChain as input completed, when you have finished submitting tasks:
   ```python
-  job_chain.mark_input_completed()
+  flowmanagerMP.mark_input_completed()
   ```
 This ensures all previous tasks are completed, and all processes are cleaned up.
 
@@ -122,10 +122,10 @@ Note: there can only be one head job, the starting job, and one tail job, the la
   ```python
   # All tasks use the same graph instance
   for task in tasks:
-      job_chain.submit_task(task, job_name='processing_graph__read_file')
+      flowmanagerMP.submit_task(task, job_name='processing_graph__read_file')
   ```
 
-### 3. Job Execution Engine (`job_chain.py`)
+### 3. Job Execution Engine (`flowmanagerMP.py`)
 
 #### JobChain
 - Manages parallel task execution
@@ -335,16 +335,16 @@ if not job_map:
 
 ```python
 # Define a job graph for web scraping and analysis
-job_chain = JobChain(
+flowmanagerMP = JobChain(
     result_processing_function=save_to_database,
     serial_processing=False
 )
 
 # Submit tasks for parallel processing
 for url in urls:
-    job_chain.submit_task({"url": url})
+    flowmanagerMP.submit_task({"url": url})
 
-job_chain.mark_input_completed()
+flowmanagerMP.mark_input_completed()
 ```
 
 ## Performance Recommendations

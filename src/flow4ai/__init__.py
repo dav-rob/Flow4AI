@@ -3,7 +3,7 @@ Flow4AI - A scalable AI job scheduling and execution platform
 """
 
 from . import f4a_logging
+from .flowmanagerMP import FlowManagerMP
 from .job import JobABC
-from .job_chain import JobChain
 
-__all__ = ['JobABC', 'JobChain', 'f4a_logging']
+__all__ = ['JobABC', 'FlowManagerMP', 'f4a_logging']

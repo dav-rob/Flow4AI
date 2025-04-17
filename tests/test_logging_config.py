@@ -4,8 +4,8 @@ import os
 import pytest
 
 from flow4ai import f4a_logging as logging
+from flow4ai.flowmanagerMP import FlowManagerMP
 from flow4ai.job import JobABC, Task
-from flow4ai.job_chain import JobChain
 
 
 class DebugDelayedJob(JobABC):
@@ -107,7 +107,7 @@ def test_logging_config_info(clear_log_file):
     assert 'This is a debug message' not in log_contents
     assert 'This is an info message' in log_contents
 
-def test_debug_logging_in_job_chain(clear_log_file):
+def test_debug_logging_in_flowmanagerMP(clear_log_file):
     """Test that both JobChain and Job debug logs are visible when JOBCHAIN_LOG_LEVEL=DEBUG."""
     os.environ['JOBCHAIN_LOG_LEVEL'] = 'DEBUG'
     os.environ['JOBCHAIN_LOG_HANDLERS'] = 'console,file'  # Enable file logging for this test
@@ -115,12 +115,12 @@ def test_debug_logging_in_job_chain(clear_log_file):
 
     # Create and run job chain with debug-enabled job
     job = DebugDelayedJob("Debug Test Job", 0.1)
-    job_chain = JobChain(job)
+    flowmanagerMP = FlowManagerMP(job)
 
     # Submit tasks
     for i in range(3):
-        job_chain.submit_task({'task': f'Task {i}'})  # Changed to use dict format
-    job_chain.mark_input_completed()
+        flowmanagerMP.submit_task({'task': f'Task {i}'})  # Changed to use dict format
+    flowmanagerMP.mark_input_completed()
 
     # Check log file contents
     with open('jobchain.log', 'r') as f:
@@ -152,7 +152,7 @@ def test_debug_logging_in_job_chain(clear_log_file):
     info_logs = [line for line in log_lines if '[INFO]' in line]
     assert any('Processing task Task' in line for line in info_logs)
 
-def test_info_logging_in_job_chain(clear_log_file):
+def test_info_logging_in_flowmanagerMP(clear_log_file):
     """Test that DEBUG logs are filtered when JOBCHAIN_LOG_LEVEL=INFO."""
     os.environ['JOBCHAIN_LOG_LEVEL'] = 'INFO'
     os.environ['JOBCHAIN_LOG_HANDLERS'] = 'console,file'  # Enable file logging for this test
@@ -160,12 +160,12 @@ def test_info_logging_in_job_chain(clear_log_file):
 
     # Create and run job chain with debug-enabled job
     job = DebugDelayedJob("Info Test Job", 0.1)
-    job_chain = JobChain(job)
+    flowmanagerMP = FlowManagerMP(job)
 
     # Submit tasks
     for i in range(3):
-        job_chain.submit_task({'task': f'Task {i}'})  # Changed to use dict format
-    job_chain.mark_input_completed()
+        flowmanagerMP.submit_task({'task': f'Task {i}'})  # Changed to use dict format
+    flowmanagerMP.mark_input_completed()
 
     # Check log file contents
     with open('jobchain.log', 'r') as f:

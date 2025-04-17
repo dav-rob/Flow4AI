@@ -7,8 +7,8 @@ import asyncio
 import os
 import time
 
+from flow4ai.flowmanagerMP import FlowManagerMP
 from flow4ai.job import JobABC
-from flow4ai.job_chain import JobChain
 
 
 class ResultTimingJob(JobABC):
@@ -62,14 +62,14 @@ def parallel_mode():
 
         # Create job chain in parallel mode
         job = ResultTimingJob()
-        job_chain = JobChain(job, unpicklable_processor, serial_processing=False)
+        flowmanagerMP = FlowManagerMP(job, unpicklable_processor, serial_processing=False)
 
         # Submit some tasks
         for i in range(3):
-            job_chain.submit_task(f"Task {i}")
+            flowmanagerMP.submit_task(f"Task {i}")
             time.sleep(0.1)
         
-        job_chain.mark_input_completed()
+        flowmanagerMP.mark_input_completed()
         assert False, "Expected parallel mode to fail with unpicklable processor"
     except Exception as e:
         print(f"Parallel mode failed as expected: {e}")
@@ -93,16 +93,16 @@ def serial_mode():
 
         # Create job chain in serial mode
         job = ResultTimingJob()
-        job_chain = JobChain(job, unpicklable_processor, serial_processing=True)
+        flowmanagerMP = FlowManagerMP(job, unpicklable_processor, serial_processing=True)
 
         # Submit some tasks
         expected_tasks = {f"Task {i}" for i in range(3)}
         for task in expected_tasks:
-            job_chain.submit_task({job.name: {'task': task}}, job_name=job.name)
+            flowmanagerMP.submit_task({job.name: {'task': task}}, job_name=job.name)
             time.sleep(0.1)
         
         # Process tasks and wait for completion
-        job_chain.mark_input_completed()  # Not awaited since it's synchronous
+        flowmanagerMP.mark_input_completed()  # Not awaited since it's synchronous
         
         # Give a small delay to ensure all results are processed
         time.sleep(0.5)

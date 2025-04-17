@@ -21,7 +21,7 @@ chain2 = JobChain(job2, processor)  # Wrong! Don't create multiple chains
 
 ```python
 # DO this:
-job_chain = JobChain(job, processor)  # Single instance handles all parallel processing
+flowmanagerMP = JobChain(job, processor)  # Single instance handles all parallel processing
 ```
 
 The JobChain implementation is optimized for parallel execution within a single instance, making multiple instances unnecessary and potentially counterproductive.

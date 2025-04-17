@@ -3,7 +3,7 @@
         - test_parallel_execution: makes sure long running tasks are executed in 
             parallel with short running tasks, and that task results are processed in 
             parallel.
-        - run_batch_job_chain: simulates running a Job on several batches of tasks.
+        - run_batch_flowmanagerMP: simulates running a Job on several batches of tasks.
         - test_parallel_execution_in_batches: runs batches in parallel
 """
 import asyncio
@@ -14,8 +14,8 @@ import time
 import yaml
 
 from flow4ai import f4a_logging as logging
+from flow4ai.flowmanagerMP import FlowManagerMP
 from flow4ai.job import JobABC
-from flow4ai.job_chain import JobChain
 from flow4ai.utils.otel_wrapper import TracerFactory
 from tests.test_utils.simple_job import SimpleJobFactory
 
@@ -55,29 +55,29 @@ def dummy_result_processor(result):
     """Dummy function for processing results in tests"""
     logger.info(f"Processing result: {result}")
 
-async def run_job_chain(time_delay: float, use_direct_job: bool = False) -> float:
+async def run_flowmanagerMP(time_delay: float, use_direct_job: bool = False) -> float:
     """Run job chain with specified delay and return execution time"""
     start_time = time.perf_counter()
     
     if use_direct_job:
         # Create and pass Job instance directly
         job = DelayedJob("Test Job", time_delay)
-        job_chain = JobChain(job, dummy_result_processor)
+        flowmanagerMP = FlowManagerMP(job, dummy_result_processor)
     else:
         # Use traditional dictionary initialization
-        job_chain_context = {
+        flowmanagerMP_context = {
                 "type": "file",
                 "params": {"time_delay": time_delay}
             }
-        loaded_job = SimpleJobFactory.load_job(job_chain_context)
-        job_chain = JobChain(loaded_job, dummy_result_processor)
+        loaded_job = SimpleJobFactory.load_job(flowmanagerMP_context)
+        flowmanagerMP = FlowManagerMP(loaded_job, dummy_result_processor)
 
     # Feed 10 tasks with a delay between each to simulate data gathering
     for i in range(10):
-        job_chain.submit_task(f"Task {i}")
+        flowmanagerMP.submit_task(f"Task {i}")
         await asyncio.sleep(0.2)  # Simulate time taken to gather data
     # Indicate there is no more input data to process to initiate shutdown
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
 
     execution_time = time.perf_counter() - start_time
     logger.info(f"Execution time for delay {time_delay}s: {execution_time:.2f}s")
@@ -85,10 +85,10 @@ async def run_job_chain(time_delay: float, use_direct_job: bool = False) -> floa
 
 def test_parallel_execution():
     # Test with 1 second delay
-    time_1s = asyncio.run(run_job_chain(1.0))
+    time_1s = asyncio.run(run_flowmanagerMP(1.0))
     
     # Test with 2 second delay
-    time_2s = asyncio.run(run_job_chain(2.0))
+    time_2s = asyncio.run(run_flowmanagerMP(2.0))
     
     # Calculate the ratio of execution times
     time_ratio = time_2s / time_1s
@@ -114,10 +114,10 @@ def test_parallel_execution():
 def test_direct_job_initialization():
     """Test that direct Job instance initialization works equivalently"""
     # Run with dictionary initialization
-    time_dict = asyncio.run(run_job_chain(1.0, use_direct_job=False))
+    time_dict = asyncio.run(run_flowmanagerMP(1.0, use_direct_job=False))
     
     # Run with direct Job instance
-    time_direct = asyncio.run(run_job_chain(1.0, use_direct_job=True))
+    time_direct = asyncio.run(run_flowmanagerMP(1.0, use_direct_job=True))
     
     # Calculate the ratio of execution times
     time_ratio = abs(time_direct - time_dict) / time_dict
@@ -131,25 +131,25 @@ def test_direct_job_initialization():
         "This suggests the two initialization methods are not equivalent"
     )
 
-async def run_batch_job_chain() -> float:
+async def run_batch_flowmanagerMP() -> float:
     """Run job chain with batches of website analysis jobs"""
     start_time = time.perf_counter()
     
-    job_chain_context = {
+    flowmanagerMP_context = {
         "type": "file",
         "params": {"time_delay": 0.70}
     }
-    loaded_job = SimpleJobFactory.load_job(job_chain_context)
-    job_chain = JobChain(loaded_job, dummy_result_processor)
+    loaded_job = SimpleJobFactory.load_job(flowmanagerMP_context)
+    flowmanagerMP = FlowManagerMP(loaded_job, dummy_result_processor)
 
     # Process 4 batches of 25 links each
     for batch in range(4):
         # Simulate scraping 25 links, 1 second per link
         for link in range(25):
-            job_chain.submit_task(f"Batch{batch}_Link{link}")
+            flowmanagerMP.submit_task(f"Batch{batch}_Link{link}")
             await asyncio.sleep(0.10)  # Simulate time to scrape each link
     # Indicate there is no more input data to process to initiate shutdown
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
 
     execution_time = time.perf_counter() - start_time
     logger.info(f"\nTotal execution time: {execution_time:.2f}s")
@@ -157,7 +157,7 @@ async def run_batch_job_chain() -> float:
 
 def test_parallel_execution_in_batches():
     """Test parallel execution of website analysis in batches while scraping continues"""
-    execution_time = asyncio.run(run_batch_job_chain())
+    execution_time = asyncio.run(run_batch_flowmanagerMP())
     
     assert execution_time <= 11.8, (
         f"Expected execution to complete in ~11.8s, took {execution_time:.2f}s. "
@@ -169,17 +169,17 @@ def test_parallel_execution_in_batches():
         "Expected ~10s for scraping all links"
     )
 
-async def run_job_chain_without_result_processor() -> bool:
+async def run_flowmanagerMP_without_result_processor() -> bool:
     """Run job chain without a result processing function"""
     try:
         job = DelayedJob("Test Job",  0.1)
-        job_chain = JobChain(job)  # Pass no result_processing_function
+        flowmanagerMP = FlowManagerMP(job)  # Pass no result_processing_function
 
         # Submit a few tasks
         for i in range(3):
-            job_chain.submit_task(f"Task {i}")
+            flowmanagerMP.submit_task(f"Task {i}")
         # Indicate there is no more input data to process to initiate shutdown
-        job_chain.mark_input_completed()
+        flowmanagerMP.mark_input_completed()
         return True
     except Exception as e:
         logger.error(f"Error occurred: {e}")
@@ -187,28 +187,28 @@ async def run_job_chain_without_result_processor() -> bool:
 
 def test_no_result_processor():
     """Test that JobChain works without setting result_processing_function"""
-    success = asyncio.run(run_job_chain_without_result_processor())
+    success = asyncio.run(run_flowmanagerMP_without_result_processor())
     assert success, "JobChain should execute successfully without result_processing_function"
 
-async def run_traced_job_chain(time_delay: float) -> float:
+async def run_traced_flowmanagerMP(time_delay: float) -> float:
     """Run job chain with specified delay and return execution time"""
     start_time = time.perf_counter()
     
     # Use traditional dictionary initialization
-    job_chain_context = {
+    flowmanagerMP_context = {
         "type": "file",
         "params": {"time_delay": time_delay}
     }
     # Load job from context
-    loaded_job = SimpleJobFactory.load_job(job_chain_context)
-    job_chain = JobChain(loaded_job, dummy_result_processor)
+    loaded_job = SimpleJobFactory.load_job(flowmanagerMP_context)
+    flowmanagerMP = FlowManagerMP(loaded_job, dummy_result_processor)
 
     # Feed 10 tasks with a delay between each to simulate data gathering
     for i in range(10):
-        job_chain.submit_task(f"Task {i}")
+        flowmanagerMP.submit_task(f"Task {i}")
         await asyncio.sleep(0.2)  # Simulate time taken to gather data
     # Indicate there is no more input data to process to initiate shutdown
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
 
     execution_time = time.perf_counter() - start_time
     logger.info(f"Execution time for delay {time_delay}s: {execution_time:.2f}s")
@@ -254,7 +254,7 @@ def test_parallel_execution_with_tracing(tmp_path):
 
         # Run the job chain
         logger.info("Starting job chain execution")
-        execution_time = asyncio.run(run_traced_job_chain(1.0))
+        execution_time = asyncio.run(run_traced_flowmanagerMP(1.0))
         logger.info("Job chain execution completed")
 
         # Verify execution time
