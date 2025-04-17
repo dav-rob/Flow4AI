@@ -3,12 +3,11 @@ import threading
 from collections import defaultdict, deque
 from typing import Any, Callable, Dict, List, Optional, Union
 
-import jobchain.jc_logging as logging
-from jobchain.dsl_graph import PrecedenceGraph, dsl_to_precedence_graph
-from jobchain.jc_graph import validate_graph
-
 from . import JobABC
+from . import jc_logging as logging
 from .dsl import DSLComponent, JobsDict
+from .dsl_graph import PrecedenceGraph, dsl_to_precedence_graph
+from .jc_graph import validate_graph
 from .job import SPLIT_STR, Task, job_graph_context_manager
 from .job_loader import JobFactory
 

@@ -1,6 +1,6 @@
 from typing import Dict, List, Tuple
 
-from jobchain.jobs.wrapping_job import WrappingJob
+from .jobs.wrapping_job import WrappingJob
 
 from . import jc_logging as logging
 from .dsl import Parallel, Serial, JobsDict

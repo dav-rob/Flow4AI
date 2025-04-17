@@ -350,7 +350,7 @@ class JobFactory:
 
     @classmethod
     def add_default_head(cls, graph_definition, head_jobs, job_instances, nodes):
-        from jobchain.jobs.default_jobs import DefaultHeadJob
+        from flow4ai.jobs.default_jobs import DefaultHeadJob
 
         # Get naming from first job instance in job_instances
         sample_job = next(iter(job_instances.values()))
@@ -410,7 +410,7 @@ class JobFactory:
         Returns:
             The name of the default tail job
         """
-        from jobchain.jobs.default_jobs import DefaultTailJob
+        from flow4ai.jobs.default_jobs import DefaultTailJob
 
         # Get naming from first job instance in job_instances
         sample_job = next(iter(job_instances.values()))

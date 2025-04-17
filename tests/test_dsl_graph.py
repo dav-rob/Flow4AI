@@ -1,13 +1,10 @@
-import time
 from typing import Any, Dict
 
-import pytest
-
-from jobchain.dsl import DSLComponent, JobsDict, p, wrap
-from jobchain.dsl_graph import dsl_to_precedence_graph, visualize_graph
-from jobchain.jc_graph import validate_graph
-from jobchain.job import JobABC
-from jobchain.taskmanager import TaskManager
+from flow4ai.dsl import DSLComponent, JobsDict, p, wrap
+from flow4ai.dsl_graph import dsl_to_precedence_graph, visualize_graph
+from flow4ai.jc_graph import validate_graph
+from flow4ai.job import JobABC
+from flow4ai.taskmanager import TaskManager
 from tests.test_utils.graph_evaluation import print_diff
 
 

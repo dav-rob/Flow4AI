@@ -255,7 +255,7 @@ class TracerFactory:
         if not config_path:
             # Finally use default path from package resources
             try:
-                with resources.path('jobchain.resources', DEFAULT_OTEL_CONFIG) as path:
+                with resources.path('flow4ai.resources', DEFAULT_OTEL_CONFIG) as path:
                     config_path = str(path)
             except Exception as e:
                 raise RuntimeError(f"Could not find {DEFAULT_OTEL_CONFIG} in package resources: {e}")
