@@ -4,9 +4,10 @@ The 'zzz' prefix in the filename ensures this runs last in alphabetical order.
 """
 import os
 import time
+
 import pytest
 
-import jobchain.jc_logging as logging
+from flow4ai import jc_logging as logging
 
 logger = logging.getLogger(__name__)
 

@@ -4,10 +4,10 @@ from typing import Any, Dict
 
 import pytest
 
-import jobchain.jc_logging as logging
-from jobchain.dsl import DSLComponent, JobsDict, p, wrap
-from jobchain.job import JobABC
-from jobchain.taskmanager import TaskManager
+from flow4ai import jc_logging as logging
+from flow4ai.dsl import DSLComponent, JobsDict, p, wrap
+from flow4ai.job import JobABC
+from flow4ai.taskmanager import TaskManager
 
 # Configure logging
 logger = logging.getLogger(__name__)

@@ -6,10 +6,10 @@ import time
 import pytest
 import yaml
 
-from jobchain import jc_logging as logging
-from jobchain.job import JobABC
-from jobchain.job_chain import JobChain
-from jobchain.utils.otel_wrapper import TracerFactory
+from flow4ai import jc_logging as logging
+from flow4ai.job import JobABC
+from flow4ai.job_chain import JobChain
+from flow4ai.utils.otel_wrapper import TracerFactory
 from tests.test_utils.simple_job import SimpleJobFactory
 
 # Configure logging

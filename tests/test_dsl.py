@@ -16,11 +16,11 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from jobchain import jc_logging as logging
-from jobchain.dsl import (DSLComponent, JobsDict, Parallel, Serial, p,
-                          parallel, s, serial, w, wrap)
-from jobchain.job import JobABC
-from jobchain.jobs.wrapping_job import WrappingJob
+from flow4ai import jc_logging as logging
+from flow4ai.dsl import (DSLComponent, JobsDict, Parallel, Serial, p, parallel,
+                         s, serial, w, wrap)
+from flow4ai.job import JobABC
+from flow4ai.jobs.wrapping_job import WrappingJob
 from tests.test_utils.graph_evaluation import evaluate
 
 logger = logging.getLogger(__name__)

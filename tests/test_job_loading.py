@@ -5,11 +5,11 @@ from unittest.mock import MagicMock
 import pytest
 import yaml
 
-import jobchain.jc_logging as logging
-from jobchain.jc_graph import validate_graph
-from jobchain.job import JobABC, Task, job_graph_context_manager
-from jobchain.job_chain import JobChain  # Import JobChain
-from jobchain.job_loader import ConfigLoader, ConfigurationError, JobFactory
+from flow4ai import jc_logging as logging
+from flow4ai.jc_graph import validate_graph
+from flow4ai.job import JobABC, Task, job_graph_context_manager
+from flow4ai.job_chain import JobChain  # Import JobChain
+from flow4ai.job_loader import ConfigLoader, ConfigurationError, JobFactory
 
 # Test configuration
 TEST_CONFIG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config"))
