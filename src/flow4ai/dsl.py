@@ -1,7 +1,7 @@
 from functools import reduce
 from typing import Any, Dict, List, Union
 
-from . import jc_logging as logging
+from . import f4a_logging as logging
 from .job import JobABC
 from .jobs.wrapping_job import WrappingJob
 

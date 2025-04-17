@@ -13,7 +13,7 @@ import time
 import psutil
 import pytest
 
-from flow4ai import jc_logging as logging
+from flow4ai import f4a_logging as logging
 from flow4ai.job import JobABC
 from flow4ai.job_chain import JobChain
 

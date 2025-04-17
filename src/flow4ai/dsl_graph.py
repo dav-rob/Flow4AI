@@ -1,10 +1,9 @@
 from typing import Dict, List, Tuple
 
-from .jobs.wrapping_job import WrappingJob
-
-from . import jc_logging as logging
-from .dsl import Parallel, Serial, JobsDict
+from . import f4a_logging as logging
+from .dsl import JobsDict, Parallel, Serial
 from .job import JobABC
+from .jobs.wrapping_job import WrappingJob
 
 logger = logging.getLogger(__name__)
 

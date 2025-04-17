@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 import yaml
 
-from flow4ai import jc_logging as logging
+from flow4ai import f4a_logging as logging
 from flow4ai.jc_graph import validate_graph
 from flow4ai.job import JobABC, Task, job_graph_context_manager
 from flow4ai.job_chain import JobChain  # Import JobChain

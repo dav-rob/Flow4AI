@@ -4,7 +4,7 @@ from collections import defaultdict, deque
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from . import JobABC
-from . import jc_logging as logging
+from . import f4a_logging as logging
 from .dsl import DSLComponent, JobsDict
 from .dsl_graph import PrecedenceGraph, dsl_to_precedence_graph
 from .jc_graph import validate_graph

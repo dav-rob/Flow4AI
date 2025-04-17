@@ -278,7 +278,7 @@ if not job_map:
 - Cross-reference checking
 - Parameter completeness verification
 
-### 5. Logging System (`jc_logging.py`)
+### 5. Logging System (`f4a_logging.py`)
 
 #### Advanced Logging Configuration
 - Environment variable-based configuration

@@ -7,7 +7,7 @@ from typing import Any, Dict
 
 import pytest
 
-from flow4ai import jc_logging as logging
+from flow4ai import f4a_logging as logging
 from flow4ai.job import JobABC, Task, job_graph_context_manager
 from flow4ai.job_chain import JobChain
 from flow4ai.job_loader import ConfigLoader, JobFactory

@@ -11,7 +11,7 @@ from typing import Any, Callable, Collection, Dict, Optional, Union
 
 from pydantic import BaseModel
 
-from . import jc_logging as logging
+from . import f4a_logging as logging
 from .job import JobABC, Task, job_graph_context_manager
 from .job_loader import ConfigLoader, JobFactory
 from .utils.monitor_utils import should_log_task_stats

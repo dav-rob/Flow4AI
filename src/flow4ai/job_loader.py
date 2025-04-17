@@ -9,7 +9,7 @@ from typing import Any, Collection, Dict, List, Type, Union
 import yaml
 from pydantic import BaseModel
 
-from . import jc_logging as logging
+from . import f4a_logging as logging
 from .jc_graph import validate_graph
 from .job import JobABC
 

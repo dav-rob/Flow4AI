@@ -5,9 +5,9 @@ Provides functionality for graph traversal, cycle detection, and validation.
 
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from . import jc_logging
+from . import f4a_logging
 
-logging = jc_logging.getLogger(__name__)
+logging = f4a_logging.getLogger(__name__)
 
 
 def has_cycle(graph: Dict[str, Dict[str, Any]], node: str, 

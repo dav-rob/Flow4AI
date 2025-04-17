@@ -12,7 +12,7 @@ from typing import List
 
 import pytest
 
-from flow4ai import jc_logging as logging
+from flow4ai import f4a_logging as logging
 from flow4ai.job import JobABC
 from flow4ai.job_chain import JobChainFactory
 from flow4ai.job_loader import ConfigLoader

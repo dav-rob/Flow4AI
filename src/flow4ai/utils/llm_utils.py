@@ -1,7 +1,7 @@
 import re
 import string
 
-from flow4ai import jc_logging as logging
+from flow4ai import f4a_logging as logging
 
 logger = logging.getLogger(__name__)
 

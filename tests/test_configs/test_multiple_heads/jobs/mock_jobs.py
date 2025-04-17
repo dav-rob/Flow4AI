@@ -1,6 +1,6 @@
 from typing import Any, Dict
 
-from flow4ai import jc_logging as logging
+from flow4ai import f4a_logging as logging
 from flow4ai.job import JobABC
 
 logger = logging.getLogger(__name__)

@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import Any, Dict, Optional, Type, Union
 
-from . import jc_logging as logging
+from . import f4a_logging as logging
 from .utils.otel_wrapper import trace_function
 
 SPLIT_STR = "$$"

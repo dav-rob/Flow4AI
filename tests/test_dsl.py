@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from flow4ai import jc_logging as logging
+from flow4ai import f4a_logging as logging
 from flow4ai.dsl import (DSLComponent, JobsDict, Parallel, Serial, p, parallel,
                          s, serial, w, wrap)
 from flow4ai.job import JobABC

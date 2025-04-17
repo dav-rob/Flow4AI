@@ -7,7 +7,7 @@ These are not intended for production use.
 import asyncio
 from typing import Any, Dict, Union
 
-from flow4ai import jc_logging as logging
+from flow4ai import f4a_logging as logging
 from flow4ai.job import JobABC, Task
 
 

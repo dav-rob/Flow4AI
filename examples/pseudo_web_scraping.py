@@ -3,7 +3,7 @@ import os
 import sys
 from time import sleep
 
-import jc_logging as logging
+import f4a_logging as logging
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

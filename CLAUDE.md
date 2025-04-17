@@ -13,7 +13,7 @@
 - **Type hints**: Required for all functions/methods, variables and return types
 - **Docstrings**: Google-style with Args sections
 - **Error handling**: Specific exceptions with detailed messages
-- **Logging**: Use `jobchain.jc_logging` module, not standard logging
+- **Logging**: Use `jobchain.f4a_logging` module, not standard logging
 
 ## JobABC Rules
 - NEVER override `_execute` method, only implement `run` method

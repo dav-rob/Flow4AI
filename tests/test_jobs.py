@@ -3,7 +3,7 @@ from typing import Any, Dict
 
 import pytest
 
-from flow4ai import jc_logging as logging
+from flow4ai import f4a_logging as logging
 from flow4ai.jobs import OpenAIJob
 
 
