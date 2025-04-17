@@ -7,7 +7,7 @@ from . import JobABC
 from . import f4a_logging as logging
 from .dsl import DSLComponent, JobsDict
 from .dsl_graph import PrecedenceGraph, dsl_to_precedence_graph
-from .jc_graph import validate_graph
+from .f4a_graph import validate_graph
 from .job import SPLIT_STR, Task, job_graph_context_manager
 from .job_loader import JobFactory
 

@@ -2,7 +2,7 @@ from typing import Any, Dict
 
 from flow4ai.dsl import DSLComponent, JobsDict, p, wrap
 from flow4ai.dsl_graph import dsl_to_precedence_graph, visualize_graph
-from flow4ai.jc_graph import validate_graph
+from flow4ai.f4a_graph import validate_graph
 from flow4ai.job import JobABC
 from flow4ai.taskmanager import TaskManager
 from tests.test_utils.graph_evaluation import print_diff

@@ -86,7 +86,7 @@ When creating custom job classes by extending `JobABC`, follow these guidelines:
    - Always call super().__init__ with name and properties parameters
    - Task metadata like task_id and custom metadata fields are automatically preserved
 
-### 2. Job Graph Management (`jc_graph.py`)
+### 2. Job Graph Management (`f4a_graph.py`)
 
 #### Graph Validation and Manipulation
 - Cycle detection in job graphs

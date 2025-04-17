@@ -10,7 +10,7 @@ import yaml
 from pydantic import BaseModel
 
 from . import f4a_logging as logging
-from .jc_graph import validate_graph
+from .f4a_graph import validate_graph
 from .job import JobABC
 
 logger = logging.getLogger(__name__)
