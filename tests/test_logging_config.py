@@ -128,12 +128,12 @@ def test_debug_logging_in_flowmanagerMP(clear_log_file):
         log_lines = log_contents.splitlines()
 
     # Separate JobChain and DebugDelayedJob debug logs
-    jobchain_debug_logs = [line for line in log_lines if '[DEBUG]' in line and 'JobChain' in line]
+    jobchain_debug_logs = [line for line in log_lines if '[DEBUG]' in line and 'FlowManagerMP' in line]
     delayed_job_debug_logs = [line for line in log_lines if '[DEBUG]' in line and 'DebugDelayedJob' in line]
 
-    # Verify JobChain has debug logs
-    assert len(jobchain_debug_logs) > 0, "No DEBUG logs found from JobChain"
-    print("\nJobChain DEBUG logs:")
+    # Verify FlowManagerMP has debug logs
+    assert len(jobchain_debug_logs) > 0, "No DEBUG logs found from FlowManagerMP"
+    print("\nFlowManagerMP DEBUG logs:")
     for log in jobchain_debug_logs[:3]:  # Print first 3 for verification
         print(log)
 
@@ -177,13 +177,13 @@ def test_info_logging_in_flowmanagerMP(clear_log_file):
     assert len(debug_logs) == 0, f"Found unexpected DEBUG logs:\n" + "\n".join(debug_logs[:3])
 
     # Verify INFO logs are present for both components
-    jobchain_info_logs = [line for line in log_lines if '[INFO]' in line and 'JobChain' in line]
+    flowmanagermp_info_logs = [line for line in log_lines if '[INFO]' in line and 'FlowManagerMP' in line]
     delayed_job_info_logs = [line for line in log_lines if '[INFO]' in line and 'DebugDelayedJob' in line]
 
-    # Verify JobChain info logs
-    assert len(jobchain_info_logs) > 0, "No INFO logs found from JobChain"
-    print("\nJobChain INFO logs:")
-    for log in jobchain_info_logs[:3]:  # Print first 3 for verification
+    # Verify FlowManagerMP info logs
+    assert len(flowmanagermp_info_logs) > 0, "No INFO logs found from FlowManagerMP"
+    print("\nFlowManagerMP INFO logs:")
+    for log in flowmanagermp_info_logs[:3]:  # Print first 3 for verification
         print(log)
 
     # Verify DebugDelayedJob info logs

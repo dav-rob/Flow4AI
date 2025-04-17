@@ -29,7 +29,7 @@ class FlowManagerMP:
 
         result_processing_function (Optional[Callable[[Any], None]]): Code to handle results after the Job executes its task.
             By default, this hand-off happens in parallel, immediately after a Job processes a task.
-            Typically, this function is from an existing codebase that JobChain is supplementing.
+            Typically, this function is from an existing codebase that FlowManagerMP is supplementing.
             This function must be picklable, for parallel execution, see serial_processing parameter below.
             This code is not assumed to be asyncio compatible.
 
@@ -43,9 +43,9 @@ class FlowManagerMP:
 
     def __init__(self, job: Optional[Any] = None, result_processing_function: Optional[Callable[[Any], None]] = None, 
                  serial_processing: bool = False):
-        # Get logger for JobChain
-        self.logger = logging.getLogger('JobChain')
-        self.logger.info("Initializing JobChain")
+        # Get logger for FlowManagerMP
+        self.logger = logging.getLogger('FlowManagerMP')
+        self.logger.info("Initializing FlowManagerMP")
         if not serial_processing and result_processing_function:
             self._check_picklable(result_processing_function)
         # tasks are created by submit_task(), with ["job_name"] added to the task dict
@@ -53,7 +53,7 @@ class FlowManagerMP:
         self._task_queue: mp.Queue[Task] = mp.Queue()  
         # INTERNAL USE ONLY. DO NOT ACCESS DIRECTLY.
         # This queue is for internal communication between the job executor and result processor.
-        # To process results, use the result_processing_function parameter in the JobChain constructor.
+        # To process results, use the result_processing_function parameter in the FlowManagerMP constructor.
         # See test_result_processing.py for examples of proper result handling.
         self._result_queue = mp.Queue()  # type: mp.Queue
         self.job_executor_process = None
@@ -104,7 +104,7 @@ class FlowManagerMP:
         self._job_name_map.clear()
         self._job_name_map.update({job.name: job.job_set_str() for job in self.job_map.values()})
 
-    # We will not to use context manager as it makes semantics of JobChain use less flexible
+    # We will not to use context manager as it makes semantics of FlowManagerMP use less flexible
     # def __enter__(self):
     #     """Initialize resources when entering the context."""
     #     self._start()
@@ -120,7 +120,7 @@ class FlowManagerMP:
 
     def _cleanup(self):
         """Clean up resources when the object is destroyed."""
-        self.logger.info("Cleaning up JobChain resources")
+        self.logger.info("Cleaning up FlowManagerMP resources")
         
         if self.job_executor_process:
             if self.job_executor_process.is_alive():
@@ -247,7 +247,7 @@ class FlowManagerMP:
                 # If there's only one job, use its name
                 task_dict['job_name'] = next(iter(self._job_name_map.keys()))
             else:
-                raise ValueError("No jobs available in JobChain")
+                raise ValueError("No jobs available in FlowManagerMP")
 
             task_obj = Task(task_dict)
             self._task_queue.put(task_obj)
@@ -344,7 +344,7 @@ class FlowManagerMP:
     @staticmethod
     def _replace_pydantic_models(data: Any) -> Any:
         """Recursively replace pydantic.BaseModel instances with their JSON dumps."""
-        logger = logging.getLogger('JobChain')
+        logger = logging.getLogger('FlowManagerMP')
         logger.debug(f'Processing data type: {type(data)}')
 
         if isinstance(data, dict):
@@ -529,25 +529,25 @@ class FlowManagerMP:
         
         return dict(self._job_name_map)
 
-class JobChainFactory:
+class FlowManagerMPFactory:
     _instance = None
     _flowmanagerMP = None
 
     def __init__(self, *args, **kwargs):
-        if not JobChainFactory._instance:
+        if not FlowManagerMPFactory._instance:
             self._flowmanagerMP = FlowManagerMP(*args, **kwargs)
-            JobChainFactory._instance = self
+            FlowManagerMPFactory._instance = self
 
     @classmethod
     def init(cls, start_method="spawn", *args, **kwargs):
       """
-      Initializes the JobChainFactory using the given start method.
-      args and kwargs are passed down to the JobChain constructor.
+      Initializes the FlowManagerMPFactory using the given start method.
+      args and kwargs are passed down to the FlowManagerMP constructor.
 
       Args:
         start_method: The start method of multiprocessing. Defaults to "spawn".
-        args: The parameters to be passed to the JobChain's constructor
-        kwargs: The keyword parameters to be passed to the JobChain's constructor
+        args: The parameters to be passed to the FlowManagerMP's constructor
+        kwargs: The keyword parameters to be passed to the FlowManagerMP's constructor
         
       """
       freeze_support()
@@ -558,6 +558,6 @@ class JobChainFactory:
 
     @staticmethod
     def get_instance()->FlowManagerMP:
-        if not JobChainFactory._instance:
-            raise RuntimeError("JobChainFactory not initialized")
-        return JobChainFactory._instance._flowmanagerMP
+        if not FlowManagerMPFactory._instance:
+            raise RuntimeError("FlowManagerMPFactory not initialized")
+        return FlowManagerMPFactory._instance._flowmanagerMP

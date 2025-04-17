@@ -13,7 +13,7 @@ from typing import List
 import pytest
 
 from flow4ai import f4a_logging as logging
-from flow4ai.flowmanagerMP import JobChainFactory
+from flow4ai.flowmanagerMP import FlowManagerMPFactory
 from flow4ai.job import JobABC
 from flow4ai.job_loader import ConfigLoader
 
@@ -96,8 +96,8 @@ class UnpicklableState:
 @pytest.fixture(autouse=True)
 def reset_factory():
     """Reset JobChainFactory between tests"""
-    JobChainFactory._instance = None
-    JobChainFactory._flowmanagerMP = None
+    FlowManagerMPFactory._instance = None
+    FlowManagerMPFactory._flowmanagerMP = None
     RESULTS.clear()  # Clear global results
     # Clean up temp file if exists
     if os.path.exists('temp.log'):
@@ -114,10 +114,10 @@ def test_empty_initialization():
     ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config")])
     
     # Create JobChain with serial processing to ensure deterministic results
-    JobChainFactory()
+    FlowManagerMPFactory()
     
     # Get head jobs from config to know their names
-    head_jobs = sorted(JobChainFactory.get_instance().get_job_names())
+    head_jobs = sorted(FlowManagerMPFactory.get_instance().get_job_names())
     
     # Verify head jobs are loaded - these are the entry point jobs from all graphs and parameter sets
     expected_jobs = sorted([
@@ -129,7 +129,7 @@ def test_empty_initialization():
     
     assert head_jobs == expected_jobs, "JobChain config not loaded correctly"
 
-    JobChainFactory.get_instance().mark_input_completed()
+    FlowManagerMPFactory.get_instance().mark_input_completed()
 
 
 @pytest.mark.asyncio
@@ -141,8 +141,8 @@ async def test_concurrent_task_execution():
         results.append(result)
     
     # Initialize factory with a new JobChain
-    JobChainFactory(AsyncTestJob(), collect_result, serial_processing=True)
-    flowmanagerMP = JobChainFactory.get_instance()
+    FlowManagerMPFactory(AsyncTestJob(), collect_result, serial_processing=True)
+    flowmanagerMP = FlowManagerMPFactory.get_instance()
     
     # Submit tasks with different delays
     tasks = [
@@ -175,8 +175,8 @@ async def test_job_instantiation_and_execution():
         results.append(result)
     
     # Create a job chain through the factory
-    JobChainFactory(BasicTestJob(), collect_result, serial_processing=True)
-    flowmanagerMP = JobChainFactory.get_instance()
+    FlowManagerMPFactory(BasicTestJob(), collect_result, serial_processing=True)
+    flowmanagerMP = FlowManagerMPFactory.get_instance()
     
     # Submit a simple task
     flowmanagerMP.submit_task({'BasicTestJob': {}})
@@ -187,7 +187,7 @@ async def test_job_instantiation_and_execution():
     assert results[0]['BasicTestJob'] == "completed"
     
     # Verify we can get the same instance again
-    same_flowmanagerMP = JobChainFactory.get_instance()
+    same_flowmanagerMP = FlowManagerMPFactory.get_instance()
     assert same_flowmanagerMP is flowmanagerMP
 
 
@@ -198,8 +198,8 @@ def test_parallel_execution():
         start_time = time.perf_counter()
         
         # Create job chain through factory with picklable result processor
-        JobChainFactory(DelayedJob(delay), picklable_result_processor)
-        flowmanagerMP = JobChainFactory.get_instance()
+        FlowManagerMPFactory(DelayedJob(delay), picklable_result_processor)
+        flowmanagerMP = FlowManagerMPFactory.get_instance()
         
         # Feed 10 tasks with a delay between each to simulate data gathering
         for i in range(10):
@@ -216,8 +216,8 @@ def test_parallel_execution():
     time_1s = asyncio.run(run_flowmanagerMP(1.0))
     
     # Reset factory for second test
-    JobChainFactory._instance = None
-    JobChainFactory._flowmanagerMP = None
+    FlowManagerMPFactory._instance = None
+    FlowManagerMPFactory._flowmanagerMP = None
     RESULTS.clear()
     
     # Test with 2 second delay
@@ -259,19 +259,19 @@ def test_serial_result_processor_with_unpicklable():
     
     # Test parallel mode (should fail)
     with pytest.raises(TypeError) as exc_info:
-        JobChainFactory(ResultTimingJob(), unpicklable_processor, serial_processing=False)
-        flowmanagerMP = JobChainFactory.get_instance()
+        FlowManagerMPFactory(ResultTimingJob(), unpicklable_processor, serial_processing=False)
+        flowmanagerMP = FlowManagerMPFactory.get_instance()
         flowmanagerMP.submit_task("Task 1")
         flowmanagerMP.mark_input_completed()
     assert "pickle" in str(exc_info.value).lower()
     
     # Reset factory for serial mode test
-    JobChainFactory._instance = None
-    JobChainFactory._flowmanagerMP = None
+    FlowManagerMPFactory._instance = None
+    FlowManagerMPFactory._flowmanagerMP = None
     
     # Test serial mode (should work)
-    JobChainFactory(ResultTimingJob(), unpicklable_processor, serial_processing=True)
-    flowmanagerMP = JobChainFactory.get_instance()
+    FlowManagerMPFactory(ResultTimingJob(), unpicklable_processor, serial_processing=True)
+    flowmanagerMP = FlowManagerMPFactory.get_instance()
     
     # Submit tasks
     for i in range(3):
