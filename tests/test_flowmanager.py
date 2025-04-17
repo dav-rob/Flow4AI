@@ -6,8 +6,8 @@ import pytest
 
 from flow4ai import f4a_logging as logging
 from flow4ai.dsl import DSLComponent, JobsDict, p, wrap
+from flow4ai.flowmanager import FlowManager
 from flow4ai.job import JobABC
-from flow4ai.taskmanager import TaskManager
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -67,17 +67,17 @@ def test_execute_job_graph_from_dsl():
         >> jobs["aggregator"] 
     )
         
-    tm = TaskManager()
-    fq_name =tm.add_dsl(dsl, "test_execute_job_graph_from_dsl")
+    fm = FlowManager()
+    fq_name =fm.add_dsl(dsl, "test_execute_job_graph_from_dsl")
     print(fq_name)
     task = {"times.x": 1, "add.x": 2, "square.x": 3}
-    tm.submit(task,fq_name)
-    success = tm.wait_for_completion()
+    fm.submit(task,fq_name)
+    success = fm.wait_for_completion()
     assert success, "Timed out waiting for tasks to complete"
     
     # Print results
-    print("Task counts:", tm.get_counts())
-    results = tm.pop_results()
+    print("Task counts:", fm.get_counts())
+    results = fm.pop_results()
     
     print("\nCompleted tasks:")
     for job_name, job_results in results["completed"].items():
@@ -125,12 +125,12 @@ def test_completion_callback():
 
     dsl =(jobs["once"] | jobs["ina"] ) >> jobs["collate"]
         
-    tm = TaskManager(on_complete=post_processor)
-    fq_name =tm.add_dsl(dsl, "test_completion_callback")
+    fm = FlowManager(on_complete=post_processor)
+    fq_name =fm.add_dsl(dsl, "test_completion_callback")
     print(fq_name)
     task = {"once.x": "once ", "ina.x": "in a "}
-    tm.submit(task,fq_name)
-    tm.wait_for_completion()
+    fm.submit(task,fq_name)
+    fm.wait_for_completion()
 
 class DelayedJob(JobABC):
     async def run(self, task):
@@ -142,9 +142,9 @@ class DelayedJob(JobABC):
 
 def create_tm(graph_name:str):
     dsl = DelayedJob("delayed")
-    tm = TaskManager(on_complete=lambda x: logger.debug(f"received {x}"))
-    fq_name = tm.add_dsl(dsl, graph_name)
-    return tm, fq_name
+    fm = FlowManager(on_complete=lambda x: logger.debug(f"received {x}"))
+    fq_name = fm.add_dsl(dsl, graph_name)
+    return fm, fq_name
 
 def execute_tm_with_delay(delay, task_count=10):
     tm, fq_name = create_tm("test_parallel_execution" + str(delay))
@@ -196,7 +196,7 @@ def test_parallel_load():
     assert execution_time < 4.0
 
 
-def test_taskmanager_execute_method():
+def test_flowmanager_execute_method():
     """Test the execute method of TaskManager which simplifies the workflow."""
     # Define functions that properly work together in a chain
     def square(x):
@@ -227,11 +227,11 @@ def test_taskmanager_execute_method():
     logger.debug(dsl)
     
     # Use execute method directly
-    tm = TaskManager()
+    fm = FlowManager()
     task = {"square.x": 4}
     
     # Test with dsl and graph_name
-    errors, result_dict = tm.execute(task, dsl=dsl, graph_name="test_execute1")
+    errors, result_dict = fm.execute(task, dsl=dsl, graph_name="test_execute1")
     
     assert errors == {}, "Errors occurred"
     assert result_dict is not None, "No result returned"
@@ -252,7 +252,7 @@ def test_taskmanager_execute_method():
 
     # Test with fresh DSL
     task = {"square.x": 5}
-    errors, result_dict = tm.execute(task, dsl=fresh_dsl, graph_name="test_execute2")
+    errors, result_dict = fm.execute(task, dsl=fresh_dsl, graph_name="test_execute2")
     
     assert errors == {}, "Errors occurred"
     assert result_dict is not None, "No result returned"
@@ -264,7 +264,7 @@ def test_taskmanager_execute_method():
     assert result_dict["SAVED_RESULTS"]["square"] == 25
 
 
-def test_taskmanager_run_static_method():
+def test_flowmanager_run_static_method():
     """Test the static run method of TaskManager for one-line execution."""
     def double(x):
         return x*2
@@ -286,7 +286,7 @@ def test_taskmanager_run_static_method():
     task = {"double.x": 3}
     
     # Use the static run method
-    errors, result_dict = TaskManager.run(dsl, task, "test_run_method")
+    errors, result_dict = FlowManager.run(dsl, task, "test_run_method")
     
     assert errors == {}, "Errors occurred"
     assert result_dict is not None, "No result returned"
@@ -319,8 +319,8 @@ def test_display_results(capsys):
     dsl = jobs["add"] >> jobs["subtract"]
     task = {"add.x": 10}
     
-    tm = TaskManager()
-    errors, result_dict = tm.execute(task, dsl=dsl, graph_name="test_display")
+    fm = FlowManager()
+    errors, result_dict = fm.execute(task, dsl=dsl, graph_name="test_display")
     
     assert errors == {}, "Errors occurred"
     assert result_dict is not None, "No result returned"
@@ -333,7 +333,7 @@ def test_display_results(capsys):
     
     
     # Call display_results
-    displayed_results = tm.display_results(result_dict)
+    displayed_results = fm.display_results(result_dict)
     
     # Capture stdout
     captured = capsys.readouterr()
@@ -348,12 +348,12 @@ def test_display_results(capsys):
     # Verify we can call display_results without providing results
     # Use the same graph name as above
     task = {"add.x": 20}
-    tm.submit(task, fq_name)
-    success = tm.wait_for_completion()
+    fm.submit(task, fq_name)
+    success = fm.wait_for_completion()
     assert success, "Timed out waiting for tasks to complete"
     
     # Call display_results without providing results
-    tm.display_results()
+    fm.display_results()
     
     # Capture stdout
     captured = capsys.readouterr()
@@ -375,11 +375,11 @@ def test_error_handling_in_execute():
     dsl = single_job
     task = {"failing.x": 1}
     
-    tm = TaskManager()
+    fm = FlowManager()
     
     # The execute method should raise an exception when a job fails
     try:
-        tm.execute(task, dsl=dsl, graph_name="test_error_handling")
+        fm.execute(task, dsl=dsl, graph_name="test_error_handling")
         assert False, "execute() did not raise an exception when a job failed"
     except Exception as e:
         assert "This job intentionally fails" in str(e), "Unexpected error message"
@@ -398,12 +398,12 @@ def test_timeout_handling_in_execute():
     dsl = single_job
     task = {"slow.x": 1}
     
-    tm = TaskManager()
+    fm = FlowManager()
     
     # The execute method should raise a TimeoutError when timeout is exceeded
     try:
         # Set timeout to 0.1 seconds, which is less than the 2-second sleep
-        tm.execute(task, dsl=dsl, graph_name="test_timeout", timeout=0.1)
+        fm.execute(task, dsl=dsl, graph_name="test_timeout", timeout=0.1)
         assert False, "execute() did not raise a TimeoutError when timeout was exceeded"
     except TimeoutError:
         pass  # Expected behavior

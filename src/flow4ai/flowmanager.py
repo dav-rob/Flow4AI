@@ -12,7 +12,7 @@ from .job import SPLIT_STR, Task, job_graph_context_manager
 from .job_loader import JobFactory
 
 
-class TaskManager:
+class FlowManager:
     _instance = None
     _lock = threading.Lock()  # Class-level lock for singleton creation
 
