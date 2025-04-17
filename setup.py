@@ -1,12 +1,11 @@
 from setuptools import find_packages, setup
 
 setup(
-    name='flow4ai',  # Renamed from 'jobchain' to 'flow4ai'
+    name='flow4ai',
     version='0.1.0',
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     package_data={
-      "jobchain": ["resources/*"],
       "flow4ai": ["resources/*"]
     },
     install_requires=[
