@@ -26,11 +26,11 @@ class DebugDelayedJob(JobABC):
 @pytest.fixture
 def clear_log_file():
     """Clear the log file before each test."""
-    if os.path.exists('jobchain.log'):
-        os.remove('jobchain.log')
+    if os.path.exists('flow4ai.log'):
+        os.remove('flow4ai.log')
     yield
-    if os.path.exists('jobchain.log'):
-        os.remove('jobchain.log')
+    if os.path.exists('flow4ai.log'):
+        os.remove('flow4ai.log')
     # Clear any environment variables that might affect logging
     os.environ.pop('FLOW4AI_LOG_HANDLERS', None)
     os.environ.pop('FLOW4AI_LOG_LEVEL', None)
@@ -41,7 +41,7 @@ def test_logging_handlers_default(clear_log_file):
     logger = logging.getLogger('test')
     logger.info('This is a test message')
     
-    with open('jobchain.log', 'r') as f:
+    with open('flow4ai.log', 'r') as f:
         lines = f.readlines()
     # Should only contain the header comment
     assert len(lines) == 1, "Log file should only contain header comment"
@@ -54,7 +54,7 @@ def test_logging_handlers_console_explicit(clear_log_file):
     logger = logging.getLogger('test')
     logger.info('This is a test message')
     
-    with open('jobchain.log', 'r') as f:
+    with open('flow4ai.log', 'r') as f:
         lines = f.readlines()
     # Should only contain the header comment
     assert len(lines) == 1, "Log file should only contain header comment"
@@ -68,7 +68,7 @@ def test_logging_handlers_file(clear_log_file):
     test_message = 'This should be in the log file'
     logger.info(test_message)
     
-    with open('jobchain.log', 'r') as f:
+    with open('flow4ai.log', 'r') as f:
         lines = f.readlines()
     # Should contain both header and log message
     assert len(lines) > 1, "Log file should contain header and log messages"
@@ -86,7 +86,7 @@ def test_logging_config_debug(clear_log_file):
     logger.debug('This is a debug message')
     
     # Check if the debug message appears in the log file
-    with open('jobchain.log', 'r') as f:
+    with open('flow4ai.log', 'r') as f:
         log_contents = f.read()
     assert 'This is a debug message' in log_contents
 
@@ -102,7 +102,7 @@ def test_logging_config_info(clear_log_file):
     logger.info('This is an info message')
     
     # Check that only INFO message appears in the log file
-    with open('jobchain.log', 'r') as f:
+    with open('flow4ai.log', 'r') as f:
         log_contents = f.read()
     assert 'This is a debug message' not in log_contents
     assert 'This is an info message' in log_contents
@@ -123,7 +123,7 @@ def test_debug_logging_in_flowmanagerMP(clear_log_file):
     flowmanagerMP.mark_input_completed()
 
     # Check log file contents
-    with open('jobchain.log', 'r') as f:
+    with open('flow4ai.log', 'r') as f:
         log_contents = f.read()
         log_lines = log_contents.splitlines()
 
@@ -168,7 +168,7 @@ def test_info_logging_in_flowmanagerMP(clear_log_file):
     flowmanagerMP.mark_input_completed()
 
     # Check log file contents
-    with open('jobchain.log', 'r') as f:
+    with open('flow4ai.log', 'r') as f:
         log_contents = f.read()
         log_lines = log_contents.splitlines()
 

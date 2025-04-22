@@ -38,7 +38,7 @@ This document tracks the implementation status of jobchain_to_flow4ai features
 - [ ] Update file headers and comments to reflect the new project name
 
 ### Logging System
-- [ ] Rename log file from `jobchain.log` to `flow4ai.log`
+- [ ] Rename log file from `flow4ai.log` to `flow4ai.log`
 - [x] Update log message prefixes from `JobChain` to `FlowManagerMP`
 - [ ] Update log initialization code to use new file names
 
