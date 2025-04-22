@@ -448,14 +448,14 @@ class JobFactory:
 
 
 class ConfigLoader:
-    # Directories are searched in order. If a valid jobchain directory is found,
+    # Directories are searched in order. If a valid flow4ai directory is found,
     # the search stops and uses that directory.
     # TODO: Nice to have - Add support for merging configurations from multiple directories
     #       if required in the future.
     directories: List[str] = [
-        os.path.join(os.getcwd(), "jobchain"),  # jobchain directory in current working directory
-        os.path.join(os.path.expanduser("~"), "jobchain"),  # ~/jobchain
-        "/etc/jobchain"
+        os.path.join(os.getcwd(), "flow4ai"),  # flow4ai directory in current working directory
+        os.path.join(os.path.expanduser("~"), "flow4ai"),  # ~/flow4ai
+        "/etc/flow4ai"
     ]
     _cached_configs: Dict[str, dict] = None
 
@@ -481,7 +481,7 @@ class ConfigLoader:
     ) -> Dict[str, dict]:
         """
         Load configuration files from directories. Will search directories in order and stop
-        at the first valid jobchain directory found.
+        at the first valid flow4ai directory found.
         
         Args:
             directories: List of directory paths to search
@@ -492,7 +492,7 @@ class ConfigLoader:
             Dictionary with config_base as key and loaded config as value
             
         Raises:
-            FileNotFoundError: If no valid jobchain directory is found in any of the directories
+            FileNotFoundError: If no valid flow4ai directory is found in any of the directories
             ConfigurationError: If configuration files are malformed
         """
         configs: Dict[str, dict] = {}
@@ -520,7 +520,7 @@ class ConfigLoader:
 
             if has_configs:
                 found_valid_dir = True
-                logger.info(f"Found valid jobchain directory: {dir_path}")
+                logger.info(f"Found valid flow4ai directory: {dir_path}")
                 # Load configs from this directory only
                 for config_base in config_bases:
                     for ext in allowed_extensions:
@@ -542,7 +542,7 @@ class ConfigLoader:
                 break  # Stop searching after finding first valid directory
 
         if not found_valid_dir:
-            raise FileNotFoundError(f"No valid jobchain directory found in search paths: {dir_paths}")
+            raise FileNotFoundError(f"No valid flow4ai directory found in search paths: {dir_paths}")
 
         # Store file paths in configs
         configs['__files__'] = config_files
