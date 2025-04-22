@@ -4,6 +4,6 @@ batch_processor:
   max_queue_size: 1000  # Batch processor will handle up to 1000 spans in queue.
   schedule_delay_millis: 1000  # 1-second timeout for exporting spans.
 file_exporter:
-  path: "~/.JobChain/otel_trace.json"  # Default path for trace export
+  path: "~/.Flow4AI/otel_trace.json"  # Default path for trace export
   max_size_bytes: 5242880  # 5MB (5 * 1024 * 1024 bytes)
   rotation_time_days: 1  # Rotate daily

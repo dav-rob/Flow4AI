@@ -74,7 +74,7 @@ def setup_logging():
     # Always create log file with header, actual logging will only happen if handlers use it
     if not os.path.exists('flow4ai.log'):
         with open('flow4ai.log', 'w') as f:
-            f.write('# JobChain log file - This file is created empty and will be written to only when file logging is enabled\n')
+            f.write('# Flow4AI log file - This file is created empty and will be written to only when file logging is enabled\n')
     
     print(f"Logging level: {config['root']['level']}")
     # Apply configuration

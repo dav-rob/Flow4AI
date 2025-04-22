@@ -1,5 +1,5 @@
 """
-JobChain Graph module for handling directed acyclic graphs with subgraphs.
+Flow4AI Graph module for handling directed acyclic graphs with subgraphs.
 Provides functionality for graph traversal, cycle detection, and validation.
 """
 
