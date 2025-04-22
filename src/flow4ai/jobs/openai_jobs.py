@@ -39,14 +39,13 @@ class OpenAIJob(JobABC):
 
     def __init__(self, name: Optional[str] = None, properties: Dict[str, Any] = {}):
         """
-        Call JobChain.submit_task({"prompt": prompt}), when submitting a task to the JobChain.
         Initialize an OpenAIJob instance with a properties dict containing three top-level keys, client, api, and rate_limit.
         All properties are optional.
 
         Args:
             name (Optional[str], optional): 
-                A unique identifier for this job within the context of a JobChain.
-                The name must be unique among all jobs in the same JobChain to ensure proper job identification 
+                A unique identifier for this job.
+                The name must be unique among all jobs to ensure proper job identification 
                 and dependency resolution. If not provided, a unique name will be auto-generated.
 
             properties (Dict[str, Any], optional): Optional properties for the job. A dictionary containing the following keys:
