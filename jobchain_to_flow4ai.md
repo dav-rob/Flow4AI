@@ -29,7 +29,7 @@ This document tracks the implementation status of jobchain_to_flow4ai features
 
 ### Environment Variables and Configuration
 - [ ] Rename environment variables from `JOBCHAIN_` prefix to `FLOW4AI_` prefix
-- [ ] Update config file names from `flow4ai_all.yaml` to `flow4ai_all.yaml`
+- [ ] Update config file names from `jobchain_all.yaml` to `flow4ai_all.yaml`
 - [ ] Update config directory search paths from `jobchain` to `flow4ai`
 
 ### Documentation
@@ -38,7 +38,7 @@ This document tracks the implementation status of jobchain_to_flow4ai features
 - [ ] Update file headers and comments to reflect the new project name
 
 ### Logging System
-- [ ] Rename log file from `flow4ai.log` to `flow4ai.log`
+- [ ] Rename log file from `jobchain.log` to `flow4ai.log`
 - [x] Update log message prefixes from `JobChain` to `FlowManagerMP`
 - [ ] Update log initialization code to use new file names
 
@@ -49,7 +49,7 @@ This document tracks the implementation status of jobchain_to_flow4ai features
 
 ### Configuration Loading 
 - [ ] Update config loading logic to search for `flow4ai` directories instead of `jobchain`
-- [ ] Rename config bases from `flow4ai_all` to `flow4ai_all`
+- [ ] Rename config bases from `jobchain_all` to `flow4ai_all`
 - [ ] Update error messages related to config loading
 
 ### Examples
