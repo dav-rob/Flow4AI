@@ -1,6 +1,6 @@
-# JobChain Graph Visualization Features
+# Flow4AI Graph Visualization Features
 
-This document tracks the implementation status of graph visualization features for the JobChain project.
+This document tracks the implementation status of graph visualization features for the Flow4AI project.
 
 ## Working Process
 

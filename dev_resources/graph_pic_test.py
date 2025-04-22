@@ -1,5 +1,5 @@
 """
-Test script for the graph_pic module in JobChain.
+Test script for the graph_pic module in Flow4AI.
 
 This script demonstrates how to use the graph_pic module to visualize
 job graphs using NetworkX and Matplotlib.
@@ -17,7 +17,7 @@ import sys
 # Add the src directory to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.jobchain.graph_pic import compare_layouts, visualize_graph
+from src.flow4ai.graph_pic import compare_layouts, visualize_graph
 
 
 def print_graph_definition(graph_definition):

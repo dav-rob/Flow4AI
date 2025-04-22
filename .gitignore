@@ -18,7 +18,6 @@ api.env
 # Distribution / Packaging
 dist/
 build/
-jobchain.egg-info/
 flow4ai.egg-info/
 
 
