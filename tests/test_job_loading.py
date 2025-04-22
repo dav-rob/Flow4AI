@@ -303,7 +303,7 @@ def test_validate_all_parameters_filled():
 
 
 @pytest.mark.asyncio
-async def test_job_execution_chain(caplog):
+async def test_job_execution_graph(caplog):
     """Test that all jobs in a graph are executed when _execute is called on the head job."""
     caplog.set_level('DEBUG')  # Set the logging level
     # Load custom job types
@@ -616,7 +616,7 @@ async def test_multiple_head_jobs_in_flowmanagerMP_serial(caplog):
     logging.info("Marking input as completed")
     flowmanagerMP.mark_input_completed()
     # FlowManagerMP automatically waits for completion when mark_input_completed is called
-    logging.info("Job chain completed")
+    logging.info("FlowManagerMP completed")
     
     # Log the results for debugging
     logging.info(f"Results count: {len(results)}")
@@ -685,7 +685,7 @@ async def test_multiple_tail_jobs_in_flowmanagerMP_serial(caplog):
     logging.info("Marking input as completed")
     flowmanagerMP.mark_input_completed()
     # FlowManagerMP automatically waits for completion when mark_input_completed is called
-    logging.info("Job chain completed")
+    logging.info("FlowManagerMP completed")
     
     # Log the results for debugging
     logging.info(f"Results count: {len(results)}")
@@ -751,7 +751,7 @@ async def test_multiple_tail_jobs_2_parameters(caplog):
     logging.info("Marking input as completed")
     flowmanagerMP.mark_input_completed()
     # FlowManagerMP automatically waits for completion when mark_input_completed is called
-    logging.info("Job chain completed")
+    logging.info("FlowManagerMP completed")
     
     # Log the results for debugging
     logging.info(f"Results count: {len(results)}")
@@ -823,7 +823,7 @@ async def test_simple_parallel_jobs_in_flowmanagerMP_serial(caplog):
     logging.info("Marking input as completed")
     flowmanagerMP.mark_input_completed()
     # FlowManagerMP automatically waits for completion when mark_input_completed is called
-    logging.info("Job chain completed")
+    logging.info("FlowManagerMP completed")
     
     # Log the results for debugging
     logging.info(f"Results count: {len(results)}")

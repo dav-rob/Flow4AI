@@ -38,7 +38,7 @@ This ensures all previous tasks are completed, and all processes are cleaned up.
 - Support for job dependencies
 - Async execution model
 - Tracing and performance instrumentation
-- Automatic task metadata preservation throughout job chains
+- Automatic task metadata preservation throughout job graphs
 
 #### Custom Job Implementation
 
@@ -77,7 +77,7 @@ When creating custom job classes by extending `JobABC`, follow these guidelines:
      ```
    - Do not override `_execute` - it's handled by JobABC for job graph processing
    - The `run` method receives task data and must return a dictionary
-   - Task metadata is automatically preserved and propagated through the job chain
+   - Task metadata is automatically preserved and propagated through the job graph
 
 3. Important Notes:
    - JobABC handles job graph execution through `_execute`
@@ -105,7 +105,7 @@ When creating custom job classes by extending `JobABC`, follow these guidelines:
   - Tasks are queued and processed asynchronously
   - Each job in the graph can handle multiple tasks
   - State isolation is maintained at the task level
-  - Results are tracked per task through the chain
+  - Results are tracked per task through the graph
 - Example configuration:
   ```yaml
   processing_graph:

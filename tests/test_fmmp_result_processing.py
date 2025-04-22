@@ -60,7 +60,7 @@ def parallel_mode():
             unpicklable.log_file.flush()
             print(f"Logged result: {result}")
 
-        # Create job chain in parallel mode
+        # Create FlowManagerMP in parallel mode
         job = ResultTimingJob()
         flowmanagerMP = FlowManagerMP(job, unpicklable_processor, serial_processing=False)
 
@@ -91,7 +91,7 @@ def serial_mode():
             unpicklable.log_file.flush()
             print(f"Logged result: {result}")
 
-        # Create job chain in serial mode
+        # Create FlowManagerMP in serial mode
         job = ResultTimingJob()
         flowmanagerMP = FlowManagerMP(job, unpicklable_processor, serial_processing=True)
 

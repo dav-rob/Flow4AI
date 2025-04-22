@@ -82,7 +82,7 @@ def test_parallel_execution_multiple_jobs():
         # Time the execution
         start_time = time.time()
         
-        # Run the job chain with all jobs and collect results
+        # Run the FlowManagerMP with all jobs and collect results
         results = []
         def result_collector(result):
             results.append(result)

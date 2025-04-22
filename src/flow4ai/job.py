@@ -131,7 +131,7 @@ class JobABC(ABC, metaclass=JobMeta):
     # class variable to keep track of instance counts for each class
     _instance_counts: Dict[Type, int] = {}
     
-    # Key used to pass task metadata through the job chain
+    # Key used to pass task metadata through the job graph
     TASK_PASSTHROUGH_KEY: str = 'task_pass_through'
     RETURN_JOB='RETURN_JOB'
     CONTEXT='CONTEXT'

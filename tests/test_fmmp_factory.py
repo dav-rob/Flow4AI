@@ -194,7 +194,7 @@ async def test_job_instantiation_and_execution():
 def test_parallel_execution():
     """Test true parallel execution performance using FlowManagerMPFactory"""
     async def run_flowmanagerMP(delay: float) -> float:
-        """Run job chain with specified delay and return execution time"""
+        """Run FlowManagerMP with specified delay and return execution time"""
         start_time = time.perf_counter()
         
         # Create FlowManagerMP through factory with picklable result processor

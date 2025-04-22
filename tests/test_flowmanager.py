@@ -198,7 +198,7 @@ def test_parallel_load():
 
 def test_flowmanager_execute_method():
     """Test the execute method of TaskManager which simplifies the workflow."""
-    # Define functions that properly work together in a chain
+    # Define functions that properly work together in a graph
     def square(x):
         return x**2
         

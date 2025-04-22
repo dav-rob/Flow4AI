@@ -113,7 +113,7 @@ def test_debug_logging_in_flowmanagerMP(clear_log_file):
     os.environ['FLOW4AI_LOG_HANDLERS'] = 'console,file'  # Enable file logging for this test
     logging.setup_logging()  # Reload config with new log level
 
-    # Create and run job chain with debug-enabled job
+    # Create and run FlowManagerMP with debug-enabled job
     job = DebugDelayedJob("Debug Test Job", 0.1)
     flowmanagerMP = FlowManagerMP(job)
 
@@ -158,7 +158,7 @@ def test_info_logging_in_flowmanagerMP(clear_log_file):
     os.environ['FLOW4AI_LOG_HANDLERS'] = 'console,file'  # Enable file logging for this test
     logging.setup_logging()  # Reload config with new log level
 
-    # Create and run job chain with debug-enabled job
+    # Create and run FlowManagerMP with debug-enabled job
     job = DebugDelayedJob("Info Test Job", 0.1)
     flowmanagerMP = FlowManagerMP(job)
 

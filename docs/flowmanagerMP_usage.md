@@ -14,7 +14,7 @@ FlowManagerMP is designed to be highly efficient and scalable with a single inst
 ```python
 # DON'T do this:
 flowmanagerMP1 = FlowManagerMP()
-flowmanagerMP2 = FlowManagerMP()  # Wrong! Don't create multiple chains
+flowmanagerMP2 = FlowManagerMP()  # Wrong! Don't create multiple classes, reuse.
 ```
 
 ## Correct Usage

@@ -56,7 +56,7 @@ def dummy_result_processor(result):
     logger.info(f"Processing result: {result}")
 
 async def run_flowmanagerMP(time_delay: float, use_direct_job: bool = False) -> float:
-    """Run job chain with specified delay and return execution time"""
+    """Run FlowManagerMP with specified delay and return execution time"""
     start_time = time.perf_counter()
     
     if use_direct_job:
@@ -132,7 +132,7 @@ def test_direct_job_initialization():
     )
 
 async def run_batch_flowmanagerMP() -> float:
-    """Run job chain with batches of website analysis jobs"""
+    """Run FlowManagerMP with batches of website analysis jobs"""
     start_time = time.perf_counter()
     
     flowmanagerMP_context = {
@@ -170,7 +170,7 @@ def test_parallel_execution_in_batches():
     )
 
 async def run_flowmanagerMP_without_result_processor() -> bool:
-    """Run job chain without a result processing function"""
+    """Run FlowManagerMP without a result processing function"""
     try:
         job = DelayedJob("Test Job",  0.1)
         flowmanagerMP = FlowManagerMP(job)  # Pass no result_processing_function
@@ -191,7 +191,7 @@ def test_no_result_processor():
     assert success, "FlowManagerMP should execute successfully without result_processing_function"
 
 async def run_traced_flowmanagerMP(time_delay: float) -> float:
-    """Run job chain with specified delay and return execution time"""
+    """Run FlowManagerMP with specified delay and return execution time"""
     start_time = time.perf_counter()
     
     # Use traditional dictionary initialization
@@ -252,10 +252,10 @@ def test_parallel_execution_with_tracing(tmp_path):
         TracerFactory._instance = None
         TracerFactory._config = None
 
-        # Run the job chain
-        logger.info("Starting job chain execution")
+        # Run the FlowManagerMP
+        logger.info("Starting FlowManagerMP execution")
         execution_time = asyncio.run(run_traced_flowmanagerMP(1.0))
-        logger.info("Job chain execution completed")
+        logger.info("FlowManagerMP execution completed")
 
         # Verify execution time
         assert execution_time <= 3.5, (
