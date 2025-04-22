@@ -4,7 +4,7 @@
 - Test: `python -m pytest`
 - Single test: `python -m pytest tests/path_to_test.py::test_name -v`
 - Full test suite: `python -m pytest --full-suite` (includes performance tests)
-- Debug logs: `python -m pytest -s` or `JOBCHAIN_LOG_LEVEL=DEBUG python -m pytest -v -s`
+- Debug logs: `python -m pytest -s` or `FLOW4AI_LOG_LEVEL=DEBUG python -m pytest -v -s`
 - Type checking: `mypy src/flow4ai`
 
 ## Code Style

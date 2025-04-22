@@ -33,7 +33,7 @@ def clear_log_file():
         os.remove('jobchain.log')
     # Clear any environment variables that might affect logging
     os.environ.pop('JOBCHAIN_LOG_HANDLERS', None)
-    os.environ.pop('JOBCHAIN_LOG_LEVEL', None)
+    os.environ.pop('FLOW4AI_LOG_LEVEL', None)
 
 def test_logging_handlers_default(clear_log_file):
     """Test that by default, logs are only written to console and not to file."""
@@ -76,8 +76,8 @@ def test_logging_handlers_file(clear_log_file):
     assert any(test_message in line for line in lines[1:]), "Test message should be in log file"
 
 def test_logging_config_debug(clear_log_file):
-    """Test that DEBUG level logging works when JOBCHAIN_LOG_LEVEL is set to DEBUG."""
-    os.environ['JOBCHAIN_LOG_LEVEL'] = 'DEBUG'
+    """Test that DEBUG level logging works when FLOW4AI_LOG_LEVEL is set to DEBUG."""
+    os.environ['FLOW4AI_LOG_LEVEL'] = 'DEBUG'
     os.environ['JOBCHAIN_LOG_HANDLERS'] = 'console,file'  # Enable file logging for this test
     logging.setup_logging()  # Reload config with new log level
     
@@ -91,8 +91,8 @@ def test_logging_config_debug(clear_log_file):
     assert 'This is a debug message' in log_contents
 
 def test_logging_config_info(clear_log_file):
-    """Test that DEBUG logs are filtered when JOBCHAIN_LOG_LEVEL is set to INFO."""
-    os.environ['JOBCHAIN_LOG_LEVEL'] = 'INFO'
+    """Test that DEBUG logs are filtered when FLOW4AI_LOG_LEVEL is set to INFO."""
+    os.environ['FLOW4AI_LOG_LEVEL'] = 'INFO'
     os.environ['JOBCHAIN_LOG_HANDLERS'] = 'console,file'  # Enable file logging for this test
     logging.setup_logging()  # Reload config with new log level
     
@@ -108,8 +108,8 @@ def test_logging_config_info(clear_log_file):
     assert 'This is an info message' in log_contents
 
 def test_debug_logging_in_flowmanagerMP(clear_log_file):
-    """Test that both JobChain and Job debug logs are visible when JOBCHAIN_LOG_LEVEL=DEBUG."""
-    os.environ['JOBCHAIN_LOG_LEVEL'] = 'DEBUG'
+    """Test that both JobChain and Job debug logs are visible when FLOW4AI_LOG_LEVEL=DEBUG."""
+    os.environ['FLOW4AI_LOG_LEVEL'] = 'DEBUG'
     os.environ['JOBCHAIN_LOG_HANDLERS'] = 'console,file'  # Enable file logging for this test
     logging.setup_logging()  # Reload config with new log level
 
@@ -153,8 +153,8 @@ def test_debug_logging_in_flowmanagerMP(clear_log_file):
     assert any('Processing task Task' in line for line in info_logs)
 
 def test_info_logging_in_flowmanagerMP(clear_log_file):
-    """Test that DEBUG logs are filtered when JOBCHAIN_LOG_LEVEL=INFO."""
-    os.environ['JOBCHAIN_LOG_LEVEL'] = 'INFO'
+    """Test that DEBUG logs are filtered when FLOW4AI_LOG_LEVEL=INFO."""
+    os.environ['FLOW4AI_LOG_LEVEL'] = 'INFO'
     os.environ['JOBCHAIN_LOG_HANDLERS'] = 'console,file'  # Enable file logging for this test
     logging.setup_logging()  # Reload config with new log level
 

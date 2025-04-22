@@ -35,4 +35,4 @@ For logging, use the flow4ai.f4a_logging module, not the standard logging module
 then do 
 `logger = logging.getLogger(__name__)`
 - for internal files under /src use the relative path import of f4a_logging
-- to activate debug logging in tests do `JOBCHAIN_LOG_LEVEL=DEBUG python -m pytest -v -s`
+- to activate debug logging in tests do `FLOW4AI_LOG_LEVEL=DEBUG python -m pytest -v -s`

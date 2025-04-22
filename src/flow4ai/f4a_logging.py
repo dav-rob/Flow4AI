@@ -1,8 +1,8 @@
 """
-Logging configuration for JobChain.
+Logging configuration for Flow4AI.
 
 Environment Variables:
-    JOBCHAIN_LOG_LEVEL: Set the logging level (e.g., 'DEBUG', 'INFO'). Defaults to 'INFO'.
+    FLOW4AI_LOG_LEVEL: Set the logging level (e.g., 'DEBUG', 'INFO'). Defaults to 'INFO'.
     JOBCHAIN_LOG_HANDLERS: Set logging handlers. Options:
         - Not set or 'console': Log to console only (default)
         - 'console,file': Log to both console and file
@@ -12,7 +12,7 @@ Example:
     $ export JOBCHAIN_LOG_HANDLERS='console,file'
     
     To set debug level logging:
-    $ export JOBCHAIN_LOG_LEVEL='DEBUG'
+    $ export FLOW4AI_LOG_LEVEL='DEBUG'
 """
 
 
@@ -21,7 +21,7 @@ import os
 # Initializing the flag here stops logging caching root levels to another value
 # for reasons I'm not completely sure about.
 WINDSURF_LOG_FLAG = None #None #"DEBUG"
-os.environ['JOBCHAIN_LOG_LEVEL'] = WINDSURF_LOG_FLAG or os.getenv('JOBCHAIN_LOG_LEVEL', 'INFO')
+os.environ['FLOW4AI_LOG_LEVEL'] = WINDSURF_LOG_FLAG or os.getenv('FLOW4AI_LOG_LEVEL', 'INFO')
 import logging
 from logging.config import dictConfig
 
@@ -41,13 +41,13 @@ def get_logging_config():
         'handlers': {
             'console': {
                 'class': 'logging.StreamHandler',
-                'level': os.getenv('JOBCHAIN_LOG_LEVEL', 'INFO'),
+                'level': os.getenv('FLOW4AI_LOG_LEVEL', 'INFO'),
                 'formatter': 'detailed',
                 'stream': 'ext://sys.stdout'
             },
             'file': {
                 'class': 'logging.FileHandler',
-                'level': os.getenv('JOBCHAIN_LOG_LEVEL', 'INFO'),
+                'level': os.getenv('FLOW4AI_LOG_LEVEL', 'INFO'),
                 'formatter': 'detailed',
                 'filename': 'jobchain.log',
                 'mode': 'a'
@@ -61,7 +61,7 @@ def get_logging_config():
             }
         },
         'root': {
-            'level':  os.getenv('JOBCHAIN_LOG_LEVEL', 'INFO'),
+            'level':  os.getenv('FLOW4AI_LOG_LEVEL', 'INFO'),
             # Set JOBCHAIN_LOG_HANDLERS='console,file' to enable both console and file logging
             'handlers': os.getenv('JOBCHAIN_LOG_HANDLERS', 'console').split(',')
         }

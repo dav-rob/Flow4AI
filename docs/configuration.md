@@ -7,7 +7,7 @@ JobChain can be configured using environment variables to customize its behavior
 | Variable | Description | Default Value |
 |----------|-------------|---------------|
 | `JOBCHAIN_OT_CONFIG` | Path to the OpenTelemetry configuration YAML file. This file configures tracing behavior, including the exporter type (console or file) and related settings. | None |
-| `JOBCHAIN_LOG_LEVEL` | Sets the root logger's logging level. Valid values are: DEBUG, INFO, WARNING, ERROR, CRITICAL | INFO |
+| `FLOW4AI_LOG_LEVEL` | Sets the root logger's logging level. Valid values are: DEBUG, INFO, WARNING, ERROR, CRITICAL | INFO |
 
 ## Usage Guide
 
@@ -41,7 +41,7 @@ export JOBCHAIN_OT_CONFIG=/path/to/your/config.yaml
 python your_script.py
 ```
 
-### Logging Level (JOBCHAIN_LOG_LEVEL)
+### Logging Level (FLOW4AI_LOG_LEVEL)
 
 This variable controls the verbosity of JobChain's root logger. The logging level affects what messages are output to the console.
 
@@ -54,9 +54,9 @@ Available logging levels (in order of increasing severity):
 
 To set the logging level:
 ```bash
-export JOBCHAIN_LOG_LEVEL=DEBUG  # For detailed debug output
+export FLOW4AI_LOG_LEVEL=DEBUG  # For detailed debug output
 # or
-export JOBCHAIN_LOG_LEVEL=WARNING  # For only warning and above messages
+export FLOW4AI_LOG_LEVEL=WARNING  # For only warning and above messages
 ```
 
 ## Best Practices
