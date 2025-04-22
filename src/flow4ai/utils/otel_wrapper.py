@@ -311,7 +311,7 @@ class TracerFactory:
         elif exporter_type == "file":
             # Load config to get file path
             config = TracerFactory._load_config()
-            file_path = config.get('file_exporter', {}).get('path', "~/.JobChain/otel_trace.json")
+            file_path = config.get('file_exporter', {}).get('path', "~/.Flow4AI/otel_trace.json")
             max_size_bytes = config.get('file_exporter', {}).get('max_size_bytes')
             rotation_time_days = config.get('file_exporter', {}).get('rotation_time_days')
             return AsyncFileExporter(file_path, max_size_bytes, rotation_time_days)

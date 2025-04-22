@@ -108,7 +108,7 @@ def test_logging_config_info(clear_log_file):
     assert 'This is an info message' in log_contents
 
 def test_debug_logging_in_flowmanagerMP(clear_log_file):
-    """Test that both JobChain and Job debug logs are visible when FLOW4AI_LOG_LEVEL=DEBUG."""
+    """Test that both FlowManagerMP and DebugDelayedJob debug logs are visible when FLOW4AI_LOG_LEVEL=DEBUG."""
     os.environ['FLOW4AI_LOG_LEVEL'] = 'DEBUG'
     os.environ['FLOW4AI_LOG_HANDLERS'] = 'console,file'  # Enable file logging for this test
     logging.setup_logging()  # Reload config with new log level
@@ -127,14 +127,14 @@ def test_debug_logging_in_flowmanagerMP(clear_log_file):
         log_contents = f.read()
         log_lines = log_contents.splitlines()
 
-    # Separate JobChain and DebugDelayedJob debug logs
-    jobchain_debug_logs = [line for line in log_lines if '[DEBUG]' in line and 'FlowManagerMP' in line]
+    # Separate FlowManagerMP and DebugDelayedJob debug logs
+    flowmanagermp_debug_logs = [line for line in log_lines if '[DEBUG]' in line and 'FlowManagerMP' in line]
     delayed_job_debug_logs = [line for line in log_lines if '[DEBUG]' in line and 'DebugDelayedJob' in line]
 
     # Verify FlowManagerMP has debug logs
-    assert len(jobchain_debug_logs) > 0, "No DEBUG logs found from FlowManagerMP"
+    assert len(flowmanagermp_debug_logs) > 0, "No DEBUG logs found from FlowManagerMP"
     print("\nFlowManagerMP DEBUG logs:")
-    for log in jobchain_debug_logs[:3]:  # Print first 3 for verification
+    for log in flowmanagermp_debug_logs[:3]:  # Print first 3 for verification
         print(log)
 
     # Verify DebugDelayedJob has debug logs
