@@ -7,7 +7,7 @@ import yaml
 
 from flow4ai import f4a_logging as logging
 from flow4ai.f4a_graph import validate_graph
-from flow4ai.flowmanagerMP import FlowManagerMP  # Import JobChain
+from flow4ai.flowmanagerMP import FlowManagerMP
 from flow4ai.job import JobABC, Task, job_graph_context_manager
 from flow4ai.job_loader import ConfigLoader, ConfigurationError, JobFactory
 
@@ -166,7 +166,7 @@ def test_config_loader_all():
     logging.info(f"ConfigLoader directories: {ConfigLoader.directories}")
     
     # Load the combined config file for comparison
-    with open(os.path.join(test_config_dir, "jobchain_all.yaml"), 'r') as f:
+    with open(os.path.join(test_config_dir, "flow4ai_all.yaml"), 'r') as f:
         all_config = yaml.safe_load(f)
     logging.info(f"All config: {all_config}")
     
@@ -339,8 +339,8 @@ async def test_job_execution_chain(caplog):
    
 
 @pytest.mark.asyncio
-async def test_head_jobs_in_jobchain_serial():
-    """Test that head jobs from config can be executed in JobChain with serial processing"""
+async def test_head_jobs_in_flowmanagerMP_serial():
+    """Test that head jobs from config can be executed in FlowManagerMP with serial processing"""
     # Set config directory for test
     ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config")])
     
@@ -351,7 +351,7 @@ async def test_head_jobs_in_jobchain_serial():
         results.append(result)
         logging.info(f"Processed result: {result}")
     
-    # Create JobChain with serial processing to ensure deterministic results
+    # Create FlowManagerMP with serial processing to ensure deterministic results
     flowmanagerMP = FlowManagerMP(job=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
@@ -404,8 +404,8 @@ def process_result(result):
 
 
 @pytest.mark.asyncio
-async def test_head_jobs_in_jobchain_parallel():
-    """Test that head jobs from config can be executed in JobChain with parallel processing"""
+async def test_head_jobs_in_flowmanagerMP_parallel():
+    """Test that head jobs from config can be executed in FlowManagerMP with parallel processing"""
     # Clean up any existing results file
     if os.path.exists("count_parallel_results"):
         os.remove("count_parallel_results")
@@ -413,7 +413,7 @@ async def test_head_jobs_in_jobchain_parallel():
     # Set config directory for test
     ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config")])
     
-    # Create JobChain with parallel processing (default)
+    # Create FlowManagerMP with parallel processing (default)
     flowmanagerMP = FlowManagerMP(job=None, result_processing_function=process_result)
     
     # Get head jobs from config to know their names
@@ -476,7 +476,7 @@ async def test_single_job_multiple_prompts():
     # Set config directory for test
     ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_single_job")])
     
-    # Create JobChain with parallel processing (default)
+    # Create FlowManagerMP with parallel processing (default)
     flowmanagerMP = FlowManagerMP(result_processing_function=process_prompts)
 
     prompts = ["what is the capital of france",
@@ -532,8 +532,8 @@ async def test_malformed_configuration():
 
 #@pytest.mark.skip("Skipping test due to working yet")
 @pytest.mark.asyncio
-async def test_pydantic_jobs_in_jobchain_serial():
-    """Test that head jobs from config can be executed in JobChain with serial processing"""
+async def test_pydantic_jobs_in_flowmanagerMP_serial():
+    """Test that head jobs from config can be executed in FlowManagerMP with serial processing"""
     # Set config directory for test
     ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_pydantic_config")])
 
@@ -545,7 +545,7 @@ async def test_pydantic_jobs_in_jobchain_serial():
         results.append(result)
         logging.info(f"Processed result: {result}")
     
-    # Create JobChain with serial processing to ensure deterministic results
+    # Create FlowManagerMP with serial processing to ensure deterministic results
     flowmanagerMP = FlowManagerMP(job=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
@@ -576,8 +576,8 @@ async def test_pydantic_jobs_in_jobchain_serial():
         
 
 @pytest.mark.asyncio
-async def test_multiple_head_jobs_in_jobchain_serial(caplog):
-    """Test that multiple head jobs from config can be executed in JobChain with serial processing
+async def test_multiple_head_jobs_in_flowmanagerMP_serial(caplog):
+    """Test that multiple head jobs from config can be executed in FlowManagerMP with serial processing
        The test uses a configuration with multiple parameters which means that multiple DefaultHeadJobs
        should be created.
     """
@@ -594,7 +594,7 @@ async def test_multiple_head_jobs_in_jobchain_serial(caplog):
         results.append(result)
         logging.info(f"Processed result: {result}")
     
-    # Create JobChain with serial processing to ensure deterministic results
+    # Create FlowManagerMP with serial processing to ensure deterministic results
     flowmanagerMP = FlowManagerMP(job=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
@@ -615,7 +615,7 @@ async def test_multiple_head_jobs_in_jobchain_serial(caplog):
     # Mark input as completed and wait for all tasks to finish
     logging.info("Marking input as completed")
     flowmanagerMP.mark_input_completed()
-    # JobChain automatically waits for completion when mark_input_completed is called
+    # FlowManagerMP automatically waits for completion when mark_input_completed is called
     logging.info("Job chain completed")
     
     # Log the results for debugging
@@ -644,8 +644,8 @@ async def test_multiple_head_jobs_in_jobchain_serial(caplog):
 
 
 @pytest.mark.asyncio
-async def test_multiple_tail_jobs_in_jobchain_serial(caplog):
-    """Test that multiple tail jobs from config can be executed in JobChain with serial processing"""
+async def test_multiple_tail_jobs_in_flowmanagerMP_serial(caplog):
+    """Test that multiple tail jobs from config can be executed in FlowManagerMP with serial processing"""
     # Enable debug logging
     caplog.set_level('DEBUG')
     
@@ -659,7 +659,7 @@ async def test_multiple_tail_jobs_in_jobchain_serial(caplog):
         results.append(result)
         logging.info(f"Processed result: {result}")
     
-    # Create JobChain with serial processing to ensure deterministic results
+    # Create FlowManagerMP with serial processing to ensure deterministic results
     flowmanagerMP = FlowManagerMP(job=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
@@ -684,7 +684,7 @@ async def test_multiple_tail_jobs_in_jobchain_serial(caplog):
     # Mark input as completed and wait for all tasks to finish
     logging.info("Marking input as completed")
     flowmanagerMP.mark_input_completed()
-    # JobChain automatically waits for completion when mark_input_completed is called
+    # FlowManagerMP automatically waits for completion when mark_input_completed is called
     logging.info("Job chain completed")
     
     # Log the results for debugging
@@ -717,7 +717,7 @@ async def test_multiple_tail_jobs_in_jobchain_serial(caplog):
 
 @pytest.mark.asyncio
 async def test_multiple_tail_jobs_2_parameters(caplog):
-    """Test that multiple tail jobs from config can be executed in JobChain with serial processing"""
+    """Test that multiple tail jobs from config can be executed in FlowManagerMP with serial processing"""
     # Enable debug logging
     caplog.set_level('DEBUG')
     
@@ -731,7 +731,7 @@ async def test_multiple_tail_jobs_2_parameters(caplog):
         results.append(result)
         logging.info(f"Processed result: {result}")
     
-    # Create JobChain with serial processing to ensure deterministic results
+    # Create FlowManagerMP with serial processing to ensure deterministic results
     flowmanagerMP = FlowManagerMP(job=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
@@ -750,7 +750,7 @@ async def test_multiple_tail_jobs_2_parameters(caplog):
     # Mark input as completed and wait for all tasks to finish
     logging.info("Marking input as completed")
     flowmanagerMP.mark_input_completed()
-    # JobChain automatically waits for completion when mark_input_completed is called
+    # FlowManagerMP automatically waits for completion when mark_input_completed is called
     logging.info("Job chain completed")
     
     # Log the results for debugging
@@ -783,8 +783,8 @@ async def test_multiple_tail_jobs_2_parameters(caplog):
 
 
 @pytest.mark.asyncio
-async def test_simple_parallel_jobs_in_jobchain_serial(caplog):
-    """Test that a simple parallel job graph with multiple independent jobs can be executed in JobChain"""
+async def test_simple_parallel_jobs_in_flowmanagerMP_serial(caplog):
+    """Test that a simple parallel job graph with multiple independent jobs can be executed in FlowManagerMP"""
     # Enable debug logging
     caplog.set_level('DEBUG')
     
@@ -798,7 +798,7 @@ async def test_simple_parallel_jobs_in_jobchain_serial(caplog):
         results.append(result)
         logging.info(f"Processed result: {result}")
     
-    # Create JobChain with serial processing to ensure deterministic results
+    # Create FlowManagerMP with serial processing to ensure deterministic results
     flowmanagerMP = FlowManagerMP(job=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
@@ -822,7 +822,7 @@ async def test_simple_parallel_jobs_in_jobchain_serial(caplog):
     # Mark input as completed and wait for all tasks to finish
     logging.info("Marking input as completed")
     flowmanagerMP.mark_input_completed()
-    # JobChain automatically waits for completion when mark_input_completed is called
+    # FlowManagerMP automatically waits for completion when mark_input_completed is called
     logging.info("Job chain completed")
     
     # Log the results for debugging
@@ -850,7 +850,7 @@ async def test_simple_parallel_jobs_in_jobchain_serial(caplog):
 
 @pytest.mark.asyncio
 async def test_save_result():
-    """Test that head jobs from config can be executed in JobChain with serial processing"""
+    """Test that head jobs from config can be executed in FlowManagerMP with serial processing"""
     # Set config directory for test
     ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_save_result")])
     
@@ -861,7 +861,7 @@ async def test_save_result():
         results.append(result)
         logging.info(f"Processed result: {result}")
     
-    # Create JobChain with serial processing to ensure deterministic results
+    # Create FlowManagerMP with serial processing to ensure deterministic results
     flowmanagerMP = FlowManagerMP(job=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names

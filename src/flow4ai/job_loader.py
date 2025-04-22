@@ -476,7 +476,7 @@ class ConfigLoader:
     def load_configs_from_dirs(
             cls,
             directories: List[str] = [],
-            config_bases: List[str] = ['graphs', 'jobs', 'parameters', 'jobchain_all'],
+            config_bases: List[str] = ['graphs', 'jobs', 'parameters', 'flow4ai_all'],
             allowed_extensions: tuple = ('.yaml', '.yml', '.json')
     ) -> Dict[str, dict]:
         """
@@ -551,7 +551,7 @@ class ConfigLoader:
     @classmethod
     def _extract_config_section(cls, configs: Dict[str, dict], section_name: str) -> dict:
         """
-        Extract a configuration section from either a dedicated file or jobchain_all.
+        Extract a configuration section from either a dedicated file or flow4ai_all.
         
         Args:
             configs: Dictionary containing all configurations
@@ -564,9 +564,9 @@ class ConfigLoader:
         if section_name in configs:
             return configs[section_name]
 
-        # If not found, try to get from jobchain_all
-        if 'jobchain_all' in configs and isinstance(configs['jobchain_all'], dict):
-            return configs['jobchain_all'].get(section_name, {})
+        # If not found, try to get from flow4ai_all
+        if 'flow4ai_all' in configs and isinstance(configs['flow4ai_all'], dict):
+            return configs['flow4ai_all'].get(section_name, {})
 
         # If nothing found, return empty dict
         return {}
@@ -764,7 +764,7 @@ class ConfigLoader:
     @classmethod
     def get_graphs_config(cls) -> dict:
         """
-        Get graphs configuration from either dedicated graphs file or jobchain_all.
+        Get graphs configuration from either dedicated graphs file or flow4ai_all.
         Returns empty dict if no configuration is found.
         """
         configs = cls.load_all_configs()
@@ -773,7 +773,7 @@ class ConfigLoader:
     @classmethod
     def get_jobs_config(cls) -> dict:
         """
-        Get jobs configuration from either dedicated jobs file or jobchain_all.
+        Get jobs configuration from either dedicated jobs file or flow4ai_all.
         Returns empty dict if no configuration is found.
         """
         configs = cls.load_all_configs()
@@ -782,7 +782,7 @@ class ConfigLoader:
     @classmethod
     def get_parameters_config(cls) -> dict:
         """
-        Get parameters configuration from either dedicated parameters file or jobchain_all.
+        Get parameters configuration from either dedicated parameters file or flow4ai_all.
         Returns empty dict if no configuration is found.
         """
         configs = cls.load_all_configs()
