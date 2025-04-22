@@ -1,17 +1,17 @@
-# JobChain Configuration
+# Flow4AI Configuration
 
-JobChain can be configured using environment variables to customize its behavior. This document outlines the available environment variables and their usage.
+Flow4AI can be configured using environment variables to customize its behavior. This document outlines the available environment variables and their usage.
 
 ## Environment Variables
 
 | Variable | Description | Default Value |
 |----------|-------------|---------------|
-| `JOBCHAIN_OT_CONFIG` | Path to the OpenTelemetry configuration YAML file. This file configures tracing behavior, including the exporter type (console or file) and related settings. | None |
+| `FLOW4AI_OT_CONFIG` | Path to the OpenTelemetry configuration YAML file. This file configures tracing behavior, including the exporter type (console or file) and related settings. | None |
 | `FLOW4AI_LOG_LEVEL` | Sets the root logger's logging level. Valid values are: DEBUG, INFO, WARNING, ERROR, CRITICAL | INFO |
 
 ## Usage Guide
 
-### OpenTelemetry Configuration (JOBCHAIN_OT_CONFIG)
+### OpenTelemetry Configuration (FLOW4AI_OT_CONFIG)
 
 This variable specifies the path to a YAML configuration file for OpenTelemetry tracing. The configuration file can set up either console or file-based tracing.
 
@@ -37,7 +37,7 @@ file_exporter:
 
 To use a specific configuration:
 ```bash
-export JOBCHAIN_OT_CONFIG=/path/to/your/config.yaml
+export FLOW4AI_OT_CONFIG=/path/to/your/config.yaml
 python your_script.py
 ```
 

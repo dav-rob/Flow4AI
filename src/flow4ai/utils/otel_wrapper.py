@@ -250,7 +250,7 @@ class TracerFactory:
         config_path = yaml_file
         if not config_path:
             # Then try environment variable
-            config_path = os.environ.get('JOBCHAIN_OT_CONFIG', "")
+            config_path = os.environ.get('FLOW4AI_OT_CONFIG', "")
         
         if not config_path:
             # Finally use default path from package resources

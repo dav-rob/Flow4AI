@@ -245,8 +245,8 @@ def test_parallel_execution_with_tracing(tmp_path):
 
     try:
         # Set environment variable before creating processes
-        os.environ['JOBCHAIN_OT_CONFIG'] = config_path
-        logger.info(f"Set JOBCHAIN_OT_CONFIG to: {os.environ.get('JOBCHAIN_OT_CONFIG')}")
+        os.environ['FLOW4AI_OT_CONFIG'] = config_path
+        logger.info(f"Set FLOW4AI_OT_CONFIG to: {os.environ.get('FLOW4AI_OT_CONFIG')}")
 
         # Reset TracerFactory state
         TracerFactory._instance = None
@@ -296,7 +296,7 @@ def test_parallel_execution_with_tracing(tmp_path):
             os.unlink(trace_file)
         if os.path.exists(config_path):
             os.unlink(config_path)
-        if 'JOBCHAIN_OT_CONFIG' in os.environ:
-            del os.environ['JOBCHAIN_OT_CONFIG']
+        if 'FLOW4AI_OT_CONFIG' in os.environ:
+            del os.environ['FLOW4AI_OT_CONFIG']
         TracerFactory._instance = None
         TracerFactory._config = None

@@ -239,15 +239,15 @@ def setup_file_exporter(trace_file):
     TracerFactory._config = None
     
     # Set config path in environment
-    os.environ['JOBCHAIN_OT_CONFIG'] = config_path
+    os.environ['FLOW4AI_OT_CONFIG'] = config_path
     
     yield
     
     # Cleanup
     if os.path.exists(config_path):
         os.unlink(config_path)
-    if 'JOBCHAIN_OT_CONFIG' in os.environ:
-        del os.environ['JOBCHAIN_OT_CONFIG']
+    if 'FLOW4AI_OT_CONFIG' in os.environ:
+        del os.environ['FLOW4AI_OT_CONFIG']
     TracerFactory._instance = None
     TracerFactory._config = None
     time.sleep(0.1)
