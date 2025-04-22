@@ -1,9 +1,9 @@
-# JobChain - scalable AI job scheduling and execution platform
+# Flow4AI - scalable AI job scheduling and execution platform
 
 Every time you choose to apply a rule(s), explicitly state the rule(s) in the output. You can abbreviate the rule description to a single word or phrase.
 
 ## Project Context
-JobChain allows users to execute AI and IO Job graphs in parallel.
+Flow4AI allows users to execute AI and IO Job graphs in parallel.
 
 ## Working process
 
@@ -22,16 +22,16 @@ Always read the [architecture document](ARCHITECTURE.md) before undertaking any 
 - The `run` method should accept a task parameter and return a dictionary with results.
 - Use properties to access configuration parameters rather than directly accessing them in the run method.
 
-## Debugging JobChain Timeout Errors
-When encountering "Timed out waiting for jobs to be loaded" errors in JobChain:
+## Debugging FlowManagerMP Timeout Errors
+When encountering "Timed out waiting for jobs to be loaded" errors in FlowManagerMP:
 - Check the stderr output from the JobExecutorProcess for underlying errors
 JobABC subclasses:
 - Always implement all required abstract methods from JobABC in custom job classes
 
 ## Logging
-For logging, use the jobchain.f4a_logging module, not the standard logging module.
+For logging, use the flow4ai.f4a_logging module, not the standard logging module.
 - for external files, examples and tests use
-`import jobchain.f4a_logging as logging` 
+`import flow4ai.f4a_logging as logging` 
 then do 
 `logger = logging.getLogger(__name__)`
 - for internal files under /src use the relative path import of f4a_logging

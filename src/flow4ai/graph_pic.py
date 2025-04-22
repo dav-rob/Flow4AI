@@ -1,5 +1,5 @@
 """
-Graph visualization module for JobChain.
+Graph visualization module for Flow4AI.
 
 This module provides functionality to visualize job graphs from adjacency list
 representations using NetworkX and Matplotlib. It can generate visual representations
@@ -8,8 +8,8 @@ of job dependencies and workflows.
 
 import os
 import tempfile
-from typing import Dict, Any, List, Optional, Tuple, Union, Set
 from collections import defaultdict
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -47,7 +47,7 @@ COLOR_SCHEMES = {
 
 def adjacency_to_nx_graph(graph_definition: Dict[str, Any]) -> nx.DiGraph:
     """
-    Convert a JobChain adjacency list to a NetworkX directed graph.
+    Convert a Flow4AI adjacency list to a NetworkX directed graph.
     
     Args:
         graph_definition: Dictionary representing the graph as an adjacency list.
@@ -661,8 +661,8 @@ def visualize_to_display(graph_definition: Dict[str, Any],
         **kwargs: Additional arguments to pass to visualize_graph
     """
     try:
-        from IPython.display import display, Image
-        
+        from IPython.display import Image, display
+
         # Save the graph as a temporary image
         path = save_graph_as_temp_image(graph_definition, **kwargs)
         

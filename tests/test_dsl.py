@@ -1,5 +1,5 @@
 """
-Tests for the DSL (Domain Specific Language) module of JobChain.
+Tests for the DSL (Domain Specific Language) module of Flow4AI.
 
 This test suite covers:
 - Wrapping callables with the wrap/w function

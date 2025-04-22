@@ -148,7 +148,7 @@ def test_task_passthrough():
             config_dir = os.path.join(os.path.dirname(__file__), "test_configs/test_task_passthrough")
             ConfigLoader._set_directories([config_dir])
             
-            # Create JobChain with parallel processing
+            # Create FlowManagerMP with parallel processing
             flowmanagerMP = FlowManagerMP(result_processing_function=collector)
             
             # Submit text processing tasks with unique identifiers
@@ -237,7 +237,7 @@ def test_multiple_task_submissions():
             config_dir = os.path.join(os.path.dirname(__file__), "test_configs/test_task_passthrough")
             ConfigLoader._set_directories([config_dir])
             
-            # Create JobChain with parallel processing
+            # Create FlowManagerMP with parallel processing
             flowmanagerMP = FlowManagerMP(result_processing_function=collector)
             
             # Get all head jobs

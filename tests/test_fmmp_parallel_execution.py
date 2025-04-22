@@ -186,9 +186,9 @@ async def run_flowmanagerMP_without_result_processor() -> bool:
         return False
 
 def test_no_result_processor():
-    """Test that JobChain works without setting result_processing_function"""
+    """Test that FlowManagerMP works without setting result_processing_function"""
     success = asyncio.run(run_flowmanagerMP_without_result_processor())
-    assert success, "JobChain should execute successfully without result_processing_function"
+    assert success, "FlowManagerMP should execute successfully without result_processing_function"
 
 async def run_traced_flowmanagerMP(time_delay: float) -> float:
     """Run job chain with specified delay and return execution time"""
@@ -228,7 +228,7 @@ def test_parallel_execution_with_tracing(tmp_path):
     config_path = str(tmp_path / "otel_config.yaml")
     config = {
         "exporter": "file",
-        "service_name": "JobChainTest",
+        "service_name": "FlowManagerMPTest",
         "batch_processor": {
             "max_queue_size": 1000,
             "schedule_delay_millis": 1000

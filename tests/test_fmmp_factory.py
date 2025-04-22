@@ -1,7 +1,7 @@
 """
-Tests for JobChainFactory class functionality.
+Tests for FlowManagerMPFactory class functionality.
 
-This module contains tests that verify the JobChainFactory wrapper over JobChain,
+This module contains tests that verify the FlowManagerMPFactory wrapper over FlowManagerMP,
 focusing on key functionality from other test modules.
 """
 
@@ -28,7 +28,7 @@ def picklable_result_processor(result):
 
 
 class AsyncTestJob(JobABC):
-    """Job to test async functionality with JobChainFactory"""
+    """Job to test async functionality with FlowManagerMPFactory"""
     def __init__(self):
         super().__init__(name="AsyncTestJob")
     
@@ -95,7 +95,7 @@ class UnpicklableState:
 
 @pytest.fixture(autouse=True)
 def reset_factory():
-    """Reset JobChainFactory between tests"""
+    """Reset FlowManagerMPFactory between tests"""
     FlowManagerMPFactory._instance = None
     FlowManagerMPFactory._flowmanagerMP = None
     RESULTS.clear()  # Clear global results
@@ -109,11 +109,11 @@ def reset_factory():
 
 
 def test_empty_initialization():
-    """Test that JobChainFactory is initialized correctly"""
+    """Test that FlowManagerMPFactory is initialized correctly"""
     # Set config directory for test
     ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config")])
     
-    # Create JobChain with serial processing to ensure deterministic results
+    # Create FlowManagerMP with serial processing to ensure deterministic results
     FlowManagerMPFactory()
     
     # Get head jobs from config to know their names
@@ -127,20 +127,20 @@ def test_empty_initialization():
         'three_stage_reasoning$$$$ask_llm_reasoning$$'
     ])
     
-    assert head_jobs == expected_jobs, "JobChain config not loaded correctly"
+    assert head_jobs == expected_jobs, "FlowManagerMP config not loaded correctly"
 
     FlowManagerMPFactory.get_instance().mark_input_completed()
 
 
 @pytest.mark.asyncio
 async def test_concurrent_task_execution():
-    """Test that tasks are truly executed concurrently using JobChainFactory"""
+    """Test that tasks are truly executed concurrently using FlowManagerMPFactory"""
     results = []
     
     def collect_result(result):
         results.append(result)
     
-    # Initialize factory with a new JobChain
+    # Initialize factory with a new FlowManagerMP
     FlowManagerMPFactory(AsyncTestJob(), collect_result, serial_processing=True)
     flowmanagerMP = FlowManagerMPFactory.get_instance()
     
@@ -168,13 +168,13 @@ async def test_concurrent_task_execution():
 
 @pytest.mark.asyncio
 async def test_job_instantiation_and_execution():
-    """Test basic job creation and execution using JobChainFactory"""
+    """Test basic job creation and execution using FlowManagerMPFactory"""
     results = []
     
     def collect_result(result):
         results.append(result)
     
-    # Create a job chain through the factory
+    # Create a FlowManagerMP through the factory
     FlowManagerMPFactory(BasicTestJob(), collect_result, serial_processing=True)
     flowmanagerMP = FlowManagerMPFactory.get_instance()
     
@@ -192,12 +192,12 @@ async def test_job_instantiation_and_execution():
 
 
 def test_parallel_execution():
-    """Test true parallel execution performance using JobChainFactory"""
+    """Test true parallel execution performance using FlowManagerMPFactory"""
     async def run_flowmanagerMP(delay: float) -> float:
         """Run job chain with specified delay and return execution time"""
         start_time = time.perf_counter()
         
-        # Create job chain through factory with picklable result processor
+        # Create FlowManagerMP through factory with picklable result processor
         FlowManagerMPFactory(DelayedJob(delay), picklable_result_processor)
         flowmanagerMP = FlowManagerMPFactory.get_instance()
         
@@ -247,7 +247,7 @@ def test_parallel_execution():
 
 
 def test_serial_result_processor_with_unpicklable():
-    """Test serial processing with unpicklable state using JobChainFactory"""
+    """Test serial processing with unpicklable state using FlowManagerMPFactory"""
     # Create unpicklable state
     unpicklable = UnpicklableState()
     

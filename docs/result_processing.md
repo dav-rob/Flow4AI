@@ -1,4 +1,4 @@
-# Result Processing in JobChain
+# Result Processing in FlowManagerMP
 
 Pickling restrictions on result_processing_function, mean that for parallel-mode result processing (default mode) the function should:
 
@@ -9,7 +9,7 @@ Pickling restrictions on result_processing_function, mean that for parallel-mode
 For serial mode:
 - No restrictions - can use any Python objects or resources
 
-JobChain's result processing pickling restriction **only applies to the result_processing_function itself not to what happens inside the function**. This means your result processing function can freely perform any operations including file I/O, database operations, logging, etc. - as long as the function itself is defined at module level not locally, the function is not a lambda and does not contain unpicklable closure variables.
+FlowManagerMP's result processing pickling restriction **only applies to the result_processing_function itself not to what happens inside the function**. This means your result processing function can freely perform any operations including file I/O, database operations, logging, etc. - as long as the function itself is defined at module level not locally, the function is not a lambda and does not contain unpicklable closure variables.
 
 ## Quick Start
 
@@ -35,7 +35,7 @@ class Processor:
         self.db.save(result)
 
 processor = Processor()
-flowmanagerMP = JobChain(job, processor.process_result, serial_processing=True)
+flowmanagerMP = FlowManagerMP(job, processor.process_result, serial_processing=True)
 ```
 
 

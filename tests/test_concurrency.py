@@ -30,7 +30,7 @@ async def test_concurrency_by_expected_returns():
     config_dir = os.path.join(os.path.dirname(__file__), "test_configs/test_concurrency_by_returns")
     ConfigLoader._set_directories([config_dir])
     
-    # Create JobChain with parallel processing
+    # Create FlowManagerMP with parallel processing
     flowmanagerMP = FlowManagerMP(result_processing_function=collector)
     logging.info(f"Names of jobs in head job: {flowmanagerMP.get_job_graph_mapping()}")
 

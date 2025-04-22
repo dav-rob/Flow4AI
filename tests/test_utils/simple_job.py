@@ -1,5 +1,5 @@
 """
-Test utilities for JobChain tests.
+Test utilities for Flow4AI tests.
 
 This module contains simple job implementations that are used in tests.
 These are not intended for production use.

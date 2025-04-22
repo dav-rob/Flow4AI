@@ -5,7 +5,7 @@
 - Single test: `python -m pytest tests/path_to_test.py::test_name -v`
 - Full test suite: `python -m pytest --full-suite` (includes performance tests)
 - Debug logs: `python -m pytest -s` or `JOBCHAIN_LOG_LEVEL=DEBUG python -m pytest -v -s`
-- Type checking: `mypy src/jobchain`
+- Type checking: `mypy src/flow4ai`
 
 ## Code Style
 - **Naming**: Classes=CamelCase, Methods/functions/variables=snake_case, Constants=UPPERCASE
@@ -13,7 +13,7 @@
 - **Type hints**: Required for all functions/methods, variables and return types
 - **Docstrings**: Google-style with Args sections
 - **Error handling**: Specific exceptions with detailed messages
-- **Logging**: Use `jobchain.f4a_logging` module, not standard logging
+- **Logging**: Use `flow4ai.f4a_logging` module, not standard logging
 
 ## JobABC Rules
 - NEVER override `_execute` method, only implement `run` method
