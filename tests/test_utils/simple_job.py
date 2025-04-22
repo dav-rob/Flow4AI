@@ -1,5 +1,5 @@
 """
-Test utilities for JobChain tests.
+Test utilities for Flow4AI tests.
 
 This module contains simple job implementations that are used in tests.
 These are not intended for production use.
@@ -7,8 +7,8 @@ These are not intended for production use.
 import asyncio
 from typing import Any, Dict, Union
 
-from jobchain import jc_logging as logging
-from jobchain.job import JobABC, Task
+from flow4ai import f4a_logging as logging
+from flow4ai.job import JobABC, Task
 
 
 class SimpleJob(JobABC):

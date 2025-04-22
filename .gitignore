@@ -19,6 +19,7 @@ api.env
 dist/
 build/
 jobchain.egg-info/
+flow4ai.egg-info/
 
 
 # IDE-specific files

@@ -3,12 +3,12 @@ import os
 import sys
 from time import sleep
 
-import jc_logging as logging
+import f4a_logging as logging
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from flowmanagerMP import JobChain
 from job import JobABC
-from job_chain import JobChain
 from utils.timing import timing_decorator
 
 
@@ -24,18 +24,18 @@ class ExampleJob(JobABC):
         return {"task": task, "result": f"Processed {task}"}
 
 # Simulates web scraping.
-def send_tasks_2(job_chain):
+def send_tasks_2(flowmanagerMP):
     """ Pass the JobChain instance to any code you want processing quickly in parallel """
     logger = logging.getLogger('WebScraper')
     pages = [f"Page {i}" for i in range(12,22)]  # Simulated pages
     for page in pages:
         logger.info(f"Scraping: {page}")
         # Push the scraped page to task_queue
-        job_chain.submit_task(page)  # Pub: Push page into task_queue
+        flowmanagerMP.submit_task(page)  # Pub: Push page into task_queue
         sleep(0.1)  # Simulate network delay
 
 # Simulates web scraping in batches
-def send_tasks_1(job_chain):
+def send_tasks_1(flowmanagerMP):
     """ Pass the JobChain instance to any code you want processing quickly in parallel """
     logger = logging.getLogger('BatchScraper')
     batch_of_pages = []
@@ -49,7 +49,7 @@ def send_tasks_1(job_chain):
             i += 1           
         # Submit the batch of 4 pages to task queue
         logger.info(f"Submitting batch of scraped pages: {batch_of_pages}")
-        job_chain.submit_task(batch_of_pages)
+        flowmanagerMP.submit_task(batch_of_pages)
         batch_of_pages = []        
         # Add delay between batches (except after last batch)
         if batch < 4:
@@ -68,15 +68,15 @@ def run_with_dict_init():
     logger = logging.getLogger('DictInit')
     logger.info("Running with dictionary-based initialization:")
     # Pass in a context describing the jobs to execute asynchronously.
-    job_chain_context = {
+    flowmanagerMP_context = {
         "job_context": {"type": "file", "params": {}}
     }
     # Initialize JobChain with dictionary configuration
-    job_chain = JobChain(job_chain_context, process_after_results_fn)
-    send_tasks_1(job_chain)
-    send_tasks_2(job_chain)
+    flowmanagerMP = JobChain(flowmanagerMP_context, process_after_results_fn)
+    send_tasks_1(flowmanagerMP)
+    send_tasks_2(flowmanagerMP)
     # Indicate there is no more input data to process to initiate shutdown
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
 
 # Example using direct Job instance initialization
 @timing_decorator
@@ -86,11 +86,11 @@ def run_with_direct_job():
     # Create a Job instance directly
     job = ExampleJob()
     # Initialize JobChain with Job instance
-    job_chain = JobChain(job, process_after_results_fn)
-    send_tasks_1(job_chain)
-    send_tasks_2(job_chain)
+    flowmanagerMP = JobChain(job, process_after_results_fn)
+    send_tasks_1(flowmanagerMP)
+    send_tasks_2(flowmanagerMP)
     # Indicate there is no more input data to process to initiate shutdown
-    job_chain.mark_input_completed()
+    flowmanagerMP.mark_input_completed()
 
 # Main function demonstrating both initialization methods
 def main():

@@ -2,10 +2,11 @@ import asyncio
 import time
 from typing import Any, Dict
 
-from jobchain.job import JobABC, Task, job_graph_context_manager
-from jobchain.job_chain import JobChain
-from jobchain.job_loader import JobFactory
-from jobchain.jobs.default_jobs import DefaultHeadJob
+from flow4ai.flowmanagerMP import FlowManagerMP
+from flow4ai.job import JobABC, Task, job_graph_context_manager
+from flow4ai.job_loader import JobFactory
+from flow4ai.jobs.default_jobs import DefaultHeadJob
+
 
 class MockJob(JobABC):
     def run(self):
@@ -81,15 +82,15 @@ def test_parallel_execution_multiple_jobs():
         # Time the execution
         start_time = time.time()
         
-        # Run the job chain with all jobs and collect results
+        # Run the FlowManagerMP with all jobs and collect results
         results = []
         def result_collector(result):
             results.append(result)
-        job_chain = JobChain(jobs, result_collector, serial_processing=True)
+        flowmanagerMP = FlowManagerMP(jobs, result_collector, serial_processing=True)
         for task in tasks:
             job_name = next(iter(task.keys()))  # Get the job name from the task dict
-            job_chain.submit_task(task, job_name=job_name)
-        job_chain.mark_input_completed()
+            flowmanagerMP.submit_task(task, job_name=job_name)
+        flowmanagerMP.mark_input_completed()
         
         end_time = time.time()
         execution_time = end_time - start_time
@@ -371,7 +372,7 @@ def test_multiple_tail_nodes():
     default_tail_job = default_tail_jobs[0]
     
     # Verify default tail was created and is correct type
-    from jobchain.jobs.default_jobs import DefaultTailJob
+    from flow4ai.jobs.default_jobs import DefaultTailJob
     assert isinstance(default_tail_job, DefaultTailJob)
     assert default_tail_job.name in job_instances
     
@@ -411,7 +412,7 @@ def test_simple_parallel_jobs():
     head_job = JobFactory.create_job_graph(graph_definition, job_instances)
     
     # Verify default head was created and is correct type
-    from jobchain.jobs.default_jobs import DefaultHeadJob, DefaultTailJob
+    from flow4ai.jobs.default_jobs import DefaultHeadJob, DefaultTailJob
     assert isinstance(head_job, DefaultHeadJob)
     assert head_job.name in job_instances
     

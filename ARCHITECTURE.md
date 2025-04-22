@@ -1,25 +1,25 @@
-# JobChain: Scalable AI Job Scheduling and Execution Platform
+# Flow4AI: Scalable AI Job Scheduling and Execution Platform
 
 ## Overview
 
-JobChain is a sophisticated Python framework designed for parallel and asynchronous job execution, with a focus on AI and data processing workflows. It provides a flexible, graph-based job scheduling system that allows complex task dependencies and parallel processing.
+Flow4AI is a sophisticated Python framework designed for parallel and asynchronous job execution, with a focus on AI and data processing workflows. It provides a flexible, graph-based job scheduling system that allows complex task dependencies and parallel processing.
 
 ## Core Architectural Components
 
-### Starting and terminating a JobChain
-- Anywhere in you code, within a function, create a JobChain instance:
+### Starting and terminating a FlowManagerMP
+- Anywhere in you code, within a function, create a FlowManagerMP instance:
   ```python
-  job_chain = JobChain()
+  flowmanagerMP = FlowManagerMP()
   ```
-  The JobChain will configure itself with multiple job types from the configuration file.  The JobChainFactory creates a singleton instance of JobChain for convenience.
+  The FlowManagerMP will configure itself with multiple job types from the configuration file.  The FlowManagerMPFactory creates a singleton instance of FlowManagerMP for convenience.
 
-- Submit tasks to the JobChain from many places to many different jobs:
+- Submit tasks to the FlowManagerMP from many places to many different jobs:
   ```python
-  job_chain.submit_task(task, job_name='job_name')
+  flowmanagerMP.submit_task(task, job_name='job_name')
   ```
-- Mark the JobChain as input completed, when you have finished submitting tasks:
+- Mark the FlowManagerMP as input completed, when you have finished submitting tasks:
   ```python
-  job_chain.mark_input_completed()
+  flowmanagerMP.mark_input_completed()
   ```
 This ensures all previous tasks are completed, and all processes are cleaned up.
 
@@ -38,7 +38,7 @@ This ensures all previous tasks are completed, and all processes are cleaned up.
 - Support for job dependencies
 - Async execution model
 - Tracing and performance instrumentation
-- Automatic task metadata preservation throughout job chains
+- Automatic task metadata preservation throughout job graphs
 
 #### Custom Job Implementation
 
@@ -52,7 +52,7 @@ When creating custom job classes by extending `JobABC`, follow these guidelines:
        return {"result": "success"}
    ```
 
-2. **NEVER override the `_execute` method**: This method is part of the core JobChain execution flow and handles critical operations including job graph traversal, state management, and result propagation.
+2. **NEVER override the `_execute` method**: This method is part of the core Flow4AI execution flow and handles critical operations including job graph traversal, state management, and result propagation.
 
 3. **Access configuration via properties**: Use `self.properties.get('property_name')` to access job configuration parameters.
 
@@ -77,7 +77,7 @@ When creating custom job classes by extending `JobABC`, follow these guidelines:
      ```
    - Do not override `_execute` - it's handled by JobABC for job graph processing
    - The `run` method receives task data and must return a dictionary
-   - Task metadata is automatically preserved and propagated through the job chain
+   - Task metadata is automatically preserved and propagated through the job graph
 
 3. Important Notes:
    - JobABC handles job graph execution through `_execute`
@@ -86,7 +86,7 @@ When creating custom job classes by extending `JobABC`, follow these guidelines:
    - Always call super().__init__ with name and properties parameters
    - Task metadata like task_id and custom metadata fields are automatically preserved
 
-### 2. Job Graph Management (`jc_graph.py`)
+### 2. Job Graph Management (`f4a_graph.py`)
 
 #### Graph Validation and Manipulation
 - Cycle detection in job graphs
@@ -105,7 +105,7 @@ When creating custom job classes by extending `JobABC`, follow these guidelines:
   - Tasks are queued and processed asynchronously
   - Each job in the graph can handle multiple tasks
   - State isolation is maintained at the task level
-  - Results are tracked per task through the chain
+  - Results are tracked per task through the graph
 - Example configuration:
   ```yaml
   processing_graph:
@@ -122,12 +122,12 @@ Note: there can only be one head job, the starting job, and one tail job, the la
   ```python
   # All tasks use the same graph instance
   for task in tasks:
-      job_chain.submit_task(task, job_name='processing_graph__read_file')
+      flowmanagerMP.submit_task(task, job_name='processing_graph__read_file')
   ```
 
-### 3. Job Execution Engine (`job_chain.py`)
+### 3. Job Execution Engine (`flowmanagerMP.py`)
 
-#### JobChain
+#### FlowManagerMP
 - Manages parallel task execution
 - Supports multiple processing modes:
   - Parallel processing
@@ -238,7 +238,7 @@ if not job_map:
 - Jobs are dynamically loaded and registered from Python files in specified directories
 
 ##### Multiprocessing Job Graph Loading
-- In `_async_worker` of JobChain:
+- In `_async_worker` of FlowManagerMP:
   1. Load job registry from specified directories
   2. Reload configurations
   3. Retrieve head jobs from configuration
@@ -278,7 +278,7 @@ if not job_map:
 - Cross-reference checking
 - Parameter completeness verification
 
-### 5. Logging System (`jc_logging.py`)
+### 5. Logging System (`f4a_logging.py`)
 
 #### Advanced Logging Configuration
 - Environment variable-based configuration
@@ -299,7 +299,7 @@ if not job_map:
    - Build job graph with dependencies
 
 3. Task Submission
-   - Submit tasks to JobChain
+   - Submit tasks to FlowManagerMP
    - Tasks routed to appropriate jobs
    - Parallel or serial execution based on configuration
 
@@ -335,16 +335,16 @@ if not job_map:
 
 ```python
 # Define a job graph for web scraping and analysis
-job_chain = JobChain(
+flowmanagerMP = FlowManagerMP(
     result_processing_function=save_to_database,
     serial_processing=False
 )
 
 # Submit tasks for parallel processing
 for url in urls:
-    job_chain.submit_task({"url": url})
+    flowmanagerMP.submit_task({"url": url})
 
-job_chain.mark_input_completed()
+flowmanagerMP.mark_input_completed()
 ```
 
 ## Performance Recommendations
@@ -356,7 +356,7 @@ job_chain.mark_input_completed()
 
 ## Extensibility
 
-JobChain is designed to be easily extended:
+Flow4AI is designed to be easily extended:
 - Create custom job types
 - Implement custom result processors
 - Add new configuration loaders

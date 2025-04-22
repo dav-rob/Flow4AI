@@ -8,9 +8,9 @@ import yaml
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
 
-from jobchain import jc_logging as logging
-from jobchain.job import JobABC, Task, job_graph_context_manager
-from jobchain.utils.otel_wrapper import TracerFactory, trace_function
+from flow4ai import f4a_logging as logging
+from flow4ai.job import JobABC, Task, job_graph_context_manager
+from flow4ai.utils.otel_wrapper import TracerFactory, trace_function
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -62,15 +62,15 @@ def setup_file_exporter(trace_file):
     TracerFactory._config = None
     
     # Set config path in environment
-    os.environ['JOBCHAIN_OT_CONFIG'] = config_path
+    os.environ['FLOW4AI_OT_CONFIG'] = config_path
     
     yield
     
     # Cleanup
     if os.path.exists(config_path):
         os.unlink(config_path)
-    if 'JOBCHAIN_OT_CONFIG' in os.environ:
-        del os.environ['JOBCHAIN_OT_CONFIG']
+    if 'FLOW4AI_OT_CONFIG' in os.environ:
+        del os.environ['FLOW4AI_OT_CONFIG']
     TracerFactory._instance = None
     TracerFactory._config = None
     time.sleep(0.1)

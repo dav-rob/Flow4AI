@@ -3,9 +3,9 @@ import os
 
 import pytest
 
-from jobchain import jc_logging as logging
-from jobchain.job import JobABC, Task
-from jobchain.job_chain import JobChain
+from flow4ai import f4a_logging as logging
+from flow4ai.flowmanagerMP import FlowManagerMP
+from flow4ai.job import JobABC, Task
 
 
 class DebugDelayedJob(JobABC):
@@ -26,14 +26,14 @@ class DebugDelayedJob(JobABC):
 @pytest.fixture
 def clear_log_file():
     """Clear the log file before each test."""
-    if os.path.exists('jobchain.log'):
-        os.remove('jobchain.log')
+    if os.path.exists('flow4ai.log'):
+        os.remove('flow4ai.log')
     yield
-    if os.path.exists('jobchain.log'):
-        os.remove('jobchain.log')
+    if os.path.exists('flow4ai.log'):
+        os.remove('flow4ai.log')
     # Clear any environment variables that might affect logging
-    os.environ.pop('JOBCHAIN_LOG_HANDLERS', None)
-    os.environ.pop('JOBCHAIN_LOG_LEVEL', None)
+    os.environ.pop('FLOW4AI_LOG_HANDLERS', None)
+    os.environ.pop('FLOW4AI_LOG_LEVEL', None)
 
 def test_logging_handlers_default(clear_log_file):
     """Test that by default, logs are only written to console and not to file."""
@@ -41,44 +41,44 @@ def test_logging_handlers_default(clear_log_file):
     logger = logging.getLogger('test')
     logger.info('This is a test message')
     
-    with open('jobchain.log', 'r') as f:
+    with open('flow4ai.log', 'r') as f:
         lines = f.readlines()
     # Should only contain the header comment
     assert len(lines) == 1, "Log file should only contain header comment"
-    assert lines[0].startswith('# JobChain log file'), "Log file should only contain header comment"
+    assert lines[0].startswith('# Flow4AI log file'), "Log file should only contain header comment"
 
 def test_logging_handlers_console_explicit(clear_log_file):
-    """Test that when JOBCHAIN_LOG_HANDLERS='console', logs are not written to file."""
-    os.environ['JOBCHAIN_LOG_HANDLERS'] = 'console'
+    """Test that when FLOW4AI_LOG_HANDLERS='console', logs are not written to file."""
+    os.environ['FLOW4AI_LOG_HANDLERS'] = 'console'
     logging.setup_logging()
     logger = logging.getLogger('test')
     logger.info('This is a test message')
     
-    with open('jobchain.log', 'r') as f:
+    with open('flow4ai.log', 'r') as f:
         lines = f.readlines()
     # Should only contain the header comment
     assert len(lines) == 1, "Log file should only contain header comment"
-    assert lines[0].startswith('# JobChain log file'), "Log file should only contain header comment"
+    assert lines[0].startswith('# Flow4AI log file'), "Log file should only contain header comment"
 
 def test_logging_handlers_file(clear_log_file):
-    """Test that when JOBCHAIN_LOG_HANDLERS includes 'file', logs are written to file."""
-    os.environ['JOBCHAIN_LOG_HANDLERS'] = 'console,file'
+    """Test that when FLOW4AI_LOG_HANDLERS includes 'file', logs are written to file."""
+    os.environ['FLOW4AI_LOG_HANDLERS'] = 'console,file'
     logging.setup_logging()
     logger = logging.getLogger('test')
     test_message = 'This should be in the log file'
     logger.info(test_message)
     
-    with open('jobchain.log', 'r') as f:
+    with open('flow4ai.log', 'r') as f:
         lines = f.readlines()
     # Should contain both header and log message
     assert len(lines) > 1, "Log file should contain header and log messages"
-    assert lines[0].startswith('# JobChain log file'), "First line should be header comment"
+    assert lines[0].startswith('# Flow4AI log file'), "First line should be header comment"
     assert any(test_message in line for line in lines[1:]), "Test message should be in log file"
 
 def test_logging_config_debug(clear_log_file):
-    """Test that DEBUG level logging works when JOBCHAIN_LOG_LEVEL is set to DEBUG."""
-    os.environ['JOBCHAIN_LOG_LEVEL'] = 'DEBUG'
-    os.environ['JOBCHAIN_LOG_HANDLERS'] = 'console,file'  # Enable file logging for this test
+    """Test that DEBUG level logging works when FLOW4AI_LOG_LEVEL is set to DEBUG."""
+    os.environ['FLOW4AI_LOG_LEVEL'] = 'DEBUG'
+    os.environ['FLOW4AI_LOG_HANDLERS'] = 'console,file'  # Enable file logging for this test
     logging.setup_logging()  # Reload config with new log level
     
     # Create a logger and log a debug message
@@ -86,14 +86,14 @@ def test_logging_config_debug(clear_log_file):
     logger.debug('This is a debug message')
     
     # Check if the debug message appears in the log file
-    with open('jobchain.log', 'r') as f:
+    with open('flow4ai.log', 'r') as f:
         log_contents = f.read()
     assert 'This is a debug message' in log_contents
 
 def test_logging_config_info(clear_log_file):
-    """Test that DEBUG logs are filtered when JOBCHAIN_LOG_LEVEL is set to INFO."""
-    os.environ['JOBCHAIN_LOG_LEVEL'] = 'INFO'
-    os.environ['JOBCHAIN_LOG_HANDLERS'] = 'console,file'  # Enable file logging for this test
+    """Test that DEBUG logs are filtered when FLOW4AI_LOG_LEVEL is set to INFO."""
+    os.environ['FLOW4AI_LOG_LEVEL'] = 'INFO'
+    os.environ['FLOW4AI_LOG_HANDLERS'] = 'console,file'  # Enable file logging for this test
     logging.setup_logging()  # Reload config with new log level
     
     # Create a logger and log messages at different levels
@@ -102,39 +102,39 @@ def test_logging_config_info(clear_log_file):
     logger.info('This is an info message')
     
     # Check that only INFO message appears in the log file
-    with open('jobchain.log', 'r') as f:
+    with open('flow4ai.log', 'r') as f:
         log_contents = f.read()
     assert 'This is a debug message' not in log_contents
     assert 'This is an info message' in log_contents
 
-def test_debug_logging_in_job_chain(clear_log_file):
-    """Test that both JobChain and Job debug logs are visible when JOBCHAIN_LOG_LEVEL=DEBUG."""
-    os.environ['JOBCHAIN_LOG_LEVEL'] = 'DEBUG'
-    os.environ['JOBCHAIN_LOG_HANDLERS'] = 'console,file'  # Enable file logging for this test
+def test_debug_logging_in_flowmanagerMP(clear_log_file):
+    """Test that both FlowManagerMP and DebugDelayedJob debug logs are visible when FLOW4AI_LOG_LEVEL=DEBUG."""
+    os.environ['FLOW4AI_LOG_LEVEL'] = 'DEBUG'
+    os.environ['FLOW4AI_LOG_HANDLERS'] = 'console,file'  # Enable file logging for this test
     logging.setup_logging()  # Reload config with new log level
 
-    # Create and run job chain with debug-enabled job
+    # Create and run FlowManagerMP with debug-enabled job
     job = DebugDelayedJob("Debug Test Job", 0.1)
-    job_chain = JobChain(job)
+    flowmanagerMP = FlowManagerMP(job)
 
     # Submit tasks
     for i in range(3):
-        job_chain.submit_task({'task': f'Task {i}'})  # Changed to use dict format
-    job_chain.mark_input_completed()
+        flowmanagerMP.submit_task({'task': f'Task {i}'})  # Changed to use dict format
+    flowmanagerMP.mark_input_completed()
 
     # Check log file contents
-    with open('jobchain.log', 'r') as f:
+    with open('flow4ai.log', 'r') as f:
         log_contents = f.read()
         log_lines = log_contents.splitlines()
 
-    # Separate JobChain and DebugDelayedJob debug logs
-    jobchain_debug_logs = [line for line in log_lines if '[DEBUG]' in line and 'JobChain' in line]
+    # Separate FlowManagerMP and DebugDelayedJob debug logs
+    flowmanagermp_debug_logs = [line for line in log_lines if '[DEBUG]' in line and 'FlowManagerMP' in line]
     delayed_job_debug_logs = [line for line in log_lines if '[DEBUG]' in line and 'DebugDelayedJob' in line]
 
-    # Verify JobChain has debug logs
-    assert len(jobchain_debug_logs) > 0, "No DEBUG logs found from JobChain"
-    print("\nJobChain DEBUG logs:")
-    for log in jobchain_debug_logs[:3]:  # Print first 3 for verification
+    # Verify FlowManagerMP has debug logs
+    assert len(flowmanagermp_debug_logs) > 0, "No DEBUG logs found from FlowManagerMP"
+    print("\nFlowManagerMP DEBUG logs:")
+    for log in flowmanagermp_debug_logs[:3]:  # Print first 3 for verification
         print(log)
 
     # Verify DebugDelayedJob has debug logs
@@ -152,23 +152,23 @@ def test_debug_logging_in_job_chain(clear_log_file):
     info_logs = [line for line in log_lines if '[INFO]' in line]
     assert any('Processing task Task' in line for line in info_logs)
 
-def test_info_logging_in_job_chain(clear_log_file):
-    """Test that DEBUG logs are filtered when JOBCHAIN_LOG_LEVEL=INFO."""
-    os.environ['JOBCHAIN_LOG_LEVEL'] = 'INFO'
-    os.environ['JOBCHAIN_LOG_HANDLERS'] = 'console,file'  # Enable file logging for this test
+def test_info_logging_in_flowmanagerMP(clear_log_file):
+    """Test that DEBUG logs are filtered when FLOW4AI_LOG_LEVEL=INFO."""
+    os.environ['FLOW4AI_LOG_LEVEL'] = 'INFO'
+    os.environ['FLOW4AI_LOG_HANDLERS'] = 'console,file'  # Enable file logging for this test
     logging.setup_logging()  # Reload config with new log level
 
-    # Create and run job chain with debug-enabled job
+    # Create and run FlowManagerMP with debug-enabled job
     job = DebugDelayedJob("Info Test Job", 0.1)
-    job_chain = JobChain(job)
+    flowmanagerMP = FlowManagerMP(job)
 
     # Submit tasks
     for i in range(3):
-        job_chain.submit_task({'task': f'Task {i}'})  # Changed to use dict format
-    job_chain.mark_input_completed()
+        flowmanagerMP.submit_task({'task': f'Task {i}'})  # Changed to use dict format
+    flowmanagerMP.mark_input_completed()
 
     # Check log file contents
-    with open('jobchain.log', 'r') as f:
+    with open('flow4ai.log', 'r') as f:
         log_contents = f.read()
         log_lines = log_contents.splitlines()
 
@@ -177,13 +177,13 @@ def test_info_logging_in_job_chain(clear_log_file):
     assert len(debug_logs) == 0, f"Found unexpected DEBUG logs:\n" + "\n".join(debug_logs[:3])
 
     # Verify INFO logs are present for both components
-    jobchain_info_logs = [line for line in log_lines if '[INFO]' in line and 'JobChain' in line]
+    flowmanagermp_info_logs = [line for line in log_lines if '[INFO]' in line and 'FlowManagerMP' in line]
     delayed_job_info_logs = [line for line in log_lines if '[INFO]' in line and 'DebugDelayedJob' in line]
 
-    # Verify JobChain info logs
-    assert len(jobchain_info_logs) > 0, "No INFO logs found from JobChain"
-    print("\nJobChain INFO logs:")
-    for log in jobchain_info_logs[:3]:  # Print first 3 for verification
+    # Verify FlowManagerMP info logs
+    assert len(flowmanagermp_info_logs) > 0, "No INFO logs found from FlowManagerMP"
+    print("\nFlowManagerMP INFO logs:")
+    for log in flowmanagermp_info_logs[:3]:  # Print first 3 for verification
         print(log)
 
     # Verify DebugDelayedJob info logs

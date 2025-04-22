@@ -1,6 +1,6 @@
 import pytest
 
-from jobchain.utils.otel_wrapper import TracerFactory
+from flow4ai.utils.otel_wrapper import TracerFactory
 
 # set the TracerFactory up with the TestTracerProvider so the TracerProvider
 #  can be overridden by code which normally isn't possible.
@@ -48,5 +48,5 @@ def pytest_collection_modifyitems(config, items):
     if not config.getoption("--full-suite"):
         # Skip load tests by default
         for item in items:
-            if "test_parallel_load.py" in str(item.fspath) or item.function.__name__ == "test_parallel_load":
+            if "test_fmmp_parallel_load.py" in str(item.fspath) or item.function.__name__ == "test_parallel_load":
                 item.add_marker(pytest.mark.skip(reason="Load test - use --full-suite to include"))

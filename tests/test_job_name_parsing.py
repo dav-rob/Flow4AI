@@ -1,6 +1,6 @@
 import pytest
 
-from jobchain.job import JobABC
+from flow4ai.job import JobABC
 
 
 def test_parse_graph_name():

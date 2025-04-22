@@ -1,7 +1,8 @@
-from jobchain.jc_graph import (add_edge_anywhere, check_graph_for_cycles, print_graph,
-                      validate_graph_references, find_head_nodes, find_tail_nodes,
-                      validate_graph)
 import pytest
+
+from flow4ai.f4a_graph import (add_edge_anywhere, check_graph_for_cycles,
+                               find_head_nodes, find_tail_nodes, print_graph,
+                               validate_graph, validate_graph_references)
 
 graph1: dict = {
     'A': {'next': ['B', 'C']},

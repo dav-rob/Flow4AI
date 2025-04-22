@@ -1,11 +1,10 @@
 import asyncio
-import os
 from typing import Any, Dict
 
 import pytest
 
-from jobchain import jc_logging as logging
-from jobchain.jobs import OpenAIJob
+from flow4ai import f4a_logging as logging
+from flow4ai.jobs import OpenAIJob
 
 
 @pytest.mark.asyncio

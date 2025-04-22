@@ -1,5 +1,5 @@
-from jobchain.job import JobABC
-from jobchain.job_chain import JobChain
+from flow4ai.flowmanagerMP import FlowManagerMP
+from flow4ai.job import JobABC
 from tests.test_utils.simple_job import SimpleJob
 
 
@@ -17,6 +17,6 @@ class AsyncTestJob(JobABC):
 
 def test_imports_are_working():
   job = SimpleJob("Test Job")
-  job_chain = JobChain(job)
+  flowmanagerMP = FlowManagerMP(job)
   testvar="test"
   assert testvar == "test"

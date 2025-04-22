@@ -1,13 +1,10 @@
-import time
 from typing import Any, Dict
 
-import pytest
-
-from jobchain.dsl import DSLComponent, JobsDict, p, wrap
-from jobchain.dsl_graph import dsl_to_precedence_graph, visualize_graph
-from jobchain.jc_graph import validate_graph
-from jobchain.job import JobABC
-from jobchain.taskmanager import TaskManager
+from flow4ai.dsl import DSLComponent, JobsDict, p, wrap
+from flow4ai.dsl_graph import dsl_to_precedence_graph, visualize_graph
+from flow4ai.f4a_graph import validate_graph
+from flow4ai.flowmanager import FlowManager
+from flow4ai.job import JobABC
 from tests.test_utils.graph_evaluation import print_diff
 
 
@@ -186,17 +183,17 @@ def test_execute_job_graph_from_dsl():
         >> jobs["aggregator"] 
     )
         
-    tm = TaskManager()
-    fq_name =tm.add_dsl(dsl, "test_execute_job_graph_from_dsl")
+    fm = FlowManager()
+    fq_name =fm.add_dsl(dsl, "test_execute_job_graph_from_dsl")
     print(fq_name)
     task = {"times": {"fn.x": 1}, "add": {"fn.x": 2}, "square": {"fn.x": 3}}
-    tm.submit(task,fq_name)
-    success = tm.wait_for_completion()
+    fm.submit(task,fq_name)
+    success = fm.wait_for_completion()
     assert success, "Timed out waiting for tasks to complete"
     
     # Print results
-    print("Task counts:", tm.get_counts())
-    results = tm.pop_results()
+    print("Task counts:", fm.get_counts())
+    results = fm.pop_results()
     
     print("\nCompleted tasks:")
     for job_name, job_results in results["completed"].items():
@@ -254,8 +251,8 @@ def test_execute_with_task_params():
         >> jobs["join"]
     )
 
-    tm = TaskManager()
-    fq_name = tm.add_dsl(dsl, "test_shorthand_params")
+    fm = FlowManager()
+    fq_name = fm.add_dsl(dsl, "test_shorthand_params")
 
     task = {
         "times": {"x": 5},                   # times(x=5) -> 10
@@ -265,11 +262,11 @@ def test_execute_with_task_params():
     }
 
     # Submit task and wait
-    tm.submit(task, fq_name)
-    success = tm.wait_for_completion()
+    fm.submit(task, fq_name)
+    success = fm.wait_for_completion()
     assert success, "Timed out waiting for tasks to complete"
     
-    results = tm.pop_results()
+    results = fm.pop_results()
     result_dict = list(results["completed"].values())[0][0] # [0]= first job
     assert result_dict["result"] == "1_2_3"
     assert result_dict["task_pass_through"] == task
@@ -306,14 +303,14 @@ def test_execute_with_shorthand_task_params():
         >> jobs["join"]
     )
 
-    tm = TaskManager()
-    fq_name = tm.add_dsl(dsl, "test_shorthand_params")
+    fm = FlowManager()
+    fq_name = fm.add_dsl(dsl, "test_shorthand_params")
     task = {"times.x": 5,"add.args": [100], "add.y": 5, "square.x": 3, "join.kwargs": {"a": 1, "b": 2, "c": 3}} 
-    tm.submit(task, fq_name)
-    success = tm.wait_for_completion()
+    fm.submit(task, fq_name)
+    success = fm.wait_for_completion()
     assert success, "Timed out waiting for  tasks to complete"
     
-    results = tm.pop_results()
+    results = fm.pop_results()
     result_dict = list(results["completed"].values())[0][0] # [0]= first job
     assert result_dict["result"] == "1_2_3"
     assert result_dict["task_pass_through"] == task

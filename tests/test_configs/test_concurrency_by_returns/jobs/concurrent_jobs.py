@@ -1,8 +1,8 @@
 import asyncio
 from typing import Any, Dict, Optional
 
-import jobchain.jc_logging as logging
-from jobchain.job import JobABC
+from flow4ai import f4a_logging as logging
+from flow4ai.job import JobABC
 
 
 class ConcurrencyTestJob(JobABC):
