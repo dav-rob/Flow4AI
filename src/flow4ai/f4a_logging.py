@@ -3,13 +3,13 @@ Logging configuration for Flow4AI.
 
 Environment Variables:
     FLOW4AI_LOG_LEVEL: Set the logging level (e.g., 'DEBUG', 'INFO'). Defaults to 'INFO'.
-    JOBCHAIN_LOG_HANDLERS: Set logging handlers. Options:
+    FLOW4AI_LOG_HANDLERS: Set logging handlers. Options:
         - Not set or 'console': Log to console only (default)
         - 'console,file': Log to both console and file
         
 Example:
     To enable both console and file logging:
-    $ export JOBCHAIN_LOG_HANDLERS='console,file'
+    $ export FLOW4AI_LOG_HANDLERS='console,file'
     
     To set debug level logging:
     $ export FLOW4AI_LOG_LEVEL='DEBUG'
@@ -62,8 +62,8 @@ def get_logging_config():
         },
         'root': {
             'level':  os.getenv('FLOW4AI_LOG_LEVEL', 'INFO'),
-            # Set JOBCHAIN_LOG_HANDLERS='console,file' to enable both console and file logging
-            'handlers': os.getenv('JOBCHAIN_LOG_HANDLERS', 'console').split(',')
+            # Set FLOW4AI_LOG_HANDLERS='console,file' to enable both console and file logging
+            'handlers': os.getenv('FLOW4AI_LOG_HANDLERS', 'console').split(',')
         }
     }
 
