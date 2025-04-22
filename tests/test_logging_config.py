@@ -45,7 +45,7 @@ def test_logging_handlers_default(clear_log_file):
         lines = f.readlines()
     # Should only contain the header comment
     assert len(lines) == 1, "Log file should only contain header comment"
-    assert lines[0].startswith('# JobChain log file'), "Log file should only contain header comment"
+    assert lines[0].startswith('# Flow4AI log file'), "Log file should only contain header comment"
 
 def test_logging_handlers_console_explicit(clear_log_file):
     """Test that when FLOW4AI_LOG_HANDLERS='console', logs are not written to file."""
@@ -58,7 +58,7 @@ def test_logging_handlers_console_explicit(clear_log_file):
         lines = f.readlines()
     # Should only contain the header comment
     assert len(lines) == 1, "Log file should only contain header comment"
-    assert lines[0].startswith('# JobChain log file'), "Log file should only contain header comment"
+    assert lines[0].startswith('# Flow4AI log file'), "Log file should only contain header comment"
 
 def test_logging_handlers_file(clear_log_file):
     """Test that when FLOW4AI_LOG_HANDLERS includes 'file', logs are written to file."""
@@ -72,7 +72,7 @@ def test_logging_handlers_file(clear_log_file):
         lines = f.readlines()
     # Should contain both header and log message
     assert len(lines) > 1, "Log file should contain header and log messages"
-    assert lines[0].startswith('# JobChain log file'), "First line should be header comment"
+    assert lines[0].startswith('# Flow4AI log file'), "First line should be header comment"
     assert any(test_message in line for line in lines[1:]), "Test message should be in log file"
 
 def test_logging_config_debug(clear_log_file):
