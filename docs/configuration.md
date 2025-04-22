@@ -18,7 +18,7 @@ This variable specifies the path to a YAML configuration file for OpenTelemetry 
 #### Console Tracing Example
 ```yaml
 exporter: console
-service_name: JobChainDemo
+service_name: Flow4AIDemo
 batch_processor:
   max_queue_size: 1000
   schedule_delay_millis: 1000
@@ -27,7 +27,7 @@ batch_processor:
 #### File Tracing Example
 ```yaml
 exporter: file
-service_name: JobChainDemo
+service_name: Flow4AIDemo
 batch_processor:
   max_queue_size: 1000
   schedule_delay_millis: 1000
@@ -43,7 +43,7 @@ python your_script.py
 
 ### Logging Level (FLOW4AI_LOG_LEVEL)
 
-This variable controls the verbosity of JobChain's root logger. The logging level affects what messages are output to the console.
+This variable controls the verbosity of Flow4AI's root logger. The logging level affects what messages are output to the console.
 
 Available logging levels (in order of increasing severity):
 - DEBUG: Detailed information for debugging

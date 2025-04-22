@@ -1,4 +1,4 @@
-# JobChain Development Guide
+# Flow4AI Development Guide
 
 ## Commands
 - Test: `python -m pytest`

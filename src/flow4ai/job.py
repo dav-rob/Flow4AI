@@ -69,7 +69,7 @@ class Task(dict):
                                             it will be converted to a dictionary with a 'task' key.
         job_name (Optional[str], optional): The name of the job that will process this task.
                                             Required if there is more than one job graph in the
-                                            JobChain class"""
+                                            FlowManagerMP class"""
     def __init__(self, data: Union[Dict[str, Any], str], job_name: Optional[str] = None):
         # Convert string input to dict
         if isinstance(data, str):
@@ -142,7 +142,7 @@ class JobABC(ABC, metaclass=JobMeta):
         Initialize an JobABC instance.
 
         Args:
-            name (Optional[str], optional): Must be a unique identifier for this job within the context of a JobChain.
+            name (Optional[str], optional): Must be a unique identifier for this job within the context of a FlowManager.
                                             If not provided, a unique name will be auto-generated.
             properties (Dict[str, Any], optional): configuration properties passed in by jobs.yaml
         """
@@ -323,7 +323,7 @@ class JobABC(ABC, metaclass=JobMeta):
         availability rather than a predetermined sequence.
 
         WARNING: DO NOT OVERRIDE THIS METHOD IN CUSTOM JOB CLASSES.
-        This method is part of the core JobChain execution flow and handles critical operations
+        This method is part of the core Flow4AI execution flow and handles critical operations
         including job graph traversal, state management, and result propagation.
         
         Instead, implement the abstract 'run' method to define custom job behavior.
