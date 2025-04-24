@@ -190,7 +190,7 @@ class FlowManager:
         if not dsl_dict:
             raise ValueError("dsl_dict cannot be None or empty")
         
-        result = []
+        fq_names = []
         
         for graph_name, graph_data in dsl_dict.items():
             # Check if this is a variant structure or direct dsl/jobs
@@ -201,8 +201,8 @@ class FlowManager:
                 if dsl is None:
                     raise ValueError(f"Graph '{graph_name}' is missing required 'dsl' or 'jobs'")
                     
-                graph_id = self.add_dsl(dsl, graph_name)
-                result.append(graph_id)
+                fq_name = self.add_dsl(dsl, graph_name)
+                fq_names.append(fq_name)
             else:
                 # With variants
                 for variant, variant_data in graph_data.items():
@@ -211,10 +211,10 @@ class FlowManager:
                     if dsl is None:
                         raise ValueError(f"Graph '{graph_name}' variant '{variant}' is missing required 'dsl' or 'jobs'")
                         
-                    graph_id = self.add_dsl(dsl, graph_name, variant)
-                    result.append(graph_id)
+                    fq_name = self.add_dsl(dsl, graph_name, variant)
+                    fq_names.append(fq_name)
         
-        return result
+        return fq_names
 
     def add_graph(self, precedence_graph: PrecedenceGraph, jobs: JobsDict, graph_name: str, variant: str = "") -> str:
         """
