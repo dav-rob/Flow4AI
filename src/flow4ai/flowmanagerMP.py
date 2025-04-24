@@ -20,6 +20,8 @@ from .utils.monitor_utils import should_log_task_stats
 class FlowManagerMP:
     """
     FlowManagerMP executes up to thousands of tasks in parallel using one or more Jobs passed into constructor.
+    FlowManagerMP is a multiprocessing implementation of FlowManager, so tasks and results are passed between entirely
+    different processes, which means that results and tasks must be picklable.
     Optionally passes results to a pre-existing result processing function after task completion.
 
     Args:
