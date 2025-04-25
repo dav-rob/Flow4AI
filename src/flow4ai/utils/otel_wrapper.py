@@ -255,8 +255,8 @@ class TracerFactory:
         if not config_path:
             # Finally use default path from package resources
             try:
-                with resources.path('flow4ai.resources', DEFAULT_OTEL_CONFIG) as path:
-                    config_path = str(path)
+                # Using files() instead of deprecated path() method
+                config_path = str(resources.files('flow4ai.resources').joinpath(DEFAULT_OTEL_CONFIG))
             except Exception as e:
                 raise RuntimeError(f"Could not find {DEFAULT_OTEL_CONFIG} in package resources: {e}")
         
