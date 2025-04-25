@@ -514,7 +514,8 @@ def test_submit_tasks_with_different_data():
 def test_submit_multiple_tasks_pipeline():
     """Test submitting multiple Tasks that flow through a multi-step pipeline.
     
-    This test demonstrates both JobABC subclasses and wrapped functions approaches for handling inputs.
+    This test demonstrates both JobABC subclasses and wrapped functions approaches for handling inputs,
+    while following proper FlowManager usage patterns - using a single instance and adding DSL once.
     """
     from flow4ai.job import Task
     
@@ -564,7 +565,7 @@ def test_submit_multiple_tasks_pipeline():
         inputs = j_ctx["inputs"]
         task = j_ctx["task"]
         
-        logger.debug(f"Aggregator j_ctx: {j_ctx}")
+        logger.debug(f"Aggregator j_ctx inputs: {inputs}")
         
         # Get results from transformer
         transformer_result = inputs.get("transformer", {}).get("result", {})
@@ -593,7 +594,7 @@ def test_submit_multiple_tasks_pipeline():
         "aggregator": aggregate_results  # Regular function that will be wrapped
     })
     
-    # Enable logging
+    # Enable detailed logging for debugging
     logging.getLogger('flow4ai').setLevel(logging.DEBUG)
     
     # Save results for context between pipeline steps
@@ -603,84 +604,103 @@ def test_submit_multiple_tasks_pipeline():
     # Build the pipeline: generator -> transformer -> aggregator
     dsl = jobs["generator"] >> jobs["transformer"] >> jobs["aggregator"]
     
-    # Initialize FlowManager and add the DSL
+    # Initialize a SINGLE FlowManager instance (FlowManager is effectively a singleton)
     fm = FlowManager()
+    
+    # Add the DSL ONCE to get a fully qualified name
     fq_name = fm.add_dsl(dsl, "test_pipeline")
     
-    # Create task for the squared operation only (to simplify debugging)
-    tasks = [
-        Task({
-            "start": 0, 
-            "count": 5, 
-            "operation": "square"
-        }, job_name=fq_name)
-    ]
+    # Demo approach 1: Submit multiple tasks one-by-one, with wait_for_completion after each
+    logger.info("Approach 1: Multiple individual submit() calls with wait_for_completion after each")
     
-    # Submit the task
-    logger.info("Submitting pipeline task")
-    fm.submit(tasks, fq_name)
+    # Task 1: Numbers 0-4, squared 
+    task1 = Task({
+        "start": 0, 
+        "count": 5, 
+        "operation": "square"
+    })
     
-    # Wait for completion
+    # Submit task 1
+    logger.info("Submitting task 1 (square operation)")
+    fm.submit(task1, fq_name)
+    
+    # Wait for task 1 to complete
     success = fm.wait_for_completion()
-    assert success, "Timed out waiting for tasks to complete"
+    assert success, "Timed out waiting for task 1 to complete"
     
-    # Check results
+    # Check results for task 1
     results = fm.pop_results()
+    assert not results["errors"], f"Errors occurred during task 1 execution: {results['errors']}"
+    logger.info(f"Task 1 completed successfully: {results['completed']}")
     
-    # Verify no errors
-    assert not results["errors"], f"Errors occurred during task execution: {results['errors']}"
+    # Verify completed task count after task 1
+    result_count = fm.get_counts()
+    assert result_count["completed"] == 1, f"Expected 1 completed task, got {result_count['completed']}"
+    completed_so_far = result_count["completed"]  # Track completed count
     
-    # Log the results for inspection
-    logger.info(f"Results: {results}")
+    # Task 2: Numbers 5-9, doubled
+    task2 = Task({
+        "start": 5, 
+        "count": 5, 
+        "operation": "double"
+    })
     
-    # Once the simplified test works, we can add all three tasks back
-    # Reset for the full test
-    fm = FlowManager()
-    fq_name = fm.add_dsl(dsl, "test_pipeline_full")
+    # Submit task 2
+    logger.info("Submitting task 2 (double operation)")
+    fm.submit(task2, fq_name)
     
-    # Create tasks with different configurations
+    # Wait for task 2 to complete
+    success = fm.wait_for_completion()
+    assert success, "Timed out waiting for task 2 to complete"
+    
+    # Check results for task 2
+    results = fm.pop_results()
+    assert not results["errors"], f"Errors occurred during task 2 execution: {results['errors']}"
+    logger.info(f"Task 2 completed successfully: {results['completed']}")
+    
+    # Verify completed task count after task 2
+    result_count = fm.get_counts()
+    # FM.get_counts() returns cumulative counts, so we expect 2 total completed tasks now
+    assert result_count["completed"] == completed_so_far + 1, f"Expected {completed_so_far + 1} total completed tasks, got {result_count['completed']}"
+    completed_so_far = result_count["completed"]  # Update completed count
+    
+    # Demo approach 2: Submit multiple tasks at once using lists
+    logger.info("\nApproach 2: Submit multiple tasks at once using Task[]")
+    
+    # Create a list of tasks
     tasks = [
-        # Task 1: Numbers 0-4, squared
-        Task({
-            "start": 0, 
-            "count": 5, 
-            "operation": "square"
-        }, job_name=fq_name),
-        
-        # Task 2: Numbers 5-9, doubled
-        Task({
-            "start": 5, 
-            "count": 5, 
-            "operation": "double"
-        }, job_name=fq_name),
-        
         # Task 3: Numbers 10-14, incremented
         Task({
             "start": 10, 
             "count": 5, 
             "operation": "increment"
-        }, job_name=fq_name)
+        }),
+        # Task 4: Numbers 15-19, squared
+        Task({
+            "start": 15, 
+            "count": 5, 
+            "operation": "square"
+        })
     ]
     
     # Submit multiple tasks at once
-    logger.info("Submitting multiple pipeline tasks")
+    logger.info("Submitting tasks 3 & 4 as a batch")
     fm.submit(tasks, fq_name)
     
-    # Wait for completion
+    # Wait for all tasks to complete
     success = fm.wait_for_completion()
-    assert success, "Timed out waiting for tasks to complete"
+    assert success, "Timed out waiting for tasks 3 & 4 to complete"
     
-    # Check results
+    # Check results for tasks 3 & 4
     results = fm.pop_results()
+    assert not results["errors"], f"Errors occurred during tasks 3 & 4 execution: {results['errors']}"
     
-    # Verify no errors
-    assert not results["errors"], f"Errors occurred during task execution: {results['errors']}"
-    
-    # Verify completed task count (should be 3 tasks at the end of the pipeline)
+    # Verify completed task count after tasks 3 & 4
     result_count = fm.get_counts()
-    assert result_count["completed"] == 3, f"Expected 3 completed tasks, got {result_count['completed']}"
+    # We expect 2 more completed tasks in addition to what we had before
+    assert result_count["completed"] == completed_so_far + 2, f"Expected {completed_so_far + 2} total completed tasks, got {result_count['completed']}"
     
-    # Log the full results
-    logger.info(f"Full test results: {results['completed']}")
+    # Log the results for inspection
+    logger.info(f"Tasks 3 & 4 completed successfully: {results['completed']}")
 
 

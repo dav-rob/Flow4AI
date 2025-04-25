@@ -159,22 +159,42 @@ class FlowManager:
 
     def add_dsl(self, dsl: DSLComponent, graph_name: str, variant: str = "") -> str:
         """
-        Adds a graph to the task manager.
+        Adds a DSL component to the FlowManager. Each DSL component should only be added once
+        as it is modified during the process by dsl_to_precedence_graph.
         
         Args:
-            dsl: the dsl defining the data flow between jobs.
-            jobs: A dictionary of jobs.
-            graph_name: The name of the graph.
+            dsl: The DSL component defining the data flow between jobs.
+                This DSL will be modified by being converted to a precedence graph.
+            graph_name: The name of the graph. Used to generate fully qualified job names.
             variant: The variant of the graph e.g. "dev", "prod"
         
         Returns:
-            str: The fully qualified name of the graph.
+            str: The fully qualified name of the head job in the graph, to be used with submit().
+        
+        Warning:
+            Do not add the same DSL object multiple times, as it will be modified each time.
+            Instead, get the fully qualified name (FQ name) from the first call and reuse it.
         """
         if not graph_name:
             raise ValueError("graph_name cannot be None or empty")
         if dsl is None:
             raise ValueError("graph cannot be None")
+        
+        # Check if this DSL has a tracking attribute to prevent multiple additions
+        if hasattr(dsl, "_f4a_already_added") and dsl._f4a_already_added:
+            self.logger.warning(
+                f"DSL appears to have been added already. Adding the same DSL multiple times " 
+                f"will cause the DSL to be modified multiple times, potentially causing errors. " 
+                f"Use the FQ name from the first add_dsl call instead."
+            )
+        
+        # Transform the DSL into a precedence graph (this modifies the DSL)
         graph, jobs = dsl_to_precedence_graph(dsl)
+        
+        # Mark this DSL as added to prevent multiple additions
+        setattr(dsl, "_f4a_already_added", True)
+        
+        # Add the graph to our job map
         return self.add_graph(graph, jobs, graph_name, variant)
         
     def add_dsl_dict(self, dsl_dict: Dict) -> List[str]:
