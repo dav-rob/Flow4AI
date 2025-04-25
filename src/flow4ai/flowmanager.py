@@ -74,7 +74,7 @@ class FlowManager:
         async with job_graph_context_manager(job_set):
             return await job._execute(task)
             
-    def submit(self, task: Task, fq_name: str):
+    def submit(self, task: Union[Task, List[Task]], fq_name: str):
         # Check that job_map is not None or empty
         if not self.job_map:
             self.logger.error("job_map is None or empty")
@@ -90,14 +90,39 @@ class FlowManager:
                 
         if job is None:
             self.logger.error(f"No job found for graph_name: {fq_name}")
-            with self._data_lock:
-                self.error_count += 1
-                self.error_results[job_key].append({
-                    "error": ValueError(f"No job found for graph_name: {fq_name}"),
-                    "task": task
-                })
+            # Handle error for single task or list of tasks
+            if isinstance(task, list):
+                with self._data_lock:
+                    self.error_count += len(task)
+                    for single_task in task:
+                        self.error_results[job_key].append({
+                            "error": ValueError(f"No job found for graph_name: {fq_name}"),
+                            "task": single_task
+                        })
+            else:
+                with self._data_lock:
+                    self.error_count += 1
+                    self.error_results[job_key].append({
+                        "error": ValueError(f"No job found for graph_name: {fq_name}"),
+                        "task": task
+                    })
             return
 
+        # Handle single task or list of tasks
+        if isinstance(task, list):
+            for single_task in task:
+                self._submit_single_task(job, single_task, job_key)
+        else:
+            self._submit_single_task(job, task, job_key)
+
+    def _submit_single_task(self, job, task: Task, job_key: str):
+        """Helper method to submit a single task to the job.
+        
+        Args:
+            job: The job to execute
+            task: The task to submit
+            job_key: The job key for tracking
+        """
         with self._data_lock:
             self.submitted_count += 1
 
