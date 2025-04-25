@@ -23,8 +23,8 @@ class FlowManager:
                 cls._instance.__initialized = False
         return cls._instance
 
-    def __init__(self, file_config=False, on_complete: Optional[Callable[[Any], None]] = None):
-        self.file_config = file_config
+    def __init__(self, jobs_dir_mode=False, on_complete: Optional[Callable[[Any], None]] = None):
+        self.jobs_dir_mode = jobs_dir_mode
         self.on_complete = on_complete
         if not hasattr(self, '_TaskManager__initialized') or not self.__initialized:
             with self._lock:
@@ -39,7 +39,7 @@ class FlowManager:
         self.thread.start()
         self.job_map: Dict[str, JobABC] = {}
         self.head_jobs: List[JobABC] = []
-        if self.file_config:
+        if self.jobs_dir_mode:
             self.head_jobs = JobFactory.get_head_jobs_from_config()
             self.job_map = {job.name: job for job in self.head_jobs}
         self.submitted_count = 0
