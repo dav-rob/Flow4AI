@@ -1,4 +1,112 @@
-# Flow4AI Architecture: Input Handling in Job Graphs
+# Flow4AI Architecture: Key Concepts
+
+## FlowManager: Singleton Pattern
+
+The `FlowManager` class operates as a singleton for managing job graphs and tasks:
+
+- **Single Instance**: Only one instance of `FlowManager` is created per application, you can call the constructor multiple times in different files and it will return the same instance with all state remembered
+- **State Management**: The FlowManager maintains internal state about job graphs, tasks, and results
+- **Multiple Submissions**: A single FlowManager instance can handle multiple DSLs and task submissions
+- **Stateful Counters**: Task counts (completed, errors) are cumulative across all submit operations
+
+```python
+# CORRECT: Create a single FlowManager instance
+fm = FlowManager()
+
+# Add multiple DSLs to the same manager
+fq_name1 = fm.add_dsl(dsl1, "graph_one")
+fq_name2 = fm.add_dsl(dsl2, "graph_two")
+
+# Submit tasks to different DSLs
+fm.submit(task1, fq_name1)
+fm.submit(task2, fq_name2)
+
+# Wait for all tasks to complete
+fm.wait_for_completion()
+```
+
+```python
+# INCORRECT: Creating multiple FlowManager instances
+fm1 = FlowManager()  # First instance
+fm2 = FlowManager()  # Second instance - unnecessary and can lead to issues
+```
+
+## DSL Handling and Modification
+
+When adding a DSL to FlowManager, important transformations occur:
+
+- **DSL Transformation**: The `add_dsl` method calls `dsl_to_precedence_graph`, which modifies the DSL by giving jobs fully qualified names
+- **One-time Addition**: Each DSL should only be added once to avoid double-transformation
+- **FQ Name**: The return value from `add_dsl` is the fully qualified name of the head job in the graph, which should be used in `submit`
+- **Job Lookup**: The `submit` method uses this FQ name to find the corresponding job graph
+
+```python
+# CORRECT: Add DSL once and reuse the FQ name
+fq_name = fm.add_dsl(dsl, "graph_name")
+
+# Submit multiple tasks using the same FQ name
+fm.submit(task1, fq_name)
+fm.submit(task2, fq_name)
+fm.submit([task3, task4], fq_name)  # Submit multiple tasks at once
+```
+
+```python
+# INCORRECT: Adding the same DSL multiple times
+fq_name1 = fm.add_dsl(dsl, "graph_name1")  # First addition
+fq_name2 = fm.add_dsl(dsl, "graph_name2")  # Second addition - modifies already modified DSL!
+```
+
+## Tasks and Submission Patterns
+
+The `Task` class is a dictionary subclass with a unique identifier:
+
+```python
+# Creating a task (dictionary with extra functionality)
+task1 = Task({"param1": value1, "param2": value2})
+
+# The task_id attribute is automatically generated
+print(task1.task_id)  # UUID string for identifying this task
+```
+
+FlowManager supports two submission patterns:
+
+### Pattern 1: Individual Submission with Sequential Waiting
+
+```python
+# Submit and process tasks one by one
+fm.submit(task1, fq_name)
+success1 = fm.wait_for_completion()
+results1 = fm.pop_results()  # Get results for task1 only
+
+fm.submit(task2, fq_name)
+success2 = fm.wait_for_completion()
+results2 = fm.pop_results()  # Get results for task2 only
+```
+
+### Pattern 2: Batch Submission with Single Wait
+
+```python
+# Submit multiple tasks at once
+tasks = [task1, task2, task3]  # List of Task objects
+fm.submit(tasks, fq_name)      # Submit all at once
+
+# Wait for all submitted tasks to complete
+success = fm.wait_for_completion()
+results = fm.pop_results()      # Get results for all tasks
+```
+
+## State and Results Management
+
+Key methods for managing state and results:
+
+- **wait_for_completion()**: Blocks until all submitted tasks complete (returns boolean success)
+- **pop_results()**: Returns and clears accumulated results (completed jobs and errors)
+- **get_counts()**: Returns cumulative counts of submitted, completed, and error tasks
+
+```python
+# Task counts are cumulative across all submit operations
+counts = fm.get_counts()  # Returns {"submitted": X, "completed": Y, "errors": Z}
+```
 
 ## JobABC Subclasses vs Wrapped Functions
 
@@ -27,6 +135,8 @@ class MyCustomJob(JobABC):
         # Process and return result
         return {"processed_data": process(predecessor_result)}
 ```
+
+**Important**: `get_inputs()` relies on proper job naming conventions. The `parse_job_name` method extracts short names from fully qualified ones using a specific format: `graph_name$$param_name$$job_name$$`. If a job name doesn't follow this pattern, it returns "UNSUPPORTED NAME FORMAT", which may cause input retrieval issues.
 
 The `get_inputs()` method returns a dictionary with short job names as keys, making it easy to access upstream job results.
 
@@ -58,7 +168,9 @@ The `j_ctx` parameter is automatically populated by the `WrappingJob` class when
 3. When refactoring between approaches, be aware of this fundamental difference in accessing inputs.
 4. Always use the `wrap()` utility to properly integrate regular functions into the Flow4AI job graph system.
 
-### Implementation Note
+### Implementation Details
+
+#### WrappingJob Context Passing
 
 In `WrappingJob`, the `FN_CONTEXT` variable (defaulting to "j_ctx") is used to identify the special parameter that should receive the job context information. This is set up in the `run()` method:
 
@@ -71,4 +183,18 @@ if self.FN_CONTEXT in sig.parameters:
     callable_params["kwargs"][self.FN_CONTEXT]["inputs"] = self.get_inputs()
 ```
 
-This means that wrapped functions receive the same information that JobABC subclasses can access directly through their methods, just structured as a context dictionary parameter.
+Wrapped functions receive the same information that JobABC subclasses can access directly through their methods, just structured as a context dictionary parameter.
+
+#### Job Naming Conventions
+
+Job names in Flow4AI follow this format: `graph_name$$param_name$$job_name$$`
+
+- When using `dsl_to_precedence_graph()`, this naming scheme is applied automatically
+- The `add_dsl()` method handles this transformation and returns the fully qualified name
+- Job names that don't follow this convention will cause "UNSUPPORTED NAME FORMAT" errors
+- These naming conventions are crucial for proper input passing between jobs
+
+```python
+# Example of a fully qualified job name
+'test_pipeline$$$$generator$$'  # graph_name$$param_name$$job_name$$
+```
