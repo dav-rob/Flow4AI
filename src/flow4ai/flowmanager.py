@@ -74,12 +74,39 @@ class FlowManager:
         async with job_graph_context_manager(job_set):
             return await job._execute(task)
             
-    def submit(self, task: Union[Task, List[Task]], fq_name: str):
+    def submit(self, task: Union[Task, List[Task]], fq_name: str = None):
         # Check that job_map is not None or empty
         if not self.job_map:
             self.logger.error("job_map is None or empty")
             return
-            
+        
+        # If fq_name is None and there's only one job graph in job_map, use that one
+        if fq_name is None:
+            if len(self.job_map) == 1:
+                fq_name = next(iter(self.job_map))
+                self.logger.debug(f"Using the only available job graph: {fq_name}")
+            else:
+                error_msg = "fq_name must be specified when multiple job graphs are available"
+                self.logger.error(error_msg)
+                # Handle error for single task or list of tasks
+                job_key = "unknown"
+                if isinstance(task, list):
+                    with self._data_lock:
+                        self.error_count += len(task)
+                        for single_task in task:
+                            self.error_results[job_key].append({
+                                "error": ValueError(error_msg),
+                                "task": single_task
+                            })
+                else:
+                    with self._data_lock:
+                        self.error_count += 1
+                        self.error_results[job_key].append({
+                            "error": ValueError(error_msg),
+                            "task": task
+                        })
+                return
+    
         # Get the JobABC instance from the job_map
         job_key = fq_name
         job = None

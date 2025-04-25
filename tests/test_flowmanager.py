@@ -511,6 +511,55 @@ def test_submit_tasks_with_different_data():
     assert any(r["processed"] is None and r["type"] == "unknown" for r in completed_results), "None processing failed"
 
 
+def test_submit_without_fqname():
+    """Test submitting tasks without specifying fq_name when only one DSL has been added.
+    
+    When only one job graph has been added to FlowManager, the fq_name parameter in submit()
+    can be omitted for convenience.
+    """
+    from flow4ai.job import Task
+    
+    # Define a simple job
+    processor = ProcessorJob("Processor", "process")
+    
+    # Create DSL directly with the processor job
+    dsl = processor
+    
+    # Initialize FlowManager and add the DSL
+    fm = FlowManager()
+    fq_name = fm.add_dsl(dsl, "test_without_fqname")
+    
+    # Create a task
+    task = Task({"value": 42})
+    
+    # Submit the task WITHOUT specifying fq_name
+    logger.info("Submitting task without specifying fq_name")
+    fm.submit(task)
+    
+    # Wait for completion
+    success = fm.wait_for_completion()
+    assert success, "Timed out waiting for tasks to complete"
+    
+    # Check results
+    results = fm.pop_results()
+    
+    # Verify no errors
+    assert not results["errors"], "Errors occurred during task execution"
+    
+    # Verify completed task count
+    result_count = fm.get_counts()
+    assert result_count["completed"] == 1, f"Expected 1 completed task, got {result_count['completed']}"
+    
+    # Log the results for inspection
+    logger.info(f"Results: {results['completed']}")
+    
+    # Verify the result contains the expected processor output
+    job_key = next(iter(results["completed"]))
+    result_value = results["completed"][job_key][0]["result"]
+    expected = f"Processor test_without_fqname$$$$Processor$$ of type process"
+    assert result_value == expected, f"Expected '{expected}', got '{result_value}'"
+
+
 def test_submit_multiple_tasks_pipeline():
     """Test submitting multiple Tasks that flow through a multi-step pipeline.
     

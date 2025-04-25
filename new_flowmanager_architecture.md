@@ -37,8 +37,9 @@ When adding a DSL to FlowManager, important transformations occur:
 
 - **DSL Transformation**: The `add_dsl` method calls `dsl_to_precedence_graph`, which modifies the DSL by giving jobs fully qualified names
 - **One-time Addition**: Each DSL should only be added once to avoid double-transformation
-- **FQ Name**: The return value from `add_dsl` is the fully qualified name of the head job in the graph, which should be used in `submit`
+- **FQ Name**: The return value from `add_dsl` is the fully qualified name of the head job in the graph, which can be used in `submit`
 - **Job Lookup**: The `submit` method uses this FQ name to find the corresponding job graph
+- **Simplified Usage**: If only one job graph has been added to the FlowManager, the `fq_name` parameter in `submit` can be omitted
 
 ```python
 # CORRECT: Add DSL once and reuse the FQ name
