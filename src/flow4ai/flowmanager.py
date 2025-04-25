@@ -85,10 +85,8 @@ class FlowManager:
         job = None
         
         # Find the job by matching the start of the name
-        for key, j in self.job_map.items():
-            if key.startswith(job_key):
-                job = j
-                break
+        if fq_name in self.job_map:
+            job = self.job_map[fq_name]
                 
         if job is None:
             self.logger.error(f"No job found for graph_name: {fq_name}")
@@ -410,41 +408,14 @@ class FlowManager:
             
         return None
         
-    # Methods to support a fluent interface
-    
-    def add_and_submit(self, dsl, task, graph_name="default_graph"):
+    def get_fq_names(self):
         """
-        Add a DSL component and submit a task in one step.
+        Returns a list of all fully qualified names of graphs added to the FlowManager.
         
-        Args:
-            dsl: The DSL component defining the job graph
-            task: Task dictionary to process
-            graph_name: Name for the graph
-            
         Returns:
-            self for method chaining
+            List[str]: List of fully qualified names
         """
-        fq_name = self.add_dsl(dsl, graph_name)
-        self.submit(task, fq_name)
-        return self
-        
-    def wait(self, timeout=10):
-        """
-        Wait for completion and check for success.
-        
-        Args:
-            timeout: Maximum time to wait in seconds
-            
-        Returns:
-            self for method chaining
-            
-        Raises:
-            TimeoutError: If tasks don't complete within the timeout period
-        """
-        success = self.wait_for_completion(timeout=timeout)
-        if not success:
-            raise TimeoutError(f"Timed out waiting for tasks to complete after {timeout} seconds")
-        return self
+        return [job.name for job in self.head_jobs]
 
     @classmethod
     def run(cls, dsl, task, graph_name="default_graph", timeout=10):
