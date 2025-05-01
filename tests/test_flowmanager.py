@@ -689,7 +689,7 @@ def test_submit_multiple_tasks_pipeline():
     logger.info(f"Task 1 completed successfully: {results['completed']}")
     
     # Verify results for task 1 (square operation on numbers 0-4)
-    task1_result = results['completed']['test_pipeline$$$$generator$$'][0]
+    task1_result = results['completed'][fq_name][0]
     saved_results = task1_result.get('SAVED_RESULTS', {})
     
     # Check generator output
@@ -730,7 +730,7 @@ def test_submit_multiple_tasks_pipeline():
     logger.info(f"Task 2 completed successfully: {results['completed']}")
     
     # Verify results for task 2 (double operation on numbers 5-9)
-    task2_result = results['completed']['test_pipeline$$$$generator$$'][0]
+    task2_result = results['completed'][fq_name][0]
     saved_results = task2_result.get('SAVED_RESULTS', {})
     
     # Check generator output
@@ -783,7 +783,7 @@ def test_submit_multiple_tasks_pipeline():
     assert not results["errors"], f"Errors occurred during tasks 3 & 4 execution: {results['errors']}"
     
     # Verify results for task 3 (increment operation on numbers 10-14)
-    task3_result = results['completed']['test_pipeline$$$$generator$$'][0]
+    task3_result = results['completed'][fq_name][0]
     saved_results_task3 = task3_result.get('SAVED_RESULTS', {})
     
     # Check generator output for task 3
@@ -799,7 +799,7 @@ def test_submit_multiple_tasks_pipeline():
     assert task3_result.get('avg') == 13.0, "Aggregator average should be 13.0"
     
     # Verify results for task 4 (square operation on numbers 15-19)
-    task4_result = results['completed']['test_pipeline$$$$generator$$'][1]
+    task4_result = results['completed'][fq_name][1]
     saved_results_task4 = task4_result.get('SAVED_RESULTS', {})
     
     # Check generator output for task 4

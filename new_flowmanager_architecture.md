@@ -31,31 +31,54 @@ fm1 = FlowManager()  # First instance
 fm2 = FlowManager()  # Second instance - unnecessary and can lead to issues
 ```
 
-## DSL Handling and Modification
+## DSL Handling and the Fully Qualified Name (fq_name)
 
-When adding a DSL to FlowManager, important transformations occur:
+When adding a DSL to FlowManager, important transformations occur that create a fully qualified name (fq_name):
 
-- **DSL Transformation**: The `add_dsl` method calls `dsl_to_precedence_graph`, which modifies the DSL by giving jobs fully qualified names
-- **One-time Addition**: Each DSL should only be added once to avoid double-transformation
-- **FQ Name**: The return value from `add_dsl` is the fully qualified name of the head job in the graph, which can be used in `submit`
-- **Job Lookup**: The `submit` method uses this FQ name to find the corresponding job graph
-- **Simplified Usage**: If only one job graph has been added to the FlowManager, the `fq_name` parameter in `submit` can be omitted
+### 1. Creating and Storing a Job Graph
+
+- **DSL Transformation**: The `add_dsl` method calls `dsl_to_precedence_graph`, which transforms the DSL into a graph structure
+- **Job Naming**: During transformation, each job is assigned a fully qualified name in the format: `graph_name$$param_name$$job_name$$`
+- **Return Value**: The `add_dsl` method returns the fully qualified name (fq_name) of the head job in the graph
+- **Key Function**: This fq_name serves as a unique key to identify and access the job graph
 
 ```python
-# CORRECT: Add DSL once and reuse the FQ name
+# Create a job graph and get its fully qualified name (fq_name)
+fm = FlowManager()
 fq_name = fm.add_dsl(dsl, "graph_name")
 
-# Submit multiple tasks using the same FQ name
+# The fq_name will look something like: 'graph_name$$$$first_job_name$$'
+```
+
+### 2. Submitting Tasks Using fq_name
+
+- **Job Graph Lookup**: The `submit` method uses the fq_name to find the corresponding job graph
+- **Requirement**: When multiple job graphs are loaded, you MUST provide the fq_name to identify which graph to use
+- **Convenience**: If only one job graph has been added, the fq_name parameter can be omitted
+
+```python
+# CORRECT: Add DSL once and reuse the fq_name for submissions
+fq_name = fm.add_dsl(dsl, "graph_name")
+
+# Submit tasks using the fq_name as the key to the job graph
 fm.submit(task1, fq_name)
 fm.submit(task2, fq_name)
 fm.submit([task3, task4], fq_name)  # Submit multiple tasks at once
+
+# If only one DSL has been added, fq_name can be omitted
+fm.submit(task5)  # Only works when there's just one job graph in the FlowManager
 ```
+
+### 3. Avoiding Common Mistakes
 
 ```python
 # INCORRECT: Adding the same DSL multiple times
 fq_name1 = fm.add_dsl(dsl, "graph_name1")  # First addition
 fq_name2 = fm.add_dsl(dsl, "graph_name2")  # Second addition - modifies already modified DSL!
 ```
+
+- **One-time Addition**: Each DSL should only be added once to avoid double-transformation
+- **Store the fq_name**: Always store and reuse the fq_name returned from `add_dsl`
 
 ## Tasks and Submission Patterns
 
@@ -200,17 +223,25 @@ Job names in Flow4AI follow this format: `graph_name$$param_name$$job_name$$`
 'test_pipeline$$$$generator$$'  # graph_name$$param_name$$job_name$$
 ```
 
-## Retrieving Results from Job Graphs
+## Retrieving Results Using the fq_name
 
-The FlowManager API provides several methods for retrieving results from job executions:
+The FlowManager API provides several methods for retrieving results from job executions, all of which use the same fq_name that was returned from `add_dsl()` when creating the job graph:
+
+### The Results Lifecycle
+
+1. **Create job graph**: `fq_name = fm.add_dsl(dsl, "graph_name")`
+2. **Submit tasks**: `fm.submit(task, fq_name)` 
+3. **Wait for completion**: `fm.wait_for_completion()`
+4. **Retrieve results**: `results = fm.pop_results()`
+5. **Access results using fq_name**: `task_result = results['completed'][fq_name][0]`
 
 ### Popping Results with pop_results()
 
-The `pop_results()` method is the primary way to retrieve and clear accumulated results:
+The `pop_results()` method retrieves and clears accumulated results:
 
 ```python
-# Submit one or more tasks
-fm.submit(task, fq_name) 
+# Submit task(s) using the fq_name from add_dsl
+fm.submit(task, fq_name)
 # or fm.submit([task1, task2], fq_name)
 
 # Wait for tasks to complete
@@ -219,23 +250,26 @@ fm.wait_for_completion()
 # Pop results - this returns and clears the accumulated results
 results = fm.pop_results()
 
-# The results structure contains both completed jobs and errors
-print(results['completed'])  # Dictionary of completed jobs with results
+# The results structure contains completed jobs and errors
+print(results['completed'])  # Dictionary keyed by fq_name with results
 print(results['errors'])     # List of tasks that encountered errors
 ```
 
-### Accessing Tail Job Results
+### Accessing Tail Job Results Using fq_name
 
-Results from the tail job (last job in the pipeline) are automatically returned in the completed results:
+Results from the tail job (last job in the pipeline) are accessed using the same fq_name that was used during submission:
 
 ```python
-# Pop results after task completion
+# Get the fq_name when creating the job graph
+fq_name = fm.add_dsl(dsl, "graph_name")
+
+# After submitting and completing tasks, pop results
 results = fm.pop_results()
 
-# Access tail job results for a specific task
+# Access tail job results using the same fq_name as the key
 tail_job_results = results['completed'][fq_name][0]  # For a single task
 
-# For multiple tasks, each task result is in the list
+# For multiple tasks, each task result is in the list with the same fq_name key
 first_task_results = results['completed'][fq_name][0]
 second_task_results = results['completed'][fq_name][1]
 
@@ -246,16 +280,14 @@ print(tail_job_results['count'])    # Access another specific value
 
 ### Accessing SAVED_RESULTS
 
-When jobs have `save_result = True` set, their outputs are stored in a special `SAVED_RESULTS` field:
+When jobs have `save_result = True` set, their outputs are stored in a special `SAVED_RESULTS` field, still accessed using the fq_name:
 
 ```python
-# Pop results after task completion
+# Get results using the same fq_name used for submission
 results = fm.pop_results()
-
-# Access the SAVED_RESULTS for a specific task
 saved_results = results['completed'][fq_name][0]['SAVED_RESULTS']
 
-# Access results from specific jobs in the pipeline
+# Access results from specific jobs in the pipeline by their short names
 generator_results = saved_results['generator']
 transformer_results = saved_results['transformer']
 
@@ -266,7 +298,7 @@ print(transformer_results['transformed'])
 
 ### Task Parameters Pass-Through
 
-Task parameters are automatically passed through to the results for convenience:
+Task parameters are automatically passed through to the results for convenience, still accessed using the same fq_name:
 
 ```python
 # Create a task with parameters
@@ -275,16 +307,40 @@ task = Task({
     'param2': 'value2'
 })
 
-# Submit and wait for completion
+# Submit using the fq_name from add_dsl
 fm.submit(task, fq_name)
 fm.wait_for_completion()
 
-# Pop results
+# Pop and access results using the same fq_name
 results = fm.pop_results()
-
-# Access the original task parameters
 task_params = results['completed'][fq_name][0]['task_pass_through']
 print(task_params['param1'])  # Outputs: 'value1'
 ```
 
-These mechanisms provide flexible access to results at different stages of the pipeline, allowing for effective data extraction and analysis after job graph execution.
+### Understanding the Results Structure
+
+The overall structure of results from `pop_results()` is:
+
+```
+results = {
+    'completed': {
+        fq_name: [  # The same fq_name returned from add_dsl
+            {  # First task result
+                'RETURN_JOB': '...',
+                'task_pass_through': Task(...),
+                'SAVED_RESULTS': {...},
+                # Direct outputs from the tail job
+                'output_key1': value1,
+                'output_key2': value2,
+                ...
+            },
+            {  # Second task result (if multiple tasks were submitted)
+                ...
+            }
+        ]
+    },
+    'errors': []
+}
+```
+
+This consistency in using the same fq_name throughout the entire lifecycle (from job graph creation to result retrieval) ensures clarity and prevents confusion when working with multiple job graphs.
