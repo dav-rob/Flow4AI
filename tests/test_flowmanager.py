@@ -718,7 +718,7 @@ def test_submit_multiple_tasks_pipeline():
     
     # Submit task 2
     logger.info("Submitting task 2 (double operation)")
-    fm.submit(task2, fq_name)
+    fm.submit(task2) # fq_name is optional when there is only one job graph
     
     # Wait for task 2 to complete
     success = fm.wait_for_completion()
@@ -772,7 +772,7 @@ def test_submit_multiple_tasks_pipeline():
     
     # Submit multiple tasks at once
     logger.info("Submitting tasks 3 & 4 as a batch")
-    fm.submit(tasks, fq_name)
+    fm.submit(tasks) # fq_name is optional when there is only one job graph
     
     # Wait for all tasks to complete
     success = fm.wait_for_completion()
