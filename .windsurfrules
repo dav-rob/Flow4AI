@@ -9,7 +9,7 @@ Flow4AI allows users to execute AI and IO Job graphs in parallel.
 
 
 ## Architecture
-Always read the [architecture document](ARCHITECTURE.md) before undertaking any task. You are allowed to update this document with any observations you have made. If you do update the ARCHITECTURE.md, then put *** ARCHITECTURE UPDATE *** in the output.
+Always read the [architecture document](architecture.md) before undertaking any task. You are allowed to update this document with any observations you have made. If you do update the architecture.md, then put *** ARCHITECTURE UPDATE *** in the output.
 
 ## Tests
 - execute unit tests in the root directory using pytest using the command `python -m pytest` as the root of your test commands.
