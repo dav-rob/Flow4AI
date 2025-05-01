@@ -404,7 +404,7 @@ def test_timeout_handling_in_execute():
 def test_submit_multiple_tasks():
     """Test submitting multiple Tasks at once using the updated submit method."""
     from flow4ai.job import Task
-    
+
     # Define a simple job
     processor = ProcessorJob("Processor", "process")
     
@@ -518,7 +518,7 @@ def test_submit_without_fqname():
     can be omitted for convenience.
     """
     from flow4ai.job import Task
-    
+
     # Define a simple job
     processor = ProcessorJob("Processor", "process")
     
@@ -567,7 +567,7 @@ def test_submit_multiple_tasks_pipeline():
     while following proper FlowManager usage patterns - using a single instance and adding DSL once.
     """
     from flow4ai.job import Task
-    
+
     # Define a JobABC subclass for number generation
     class NumberGenerator(JobABC):
         """Job that generates a number sequence."""
@@ -583,12 +583,13 @@ def test_submit_multiple_tasks_pipeline():
             # Get inputs directly using JobABC method (no j_ctx needed)
             inputs = self.get_inputs()
             
-            # Log inputs for debugging
-            self.logger.debug(f"Transformer inputs: {inputs}")
+            # Log inputs for debugging with INFO level to see in test output
+            self.logger.info(f"Transformer inputs: {inputs}")
             
-            # Get the numbers from the generator job's output
-            generator_result = inputs.get("generator", {}).get("result", {})
-            numbers = generator_result.get("numbers", [])
+            # Get the numbers from the generator job's output - direct access instead of through result
+            numbers = inputs.get("generator", {}).get("numbers", [])
+            
+            self.logger.info(f"Extracted numbers from generator: {numbers}")
             
             # Get the operation to perform
             operation = task.get("operation", "square")
@@ -603,7 +604,7 @@ def test_submit_multiple_tasks_pipeline():
             else:
                 result = numbers
             
-            self.logger.debug(f"Transformer output: {result} with operation {operation}")
+            self.logger.info(f"Transformer output: {result} with operation {operation}")
             return {"transformed": result, "operation": operation}
     
     # Define a function (not a JobABC class) that will be wrapped
@@ -614,21 +615,29 @@ def test_submit_multiple_tasks_pipeline():
         inputs = j_ctx["inputs"]
         task = j_ctx["task"]
         
-        logger.debug(f"Aggregator j_ctx inputs: {inputs}")
+        logger.info(f"Aggregator j_ctx inputs: {inputs}")
         
-        # Get results from transformer
-        transformer_result = inputs.get("transformer", {}).get("result", {})
-        transformed = transformer_result.get("transformed", [])
-        operation = transformer_result.get("operation", "unknown")
+        # Get results from transformer - direct access instead of through result
+        transformed = inputs.get("transformer", {}).get("transformed", [])
+        operation = inputs.get("transformer", {}).get("operation", "unknown")
+        
+        logger.info(f"Aggregator extracted transformed: {transformed}, operation: {operation}")
         
         # Calculate aggregate values
         if not transformed:
+            logger.warning("Transformed list is empty, returning zeros")
             return {"sum": 0, "count": 0, "avg": 0, "operation": operation}
             
+        total_sum = sum(transformed)
+        count = len(transformed)
+        avg = total_sum / count if count > 0 else 0
+        
+        logger.info(f"Aggregator results: sum={total_sum}, count={count}, avg={avg}")
+        
         return {
-            "sum": sum(transformed),
-            "count": len(transformed),
-            "avg": sum(transformed) / len(transformed) if transformed else 0,
+            "sum": total_sum,
+            "count": count,
+            "avg": avg,
             "operation": operation
         }
     
@@ -642,10 +651,7 @@ def test_submit_multiple_tasks_pipeline():
         "transformer": transformer,
         "aggregator": aggregate_results  # Regular function that will be wrapped
     })
-    
-    # Enable detailed logging for debugging
-    logging.getLogger('flow4ai').setLevel(logging.DEBUG)
-    
+ 
     # Save results for context between pipeline steps
     jobs["generator"].save_result = True
     jobs["transformer"].save_result = True
@@ -682,6 +688,22 @@ def test_submit_multiple_tasks_pipeline():
     assert not results["errors"], f"Errors occurred during task 1 execution: {results['errors']}"
     logger.info(f"Task 1 completed successfully: {results['completed']}")
     
+    # Verify results for task 1 (square operation on numbers 0-4)
+    task1_result = results['completed']['test_pipeline$$$$generator$$'][0]
+    saved_results = task1_result.get('SAVED_RESULTS', {})
+    
+    # Check generator output
+    assert saved_results.get('generator', {}).get('numbers') == [0, 1, 2, 3, 4], "Generator should produce [0, 1, 2, 3, 4]"
+    
+    # Check transformer output
+    assert saved_results.get('transformer', {}).get('transformed') == [0, 1, 4, 9, 16], "Transformer with square operation should produce [0, 1, 4, 9, 16]"
+    assert saved_results.get('transformer', {}).get('operation') == 'square', "Operation should be 'square'"
+    
+    # Check aggregator output
+    assert task1_result.get('sum') == 30, "Aggregator sum should be 30"
+    assert task1_result.get('count') == 5, "Aggregator count should be 5"
+    assert task1_result.get('avg') == 6.0, "Aggregator average should be 6.0"
+    
     # Verify completed task count after task 1
     result_count = fm.get_counts()
     assert result_count["completed"] == 1, f"Expected 1 completed task, got {result_count['completed']}"
@@ -706,6 +728,22 @@ def test_submit_multiple_tasks_pipeline():
     results = fm.pop_results()
     assert not results["errors"], f"Errors occurred during task 2 execution: {results['errors']}"
     logger.info(f"Task 2 completed successfully: {results['completed']}")
+    
+    # Verify results for task 2 (double operation on numbers 5-9)
+    task2_result = results['completed']['test_pipeline$$$$generator$$'][0]
+    saved_results = task2_result.get('SAVED_RESULTS', {})
+    
+    # Check generator output
+    assert saved_results.get('generator', {}).get('numbers') == [5, 6, 7, 8, 9], "Generator should produce [5, 6, 7, 8, 9]"
+    
+    # Check transformer output
+    assert saved_results.get('transformer', {}).get('transformed') == [10, 12, 14, 16, 18], "Transformer with double operation should produce [10, 12, 14, 16, 18]"
+    assert saved_results.get('transformer', {}).get('operation') == 'double', "Operation should be 'double'"
+    
+    # Check aggregator output
+    assert task2_result.get('sum') == 70, "Aggregator sum should be 70"
+    assert task2_result.get('count') == 5, "Aggregator count should be 5"
+    assert task2_result.get('avg') == 14.0, "Aggregator average should be 14.0"
     
     # Verify completed task count after task 2
     result_count = fm.get_counts()
@@ -744,6 +782,38 @@ def test_submit_multiple_tasks_pipeline():
     results = fm.pop_results()
     assert not results["errors"], f"Errors occurred during tasks 3 & 4 execution: {results['errors']}"
     
+    # Verify results for task 3 (increment operation on numbers 10-14)
+    task3_result = results['completed']['test_pipeline$$$$generator$$'][0]
+    saved_results_task3 = task3_result.get('SAVED_RESULTS', {})
+    
+    # Check generator output for task 3
+    assert saved_results_task3.get('generator', {}).get('numbers') == [10, 11, 12, 13, 14], "Generator should produce [10, 11, 12, 13, 14]"
+    
+    # Check transformer output for task 3
+    assert saved_results_task3.get('transformer', {}).get('transformed') == [11, 12, 13, 14, 15], "Transformer with increment operation should produce [11, 12, 13, 14, 15]"
+    assert saved_results_task3.get('transformer', {}).get('operation') == 'increment', "Operation should be 'increment'"
+    
+    # Check aggregator output for task 3
+    assert task3_result.get('sum') == 65, "Aggregator sum should be 65"
+    assert task3_result.get('count') == 5, "Aggregator count should be 5"
+    assert task3_result.get('avg') == 13.0, "Aggregator average should be 13.0"
+    
+    # Verify results for task 4 (square operation on numbers 15-19)
+    task4_result = results['completed']['test_pipeline$$$$generator$$'][1]
+    saved_results_task4 = task4_result.get('SAVED_RESULTS', {})
+    
+    # Check generator output for task 4
+    assert saved_results_task4.get('generator', {}).get('numbers') == [15, 16, 17, 18, 19], "Generator should produce [15, 16, 17, 18, 19]"
+    
+    # Check transformer output for task 4
+    assert saved_results_task4.get('transformer', {}).get('transformed') == [225, 256, 289, 324, 361], "Transformer with square operation should produce [225, 256, 289, 324, 361]"
+    assert saved_results_task4.get('transformer', {}).get('operation') == 'square', "Operation should be 'square'"
+    
+    # Check aggregator output for task 4
+    assert task4_result.get('sum') == 1455, "Aggregator sum should be 1455"
+    assert task4_result.get('count') == 5, "Aggregator count should be 5"
+    assert task4_result.get('avg') == 291.0, "Aggregator average should be 291.0"
+    
     # Verify completed task count after tasks 3 & 4
     result_count = fm.get_counts()
     # We expect 2 more completed tasks in addition to what we had before
@@ -751,5 +821,6 @@ def test_submit_multiple_tasks_pipeline():
     
     # Log the results for inspection
     logger.info(f"Tasks 3 & 4 completed successfully: {results['completed']}")
+
 
 

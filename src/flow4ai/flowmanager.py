@@ -75,6 +75,18 @@ class FlowManager:
             return await job._execute(task)
             
     def submit(self, task: Union[Task, List[Task]], fq_name: str = None):
+        """
+        Submit a task or list of tasks to the FlowManager.
+        
+        Args:
+            task: A Task or list of Tasks to submit
+            fq_name: Fully qualified name of the job graph to submit to, optional, if there is
+            only one job graph in job_map, it will be used automatically without an fq_name
+            lookup.
+            
+        Returns:
+            None
+        """
         # Check that job_map is not None or empty
         if not self.job_map:
             self.logger.error("job_map is None or empty")

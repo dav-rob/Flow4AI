@@ -199,3 +199,92 @@ Job names in Flow4AI follow this format: `graph_name$$param_name$$job_name$$`
 # Example of a fully qualified job name
 'test_pipeline$$$$generator$$'  # graph_name$$param_name$$job_name$$
 ```
+
+## Retrieving Results from Job Graphs
+
+The FlowManager API provides several methods for retrieving results from job executions:
+
+### Popping Results with pop_results()
+
+The `pop_results()` method is the primary way to retrieve and clear accumulated results:
+
+```python
+# Submit one or more tasks
+fm.submit(task, fq_name) 
+# or fm.submit([task1, task2], fq_name)
+
+# Wait for tasks to complete
+fm.wait_for_completion()
+
+# Pop results - this returns and clears the accumulated results
+results = fm.pop_results()
+
+# The results structure contains both completed jobs and errors
+print(results['completed'])  # Dictionary of completed jobs with results
+print(results['errors'])     # List of tasks that encountered errors
+```
+
+### Accessing Tail Job Results
+
+Results from the tail job (last job in the pipeline) are automatically returned in the completed results:
+
+```python
+# Pop results after task completion
+results = fm.pop_results()
+
+# Access tail job results for a specific task
+tail_job_results = results['completed'][fq_name][0]  # For a single task
+
+# For multiple tasks, each task result is in the list
+first_task_results = results['completed'][fq_name][0]
+second_task_results = results['completed'][fq_name][1]
+
+# These results contain the direct output of the tail job
+print(tail_job_results['sum'])      # Access a specific value from tail job
+print(tail_job_results['count'])    # Access another specific value
+```
+
+### Accessing SAVED_RESULTS
+
+When jobs have `save_result = True` set, their outputs are stored in a special `SAVED_RESULTS` field:
+
+```python
+# Pop results after task completion
+results = fm.pop_results()
+
+# Access the SAVED_RESULTS for a specific task
+saved_results = results['completed'][fq_name][0]['SAVED_RESULTS']
+
+# Access results from specific jobs in the pipeline
+generator_results = saved_results['generator']
+transformer_results = saved_results['transformer']
+
+# Access specific values from each job
+print(generator_results['numbers'])
+print(transformer_results['transformed'])
+```
+
+### Task Parameters Pass-Through
+
+Task parameters are automatically passed through to the results for convenience:
+
+```python
+# Create a task with parameters
+task = Task({
+    'param1': 'value1',
+    'param2': 'value2'
+})
+
+# Submit and wait for completion
+fm.submit(task, fq_name)
+fm.wait_for_completion()
+
+# Pop results
+results = fm.pop_results()
+
+# Access the original task parameters
+task_params = results['completed'][fq_name][0]['task_pass_through']
+print(task_params['param1'])  # Outputs: 'value1'
+```
+
+These mechanisms provide flexible access to results at different stages of the pipeline, allowing for effective data extraction and analysis after job graph execution.
