@@ -221,10 +221,16 @@ class FlowManager:
         
         # Check if this DSL has a tracking attribute to prevent multiple additions
         if hasattr(dsl, "_f4a_already_added") and dsl._f4a_already_added:
+            # Try to find the existing graph for this DSL
+            for job in self.head_jobs:
+                # Check if this job's associated DSL is the same object
+                if hasattr(job, "_f4a_source_dsl") and job._f4a_source_dsl is dsl:
+                    self.logger.info(f"DSL already added, returning existing FQ name: {job.name}")
+                    return job.name
+                
             self.logger.warning(
-                f"DSL appears to have been added already. Adding the same DSL multiple times " 
-                f"will cause the DSL to be modified multiple times, potentially causing errors. " 
-                f"Use the FQ name from the first add_dsl call instead."
+                f"DSL appears to have been added already but existing graph not found. "
+                f"Creating a new graph, which may lead to duplicate processing."
             )
         
         # Transform the DSL into a precedence graph (this modifies the DSL)
@@ -234,7 +240,13 @@ class FlowManager:
         setattr(dsl, "_f4a_already_added", True)
         
         # Add the graph to our job map
-        return self.add_graph(graph, jobs, graph_name, variant)
+        fq_name = self.add_graph(graph, jobs, graph_name, variant)
+        
+        # Store the reference to the source DSL in the head job
+        head_job = self.job_map[fq_name]
+        setattr(head_job, "_f4a_source_dsl", dsl)
+        
+        return fq_name
         
     def add_dsl_dict(self, dsl_dict: Dict) -> List[str]:
         """
