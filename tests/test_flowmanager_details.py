@@ -130,10 +130,10 @@ def test_dsl_submission_with_tasks():
 
 
 def test_new_dsl_with_same_structure():
-    """Test that two DSLs with the same structure get the same FQ name based on job names.
+    """Test that two DSLs with the same structure get unique FQ names.
     
-    This test confirms current system behavior: FQ names are generated based on graph name
-    and job names, not object identity.
+    This test confirms the updated system behavior: Different DSL objects get unique FQ names
+    even if they have the same structure, to prevent collisions and ensure correct input handling.
     """
     # Create a FlowManager
     fm = FlowManager()
@@ -166,17 +166,18 @@ def test_new_dsl_with_same_structure():
     fq_name2 = fm.add_dsl(dsl2, "test_graph")
     logger.info(f"Second DSL FQ name: {fq_name2}")
     
-    # Current behavior: Same FQ names because they're based on graph/job names
-    assert fq_name1 == fq_name2, "DSLs with same structure should get same FQ names in current implementation"
+    # New behavior: Different DSLs should get unique FQ names even with the same structure
+    assert fq_name1 != fq_name2, "Different DSL objects with same structure should get unique FQ names"
     
-    # Check the _f4a_source_dsl reference
-    head_job = fm.job_map[fq_name2]
-    assert hasattr(head_job, "_f4a_source_dsl")
+    # Check the _f4a_source_dsl reference for the first DSL's head job
+    head_job1 = fm.job_map[fq_name1]
+    assert hasattr(head_job1, "_f4a_source_dsl")
+    assert head_job1._f4a_source_dsl is dsl1, "First head job should reference first DSL"
     
-    # The current implementation updates the reference to the most recently added DSL
-    # with the same FQ name, which is dsl2 in this case
-    assert head_job._f4a_source_dsl is dsl2
-    assert head_job._f4a_source_dsl is not dsl1
+    # Check the _f4a_source_dsl reference for the second DSL's head job
+    head_job2 = fm.job_map[fq_name2]
+    assert hasattr(head_job2, "_f4a_source_dsl")
+    assert head_job2._f4a_source_dsl is dsl2, "Second head job should reference second DSL"
     
     # Create a third DSL with different job name structure
     job5 = SimpleJob("processorA")

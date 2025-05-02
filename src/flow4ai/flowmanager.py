@@ -3,6 +3,8 @@ import threading
 from collections import defaultdict, deque
 from typing import Any, Callable, Dict, List, Optional, Union
 
+from flow4ai.flowmanager_utils import find_unique_variant_suffix
+
 from . import JobABC
 from . import f4a_logging as logging
 from .dsl import DSLComponent, JobsDict
@@ -239,8 +241,23 @@ class FlowManager:
         # Mark this DSL as added to prevent multiple additions
         setattr(dsl, "_f4a_already_added", True)
         
-        # Add the graph to our job map
-        fq_name = self.add_graph(graph, jobs, graph_name, variant)
+        # Check for FQ name collisions from different DSL objects with same structure
+        # Create a base name prefix to check for collisions
+        base_name_prefix = f"{graph_name}{SPLIT_STR}{variant}"
+        
+        # If there's already a job in job_map that would lead to a collision, 
+        # we need to make this variant name unique by adding a suffix
+        variant_suffix = find_unique_variant_suffix(self.job_map, base_name_prefix)
+        
+        # Add the suffix to the variant if needed
+        if variant_suffix:
+            self.logger.info(f"Detected potential FQ name collision, adding suffix '{variant_suffix}' to variant")
+            enhanced_variant = f"{variant}{variant_suffix}"
+        else:
+            enhanced_variant = variant
+        
+        # Add the graph to our job map with potentially modified variant name
+        fq_name = self.add_graph(graph, jobs, graph_name, enhanced_variant)
         
         # Store the reference to the source DSL in the head job
         head_job = self.job_map[fq_name]

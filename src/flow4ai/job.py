@@ -190,11 +190,32 @@ class JobABC(ABC, metaclass=JobMeta):
             return Serial(self, WrappingJob(other))
     
     @classmethod
-    def create_FQName(cls, graph_name, parameter_name, short_graph_job_name):
+    def create_FQName(cls, graph_name, parameter_name, short_graph_job_name, dsl_id=None):
         """
-            Creates a unique, fully qualified name from the graph, parameter and job names.
+        Creates a unique, fully qualified name from the graph, parameter and job names.
+        
+        Args:
+            graph_name: Name of the graph
+            parameter_name: Parameter name (usually variant)
+            short_graph_job_name: The job name (short form)
+            dsl_id: Optional unique identifier for the source DSL to prevent FQ name collisions
+            
+        Returns:
+            str: A fully qualified name in format graph_name$$parameter_name$$short_graph_job_name$$
+                 or graph_name$$parameter_name-dsl_id$$short_graph_job_name$$ if dsl_id is provided
         """
-        unique_job_name = graph_name + SPLIT_STR + parameter_name + SPLIT_STR + short_graph_job_name + SPLIT_STR
+        # If a DSL identifier is provided, incorporate it into the parameter name
+        # This ensures unique FQ names while maintaining compatibility with existing parsing logic
+        if dsl_id:
+            # Embed the DSL ID in the parameter name to maintain compatibility with parsers
+            if parameter_name:
+                enhanced_param_name = f"{parameter_name}-{dsl_id}"
+            else:
+                enhanced_param_name = dsl_id
+        else:
+            enhanced_param_name = parameter_name
+            
+        unique_job_name = graph_name + SPLIT_STR + enhanced_param_name + SPLIT_STR + short_graph_job_name + SPLIT_STR
         return unique_job_name
 
     @classmethod
