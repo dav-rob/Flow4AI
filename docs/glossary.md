@@ -56,8 +56,25 @@ A special parameter used in wrapped functions to access task data, inputs from p
 ### get_inputs()
 A method available in `JobABC` subclasses that provides access to inputs from predecessor jobs, returning a dictionary with short job names as keys.
 
-## Recommended Practices and Clarifications
+## Recommended Practices
 
-While the architecture documents provide a solid foundation for understanding Flow4AI, the following clarification may help address a potential area of confusion:
+### Job Execution Paradigms: JobABC Subclasses vs. Wrapped Functions
 
-**Job Execution Paradigms**: The distinction between `JobABC` subclasses and wrapped functions represents two different programming paradigms (object-oriented vs. functional) that achieve the same goal. Understanding when to use each approach can help developers make appropriate design decisions.
+Flow4AI supports two primary approaches for defining jobs, each with distinct use cases:
+
+#### When to Use Wrapped Functions
+
+- **Framework Integration**: Wrapped functions were designed to allow seamless integration with diverse frameworks like LangChain, LlamaIndex, or any other AI or data processing framework that users are already familiar with.
+
+- **Simplicity and Familiarity**: For users who prefer writing standard Python functions, wrapped functions provide a straightforward approach with no reduction in functionality compared to JobABC subclasses.
+
+- **Minimal Dependencies**: When a job doesn't need to access inputs from predecessor jobs or task metadata, wrapped functions without the `j_ctx` parameter offer the cleanest implementation.
+
+#### When to Use JobABC Subclasses
+
+- **Built-in Context Access**: JobABC subclasses provide built-in `get_inputs()` and `get_task()` methods, making access to predecessor outputs and task data more direct without needing to extract this information from a context parameter.
+
+- **Object-Oriented Design**: For complex jobs that benefit from encapsulation, inheritance, and other OOP principles, subclassing JobABC provides a more natural structure.
+
+- **Legacy Integration**: JobABC is the original way of creating jobs in Flow4AI and remains fully supported for backward compatibility and consistency with existing code.
+

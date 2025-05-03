@@ -144,9 +144,41 @@ Flow4AI supports two primary methods for defining jobs in a job graph:
 1. **JobABC Subclasses** - Object-oriented approach with inheritance
 2. **Wrapped Functions** - Functional approach using plain functions
 
+
+### When to Use Wrapped Functions
+
+Wrapped functions were designed to enable seamless integration with existing frameworks and simplify the developer experience:
+
+- **Framework Integration**: Easily wrap code from LangChain, LlamaIndex, or any other AI or data processing framework that users are already familiar with.
+
+- **Simplicity First**: For users who prefer writing standard Python functions, wrapped functions provide a straightforward approach with no reduction in functionality compared to JobABC subclasses.
+
+- **Minimal Context Dependencies**: Most transformation functions don't need access to job context data. When a job doesn't need to access inputs from predecessor jobs or task metadata, wrapped functions without the `j_ctx` parameter offer the cleanest implementation.
+
+```python
+# Example: Simple wrapped function without need for context
+def process_document(document):
+    # Process the document
+    return {"processed_document": process_result}
+
+# If context access is needed, use j_ctx parameter
+def advanced_process(j_ctx):
+    # Access task and inputs when needed
+    task = j_ctx["task"]
+    inputs = j_ctx["inputs"]
+    return {"result": processed_data}
+```
+
+### When to Use JobABC Subclasses
+
+For more complex scenarios, subclassing JobABC remains fully supported and is recommended when:
+
+- You need direct access to built-in context methods like `get_inputs()` and `get_task()`
+- Your job benefits from object-oriented design principles
+- You're extending existing JobABC-based code
 ### Input Handling Differences
 
-One of the key architectural differences between these two approaches is how they access inputs from predecessor jobs in the job graph:
+The main technical distinction between these two approaches is how they access inputs from predecessor jobs in the job graph. Importantly, only a small subset of wrapped functions typically need access to previous inputs or task metadata, making the wrapped function approach particularly clean for straightforward transformations:
 
 #### JobABC Subclasses
 
