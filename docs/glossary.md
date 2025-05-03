@@ -5,7 +5,7 @@ This document defines key terminology used throughout the Flow4AI platform docum
 ## Core Concepts
 
 ### Flow4AI
-A sophisticated Python framework designed for parallel and asynchronous job execution, with a focus on AI and data processing workflows. Flow4AI provides a flexible, graph-based job scheduling system that enables complex task dependencies and parallel processing.
+A sophisticated Python framework designed for parallel and asynchronous job execution, with a focus on AI and data processing workflows. Flow4AI provides a flexible, graph-based job scheduling system that enables complex task dependencies and parallel processing. The framework is fundamentally asynchronous by design, optimized for handling concurrent operations efficiently.
 
 ### Job Graph
 The complete workflow of interconnected jobs that defines the execution flow. Job graphs represent the directed acyclic graph (DAG) of execution units where each node is a `JobABC` instance, often wrapping functions from LangChain, LlamaIndex, or other AI and data processing frameworks. While "workflow" describes the higher-level business process being automated, "job graph" specifically refers to the technical implementation of execution flow.
@@ -55,6 +55,16 @@ A special parameter used in wrapped functions to access task data, inputs from p
 
 ### get_inputs()
 A method available in `JobABC` subclasses that provides access to inputs from predecessor jobs, returning a dictionary with short job names as keys.
+
+## Key Design Principles
+
+### Asynchronous Execution Model
+
+Flow4AI is built on an asynchronous execution model, which is essential for understanding how to work with the framework effectively:
+
+- **Concurrent Processing**: Tasks are executed concurrently rather than sequentially, maximizing throughput and efficiency.
+- **Non-Blocking Operations**: The framework avoids blocking operations that could cause bottlenecks in high-volume workflows.
+- **Compatibility Considerations**: Synchronous libraries and frameworks should be adapted or avoided when building Flow4AI workflows to maintain performance benefits.
 
 ## Recommended Practices
 

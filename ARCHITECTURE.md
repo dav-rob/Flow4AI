@@ -2,6 +2,8 @@
 
 > **Terminology Clarification**: Throughout this document, "job graph" refers specifically to the technical implementation of execution flow, while "workflow" describes the higher-level business process being automated. A job graph is the concrete realization of a workflow in the Flow4AI system.
 
+> **Asynchronous Framework**: Flow4AI is fundamentally an asynchronous framework. All job implementations should leverage async/await patterns and avoid blocking operations. Synchronous code and frameworks should be adapted or avoided when possible to maintain the performance benefits of the asynchronous execution model.
+
 ## FlowManager: Singleton Pattern
 
 The `FlowManager` class operates as a singleton for managing job graphs and tasks:
@@ -235,7 +237,7 @@ The main technical distinction between these two approaches is how they access i
 
 #### JobABC Subclasses
 
-JobABC subclasses can directly access inputs from predecessor jobs using the built-in `get_inputs()` method:
+JobABC subclasses implement an asynchronous `run` method and can directly access inputs from predecessor jobs using the built-in `get_inputs()` method:
 
 ```python
 class MyCustomJob(JobABC):
@@ -246,9 +248,14 @@ class MyCustomJob(JobABC):
         # Access a specific predecessor job's result by its short name
         predecessor_result = inputs.get("predecessor_job_name", {}).get("result", None)
         
-        # Process and return result
-        return {"processed_data": process(predecessor_result)}
+        # Use async libraries and patterns for processing
+        processed_data = await async_process(predecessor_result)
+        
+        # Return result
+        return {"processed_data": processed_data}
 ```
+
+**Important:** The `run` method is defined as `async` and should use asynchronous patterns. Avoid synchronous blocking operations that could affect performance.
 
 **Important**: `get_inputs()` relies on proper job naming conventions. The `parse_job_name` method extracts short names from fully qualified ones using a specific format: `graph_name$$param_name$$job_name$$`. If a job name doesn't follow this pattern, it returns "UNSUPPORTED NAME FORMAT", which may cause input retrieval issues.
 

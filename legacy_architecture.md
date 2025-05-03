@@ -6,6 +6,8 @@ Flow4AI is a sophisticated Python framework designed for parallel and asynchrono
 
 > **Terminology Clarification**: Throughout this document, "job graph" refers specifically to the technical implementation of execution flow, while "workflow" describes the higher-level business process being automated. A job graph is the concrete realization of a workflow in the Flow4AI system.
 
+> **Asynchronous Architecture**: Flow4AI is built on an entirely asynchronous architecture. This is a fundamental design choice that enables efficient handling of concurrent operations and optimal resource utilization. When implementing custom jobs or integrating external libraries, use asynchronous patterns and avoid synchronous code that could block the event loop. Synchronous frameworks should be wrapped carefully or avoided when possible.
+
 ## Core Architectural Components
 
 ### Starting and terminating a FlowManagerMP
@@ -30,10 +32,11 @@ This ensures all previous tasks are completed, and all processes are cleaned up.
 #### JobABC (Abstract Base Class)
 - Defines the core contract for job execution
 - Key methods:
-  - `run(task)`: Async method to process a task
-  - `_execute(task)`: Internal method handling job lifecycle
+  - `run(task)`: **Async** method to process a task - **must leverage async/await patterns**
+  - `_execute(task)`: Internal **async** method handling job lifecycle
 - Supports complex job graphs with dependencies
 - Implements tracing for performance monitoring
+- **Fundamentally asynchronous**: All methods use async/await for non-blocking execution
 
 > **Note on Task vs. Job Distinction**: Tasks are units of work (data + metadata) that flow through the job graph, while jobs are the processing units that operate on tasks. This distinction is fundamental to understanding the Flow4AI execution model.
 
@@ -87,10 +90,12 @@ When creating custom job classes by extending `JobABC`, follow these guidelines:
 1. **Implement the `run` method**: This is the only abstract method that must be implemented. It defines the job-specific behavior.
 
    ```python
-   async def run(self, task) -> Dict[str, Any]:
-       # Implement job-specific logic here
-       return {"result": "success"}
-   ```
+async def run(self, task) -> Dict[str, Any]:
+    # Implement job-specific logic here using async patterns
+    # Avoid blocking operations or wrap them appropriately
+    result = await async_operation(task)
+    return {"result": result}
+```
 
 2. **NEVER override the `_execute` method**: This method is part of the core Flow4AI execution flow and handles critical operations including job graph traversal, state management, and result propagation.
 
