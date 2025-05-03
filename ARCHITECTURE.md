@@ -1,5 +1,7 @@
 # Flow4AI Architecture: Key Concepts
 
+> **Terminology Clarification**: Throughout this document, "job graph" refers specifically to the technical implementation of execution flow, while "workflow" describes the higher-level business process being automated. A job graph is the concrete realization of a workflow in the Flow4AI system.
+
 ## FlowManager: Singleton Pattern
 
 The `FlowManager` class operates as a singleton for managing job graphs and tasks:
@@ -33,6 +35,8 @@ fm2 = FlowManager()  # Second instance - unnecessary and can lead to issues
 
 ## DSL Handling and the Fully Qualified Name (fq_name)
 
+> **Note on Task vs. Job Distinction**: Tasks are units of work (data + metadata) that flow through the job graph, while jobs are the processing units that operate on tasks. This distinction is fundamental to understanding the Flow4AI execution model.
+
 When adding a DSL to FlowManager, important transformations occur that create a fully qualified name (fq_name):
 
 ### 1. Creating and Storing a Job Graph
@@ -41,6 +45,7 @@ When adding a DSL to FlowManager, important transformations occur that create a 
 - **Job Naming**: During transformation, each job is assigned a fully qualified name in the format: `graph_name$$param_name$$job_name$$`
 - **Return Value**: The `add_dsl` method returns the fully qualified name (fq_name) of the head job in the graph
 - **Key Function**: This fq_name serves as a unique key to identify and access the job graph
+- **Graph Name and Head Job Name**: The name of the entire job graph equals the name of the head job in a logical sense for workflow management purposes, not necessarily reflecting all physical implementation details
 
 ```python
 # Create a job graph and get its fully qualified name (fq_name)

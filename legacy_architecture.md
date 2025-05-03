@@ -4,6 +4,8 @@
 
 Flow4AI is a sophisticated Python framework designed for parallel and asynchronous job execution, with a focus on AI and data processing workflows. It provides a flexible, graph-based job scheduling system that allows complex task dependencies and parallel processing.
 
+> **Terminology Clarification**: Throughout this document, "job graph" refers specifically to the technical implementation of execution flow, while "workflow" describes the higher-level business process being automated. A job graph is the concrete realization of a workflow in the Flow4AI system.
+
 ## Core Architectural Components
 
 ### Starting and terminating a FlowManagerMP
@@ -32,6 +34,8 @@ This ensures all previous tasks are completed, and all processes are cleaned up.
   - `_execute(task)`: Internal method handling job lifecycle
 - Supports complex job graphs with dependencies
 - Implements tracing for performance monitoring
+
+> **Note on Task vs. Job Distinction**: Tasks are units of work (data + metadata) that flow through the job graph, while jobs are the processing units that operate on tasks. This distinction is fundamental to understanding the Flow4AI execution model.
 
 #### Key Features
 - Automatic unique naming for job instances
@@ -117,7 +121,7 @@ When creating custom job classes by extending `JobABC`, follow these guidelines:
       next: []
   ```
 
-Note: there can only be one head job, the starting job, and one tail job, the last job in the graph. There can be many jobs in between.
+Note: there can only be one head job, the starting job, and one tail job, the last job in the graph. There can be many jobs in between. The name of the entire job graph equals the name of the head job in a logical sense for workflow management purposes, not necessarily reflecting all physical implementation details.
 - Multiple tasks can be submitted to the same graph:
   ```python
   # All tasks use the same graph instance
