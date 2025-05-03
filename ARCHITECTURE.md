@@ -176,6 +176,59 @@ For more complex scenarios, subclassing JobABC remains fully supported and is re
 - You need direct access to built-in context methods like `get_inputs()` and `get_task()`
 - Your job benefits from object-oriented design principles
 - You're extending existing JobABC-based code
+
+### Best Practice for Job Definition and DSL Construction
+
+The recommended approach for defining job names and constructing DSL components is to use the `wrap()` function with a dictionary mapping names to job implementations. This method provides several advantages:
+
+1. **Explicit Naming**: Each job gets a clear, explicit name that will be used as its short job name in the job graph
+2. **Unified Treatment**: Both JobABC subclasses and regular functions are handled consistently
+3. **Reference Convenience**: The resulting dictionary allows for easy job reference when constructing the DSL
+4. **Code Readability**: The job graph structure becomes visually apparent in the DSL construction
+
+```python
+# First define or import your job implementations
+analyzer2 = ProcessorJob("Analyzer2", "analyze")  # JobABC subclass
+cache_manager = ProcessorJob("CacheManager", "cache")  # JobABC subclass
+times = lambda x: {"result": x * 3}  # Simple function to be wrapped
+transformer = ProcessorJob("Transformer", "transform")  # JobABC subclass
+formatter = ProcessorJob("Formatter", "format")  # JobABC subclass
+add = lambda x: {"result": x + 2}  # Simple function to be wrapped
+square = lambda x: {"result": x * x}  # Simple function to be wrapped
+aggregator = ProcessorJob("Aggregator", "aggregate")  # JobABC subclass
+test_context = lambda j_ctx: {"result": process(j_ctx)}  # Function with context access
+
+# Wrap all jobs in a dictionary with their short names
+jobs:JobsDict = wrap({
+        "analyzer2": analyzer2,
+        "cache_manager": cache_manager,
+        "times": times,
+        "transformer": transformer,
+        "formatter": formatter,
+        "add": add,
+        "square": square,
+        "aggregator": aggregator,
+        "test_context": test_context
+    })
+
+# Optionally configure job properties
+jobs["times"].save_result = True
+jobs["add"].save_result = True
+jobs["square"].save_result = True
+
+# Construct the DSL component using the named jobs
+dsl:DSLComponent = (
+    p(jobs["analyzer2"], jobs["cache_manager"], jobs["times"]) 
+    >> jobs["transformer"] 
+    >> jobs["formatter"] 
+    >> (jobs["add"] | jobs["square"]) 
+    >> jobs["test_context"]
+    >> jobs["aggregator"] 
+)
+```
+
+This approach works seamlessly for both JobABC subclasses and functions. When a JobABC subclass is "wrapped," it simply assigns the provided name without any negative side effects. For functions, it creates proper WrappingJob instances to integrate them into the job graph.
+
 ### Input Handling Differences
 
 The main technical distinction between these two approaches is how they access inputs from predecessor jobs in the job graph. Importantly, only a small subset of wrapped functions typically need access to previous inputs or task metadata, making the wrapped function approach particularly clean for straightforward transformations:
