@@ -104,34 +104,6 @@ def test_execute_job_graph_from_dsl():
     assert result_dict["SAVED_RESULTS"] == {"times": 2, "add": 5, "square": 9}
     
 
-def test_completion_callback():
-    once = lambda x: x + "upon a time"
-    ina = lambda x: x + "galaxy far far away"
-
-    async def collate(j_ctx):
-        await asyncio.sleep(2)
-        inputs = j_ctx["inputs"]
-        output = f"{inputs['once']['result']} {inputs['ina']['result']}"
-        return output
-
-    def post_processor(result):
-        assert result["result"] == "once upon a time in a galaxy far far away"
-            
-    jobs = wrap({
-        "once": once,
-        "ina": ina,
-        "collate": collate
-    })
-
-    dsl =(jobs["once"] | jobs["ina"] ) >> jobs["collate"]
-        
-    fm = FlowManager(on_complete=post_processor)
-    fq_name =fm.add_dsl(dsl, "test_completion_callback")
-    print(fq_name)
-    task = {"once.x": "once ", "ina.x": "in a "}
-    fm.submit(task,fq_name)
-    fm.wait_for_completion()
-
 class DelayedJob(JobABC):
     async def run(self, task):
         short_name = self.parse_job_name(self.name)

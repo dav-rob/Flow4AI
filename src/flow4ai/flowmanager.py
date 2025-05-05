@@ -25,7 +25,7 @@ class FlowManager:
                 cls._instance.__initialized = False
         return cls._instance
 
-    def __init__(self, jobs_dir_mode=False, on_complete: Optional[Callable[[Any], None]] = None):
+    def __init__(self, dsl_dict=None, jobs_dir_mode=False, on_complete: Optional[Callable[[Any], None]] = None):
         self.jobs_dir_mode = jobs_dir_mode
         self.on_complete = on_complete
         if not hasattr(self, '_TaskManager__initialized') or not self.__initialized:
@@ -33,6 +33,10 @@ class FlowManager:
                 if not hasattr(self, '_TaskManager__initialized') or not self.__initialized:
                     self._initialize()
                     self.__initialized = True
+        
+        # Add DSL dictionary if provided
+        if dsl_dict:
+            self.add_dsl_dict(dsl_dict)
 
     def _initialize(self):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -336,6 +340,78 @@ class FlowManager:
                         fq_names.append(fq_name)
         
         return fq_names
+        
+    def get_fq_names_by_graph(self, graph_name, variant=""):
+        """
+        Get the fully qualified names for a specific graph and variant.
+        
+        This handles cases where multiple DSLs with the same structure 
+        might have been added with the same graph_name and variant, 
+        but received different FQ names due to collision handling.
+        
+        Args:
+            graph_name: The name of the graph
+            variant: The variant name, defaults to empty string
+            
+        Returns:
+            The list of matching fully qualified names, or empty list if none found
+        """
+        matching_names = []
+        base_prefix = f"{graph_name}{SPLIT_STR}{variant}"
+        
+        # Import re for regex pattern matching
+        import re
+        
+        # Find exact match first
+        for job_name in self.job_map.keys():
+            if job_name.startswith(base_prefix + SPLIT_STR):
+                matching_names.append(job_name)
+                
+        # Also look for variants with numeric suffixes (added by collision handling)
+        pattern = re.compile(re.escape(graph_name + SPLIT_STR) + 
+                           re.escape(variant) + r'_\d+' + 
+                           re.escape(SPLIT_STR))
+        
+        for job_name in self.job_map.keys():
+            if pattern.match(job_name):
+                # Only add if not already added (could happen if exact match already found)
+                if job_name not in matching_names:
+                    matching_names.append(job_name)
+                    
+        return matching_names
+    
+    def submit_by_graph(self, task, graph_name, variant=""):
+        """
+        Submit task(s) to a specific graph and variant.
+        
+        Args:
+            task: The task or list of tasks to submit
+            graph_name: The name of the graph
+            variant: The variant name, defaults to empty string
+            
+        Returns:
+            None
+            
+        Raises:
+            ValueError: If no matching graph is found or if multiple matches found
+        """
+        matching_fq_names = self.get_fq_names_by_graph(graph_name, variant)
+        
+        if not matching_fq_names:
+            error_msg = f"No graph found with name '{graph_name}' and variant '{variant}'"
+            self.logger.error(error_msg)
+            raise ValueError(error_msg)
+        
+        if len(matching_fq_names) > 1:
+            # If multiple matches, log them all and raise an error
+            self.logger.error(f"Multiple matching graphs found for '{graph_name}' variant '{variant}': {matching_fq_names}")
+            error_msg = (f"Multiple matching graphs found. Please use submit() with the specific FQ name "
+                        f"from these options: {matching_fq_names}")
+            raise ValueError(error_msg)
+        
+        # If exactly one match, use it
+        fq_name = matching_fq_names[0]
+        return self.submit(task, fq_name)
 
     def add_graph(self, precedence_graph: PrecedenceGraph, jobs: JobsDict, graph_name: str, variant: str = "") -> str:
         """
