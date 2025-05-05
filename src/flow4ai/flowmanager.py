@@ -274,22 +274,18 @@ class FlowManager:
                 Format can be either:
                 {
                     "graph1": {
-                        "dev": {
-                            "dsl": dsl1d
-                        },
-                        "prod": {
-                            "dsl": dsl1p
-                        }
+                        "dev": dsl1d,
+                        "prod": dsl1p
+                    }
+                    "graph2": {
+                        "dev": dsl2d,
+                        "prod": dsl2p
                     }
                 }
                 Or without variants:
                 {
-                    "graph1": {
-                        "dsl": dsl1
-                    },
-                    "graph2": {
-                        "dsl": dsl2
-                    }
+                    "graph1": dsl1,
+                    "graph2": dsl2
                 }
         
         Returns:
@@ -304,26 +300,40 @@ class FlowManager:
         fq_names = []
         
         for graph_name, graph_data in dsl_dict.items():
-            # Check if this is a variant structure or direct dsl/jobs
-            if "dsl" in graph_data:
-                # No variants, direct dsl/jobs
-                dsl = graph_data.get("dsl")
+            # Check if graph_data is a DSL component directly (no variants)
+            if not isinstance(graph_data, dict):
+                # No variants, graph_data is the DSL directly
+                dsl = graph_data
                 
-                if dsl is None:
-                    raise ValueError(f"Graph '{graph_name}' is missing required 'dsl' or 'jobs'")
-                    
                 fq_name = self.add_dsl(dsl, graph_name)
                 fq_names.append(fq_name)
             else:
-                # With variants
-                for variant, variant_data in graph_data.items():
-                    dsl = variant_data.get("dsl")
+                # Check if this is a variant structure or old-style direct dsl structure
+                if "dsl" in graph_data:
+                    # Old format - no variants, direct dsl
+                    dsl = graph_data.get("dsl")
                     
                     if dsl is None:
-                        raise ValueError(f"Graph '{graph_name}' variant '{variant}' is missing required 'dsl' or 'jobs'")
+                        raise ValueError(f"Graph '{graph_name}' is missing required 'dsl'")
                         
-                    fq_name = self.add_dsl(dsl, graph_name, variant)
+                    fq_name = self.add_dsl(dsl, graph_name)
                     fq_names.append(fq_name)
+                else:
+                    # With variants - each key is a variant name, value is the DSL
+                    for variant, variant_data in graph_data.items():
+                        # Check if variant_data is a dict with 'dsl' key (old format)
+                        if isinstance(variant_data, dict) and "dsl" in variant_data:
+                            # Old format with nested 'dsl' key
+                            dsl = variant_data.get("dsl")
+                            
+                            if dsl is None:
+                                raise ValueError(f"Graph '{graph_name}' variant '{variant}' is missing required 'dsl'")
+                        else:
+                            # New format - variant_data is the DSL directly
+                            dsl = variant_data
+                            
+                        fq_name = self.add_dsl(dsl, graph_name, variant)
+                        fq_names.append(fq_name)
         
         return fq_names
 
