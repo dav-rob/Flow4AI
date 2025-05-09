@@ -137,13 +137,22 @@ fm2 = FlowManager()  # Second instance - unnecessary and can lead to issues
 
 When a DSL component is added to `FlowManager` via `add_dsl()`:
 
-1.  **DSL Transformation**: `dsl_graph.dsl_to_precedence_graph()` converts the DSL into a `PrecedenceGraph` (an adjacency list representation) and a `JobsDict` (mapping short names to `JobABC` instances).
-2.  **Graph Validation**: `f4a_graph.validate_graph()` checks this `PrecedenceGraph` for cycles, valid references, and appropriate head/tail node structures.
-3.  **Job Graph Creation**: `JobFactory.create_job_graph()` links the `JobABC` instances based on the validated graph. It automatically adds `DefaultHeadJob` or `DefaultTailJob` if the graph has multiple entry or exit points, ensuring a single effective head/tail for execution.
-4.  **FQName (Fully Qualified Name) Generation**:
-    *   Each job is assigned an FQN, typically `graph_name$$variant$$short_job_name$$`, by `JobABC.create_FQName()`.
-    *   **Collision Handling**: If different DSL objects would result in the same FQN prefix (due to identical `graph_name` and `variant`), `flowmanager_utils.find_unique_variant_suffix()` appends a numeric suffix (e.g., `_1`) to the `variant` before FQN creation, ensuring uniqueness in `FlowManager.job_map`.
-    *   The `add_dsl` method returns the FQN of the (potentially new default) head job. This FQN is the key for submitting tasks to this specific graph instance.
+1.  **DSL Transformation**: `dsl_graph.dsl_to_precedence_graph()` converts the user's DSL (composed of `Serial`, `Parallel`, and `JobABC` instances) into:
+    *   A `PrecedenceGraph`: An adjacency list (dictionary) representing the graph structure using short job names.
+    *   A `JobsDict`: A mapping from short job names to their corresponding `JobABC` objects.
+2.  **Graph Validation**: `f4a_graph.validate_graph()` is called on the `PrecedenceGraph`. It checks for:
+    *   Cycles.
+    *   Invalid cross-graph references (ensuring nodes only link within their logical level).
+    *   Presence of head and tail nodes, logging warnings if multiple are found.
+3.  **Job Graph Assembly**: `JobFactory.create_job_graph()` takes the validated `PrecedenceGraph` and `JobsDict`.
+    *   It links the `JobABC` instances by setting their `next_jobs` and `expected_inputs` attributes.
+    *   **Automatic Head/Tail Jobs**: If the graph definition has multiple head nodes (no predecessors) or multiple tail nodes (no successors), `JobFactory` automatically inserts a `DefaultHeadJob` or `DefaultTailJob` respectively. This ensures the graph effectively has a single entry and exit point for the core execution logic.
+4.  **FQName (Fully Qualified Name) Generation & Management**:
+    *   Each job in the graph is assigned an FQN using `JobABC.create_FQName(graph_name, variant, short_job_name)`, resulting in a name like `graph_name$$variant$$short_job_name$$`.
+    *   **Collision Avoidance**:
+        *   If the *exact same DSL object instance* is re-added, `FlowManager` tries to detect this and reuse the original FQN.
+        *   If *different DSL objects* are added with the same `graph_name` and `variant` (which would lead to FQN prefix clashes), `flowmanager_utils.find_unique_variant_suffix()` appends a numeric suffix (e.g., `_1`, `_2`) to the `variant` part of the FQN. This ensures that every distinct graph instance registered with `FlowManager` has a unique FQN.
+    *   The `add_dsl` method returns the FQN of the graph's head job (which might be a `DefaultHeadJob`). This FQN is then used to submit tasks to this specific, uniquely identified graph instance.
 
 ```python
 # Create a job graph and get its fully qualified name (fq_name)
@@ -183,37 +192,32 @@ fq_name2 = fm.add_dsl(dsl, "graph_name2")  # Second addition - modifies already 
 - **One-time Addition**: Each DSL should only be added once to avoid double-transformation
 - **Store the fq_name**: Always store and reuse the fq_name returned from `add_dsl`
 
-## Tasks, Submission, State, and Results
+## Tasks, Submission, State, and Results Management
 
 ### Task Definition and Parameter Formats
--   A `Task` is a dictionary subclass with a unique `task_id`.
--   Parameters for jobs within a task can be provided in:
-    -   **Short Form (Dot Notation)**: `{"job_name.param_key": value}`
-    -   **Long Form (Nested Dictionaries)**: `{"job_name": {"param_key": value}}`
-    -   Special keys like `"args"` (list of positional) and `"kwargs"` (dict of keyword) are supported for callables.
+-   A `Task` is a dictionary subclass, automatically assigned a unique `task_id`.
+-   Job parameters within a task can be specified using:
+    -   **Short Form (Dot Notation)**: e.g., `"my_job.param_name": value`. `WrappingJob` converts this to the long form.
+    -   **Long Form (Nested Dictionaries)**: e.g., `{"my_job": {"param_name": value}}`.
+    -   For wrapped callables, special keys `args` (list) and `kwargs` (dict) can be used for positional and keyword arguments.
 
-### Submission Patterns
--   **Individual Submission**: `fm.submit(task1, fq_name)` followed by `fm.wait_for_completion()` and `fm.pop_results()`. Results are for `task1` only.
--   **Batch Submission**: `fm.submit([task1, task2], fq_name)` followed by a single `fm.wait_for_completion()`. `fm.pop_results()` then contains results for all tasks in the batch.
+### Submission and Execution
+-   Tasks are submitted via `fm.submit(task, fq_name)` or `fm.submit([task_list], fq_name)`.
+-   `fm.wait_for_completion(timeout=X)` blocks until all tasks complete/error, or `X` seconds elapse. Returns `True` on full completion, `False` on timeout.
+    -   The `JobABC.timeout` attribute (default 3000s) is a separate, per-job timeout for awaiting all its `expected_inputs`. If this is exceeded, the job errors out.
+-   `fm.execute(task, dsl, ...)` is a high-level method combining `add_dsl`, `submit`, `wait_for_completion`, and result retrieval. It raises an `Exception` for job errors or a `TimeoutError` if `wait_for_completion` times out.
+-   **Concurrency (`FlowManager`)**: Operates on a single `asyncio` event loop in a background thread, providing concurrency (cooperative multitasking) but not true multi-core parallelism. Parallel DSL paths (e.g., `A | B`) are run concurrently via `asyncio.gather`.
 
-### State and Results Management
--   `fm.wait_for_completion(timeout=X)`: Blocks until all submitted tasks complete or error, or `X` seconds pass. Returns `True` on full completion, `False` on timeout.
--   `fm.pop_results()`: Retrieves and clears results. Returns `{'completed': {fq_name: [task_results...]}, 'errors': [error_details...]}`.
-    -   Each `task_result` contains:
-        -   Direct output from the tail job (e.g., `task_result["output_key"]`).
-        -   `JobABC.RETURN_JOB`: FQN of the job that produced the main result.
-        -   `JobABC.TASK_PASSTHROUGH_KEY`: The original submitted task.
-        -   `JobABC.SAVED_RESULTS`: A dictionary of `{short_job_name: job_output_dict}` for jobs with `save_result=True`.
--   `fm.get_counts()`: Returns cumulative counts: `{'submitted': X, 'completed': Y, 'errors': Z}`.
--   `fm.execute()`: A convenience method that wraps `submit`, `wait_for_completion`, and `pop_results`. It raises an `Exception` if errors occurred or a `TimeoutError` if `wait_for_completion` timed out.
-
-### Error Handling
--   Errors within a job's `run` or due to input timeouts (`JobABC.timeout`) are caught by `FlowManager` and appear in `pop_results()['errors']`.
--   Exceptions in `on_complete` callbacks are *not* caught by `FlowManager`.
-
-### Concurrency (FlowManager - non-MP)
--   `FlowManager` uses a single `asyncio` event loop for concurrent execution of tasks. This is cooperative multitasking, not true multi-core parallelism.
--   Parallel branches within a DSL (e.g., `A | B`) are executed concurrently using `asyncio.gather`.
+### Results and Error Handling
+-   `fm.pop_results()` retrieves and clears results, returning `{'completed': {fq_name: [task_results...]}, 'errors': [error_details...]}`.
+    -   Each `task_result` in the `'completed'` list contains:
+        -   Direct output from the graph's tail job (e.g., `task_result["output_key"]`). If the tail job returns a non-dict, it's wrapped: `{"result": value}`.
+        -   `JobABC.RETURN_JOB`: FQN of the job that produced this main result (usually the tail job).
+        -   `JobABC.TASK_PASSTHROUGH_KEY`: The original task dictionary submitted.
+        -   `JobABC.SAVED_RESULTS`: A dictionary of `{short_job_name: full_job_output_dict}` for any intermediate jobs that had `save_result=True`.
+-   Errors from job execution (including `JobABC.timeout` for inputs) are caught and listed in `pop_results()['errors']`.
+-   Exceptions raised within an `on_complete` callback (if provided to `FlowManager`) are *not* caught by `FlowManager`'s internal error handling.
+-   `fm.get_counts()`: Returns cumulative `{'submitted': X, 'completed': Y, 'errors': Z}`.
 
 ## JobABC Subclasses vs Wrapped Functions
 
