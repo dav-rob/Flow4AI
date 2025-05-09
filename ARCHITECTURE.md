@@ -4,6 +4,102 @@
 
 > **Asynchronous Framework**: Flow4AI is fundamentally an asynchronous framework. All job implementations should leverage async/await patterns and avoid blocking operations. Synchronous code and frameworks should be adapted or avoided when possible to maintain the performance benefits of the asynchronous execution model.
 
+## Domain Specific Language (DSL) for Job Graphs
+
+Flow4AI provides a powerful DSL for defining job graphs using an intuitive, chainable syntax. This allows you to express complex execution patterns with minimal code.
+
+### DSL Operators
+
+The DSL provides three primary operators for constructing job graphs:
+
+1. **Sequence Operator `>>`**: Connects jobs in sequence where the output of one job becomes input to the next
+   ```python
+   # A >> B means job A's output feeds into job B
+   dsl = jobs["job1"] >> jobs["job2"] >> jobs["job3"]
+   ```
+
+2. **Parallel Operator `|`**: Creates parallel branches where both jobs receive the same input
+   ```python
+   # job1 | job2 means both job1 and job2 run in parallel with the same input
+   dsl = jobs["source"] >> (jobs["branch1"] | jobs["branch2"]) >> jobs["sink"]
+   ```
+
+3. **Parallel Function `p()`**: Groups multiple jobs to be executed in parallel
+   ```python
+   # p(job1, job2, job3) creates parallel execution of multiple jobs
+   dsl = p(jobs["job1"], jobs["job2"], jobs["job3"]) >> jobs["aggregator"]
+   ```
+
+### Graph Transformation and Validation
+
+When a DSL is added to FlowManager via `add_dsl()`, the following process occurs:
+
+1. The DSL is transformed into a precedence graph via `dsl_to_precedence_graph()`
+2. The resulting graph is validated to ensure it's a proper directed acyclic graph (DAG)
+3. Validation includes checks for:
+   - No cycles in the graph
+   - No cross-graph reference violations
+   - Proper head node structure (adding a default head node if multiple head nodes exist)
+   - Proper tail node structure (adding a default tail node if multiple tail nodes exist)
+
+This validation ensures your job graph can execute correctly without deadlocks or unintended behavior.
+
+### Complex DSL Examples
+
+```python
+# Multiple sources feeding into a transformer
+dsl = p(jobs["analyzer"], jobs["cache_manager"], jobs["processor"]) >> jobs["transformer"]
+
+# Parallel branches with join
+dsl = jobs["generator"] >> (jobs["square"] | jobs["double"]) >> jobs["aggregator"]
+
+# Complex flow with multiple parallel sections
+dsl = (
+    p(jobs["analyzer"], jobs["cache_manager"], jobs["times"]) 
+    >> jobs["transformer"] 
+    >> jobs["formatter"] 
+    >> (jobs["add"] | jobs["square"]) 
+    >> jobs["aggregator"] 
+)
+```
+
+## Task Parameter Formats
+
+Flow4AI supports two formats for providing task parameters:
+
+### Short Form (Dot Notation)
+
+The short form uses dot notation to specify job parameters:
+
+```python
+# Short form task parameters using dot notation
+task = {
+    "times.x": 5,                      # Parameter x=5 for job "times"
+    "add.args": [100],                 # Positional argument 100 for job "add"
+    "add.y": 5,                        # Parameter y=5 for job "add"
+    "square.x": 3,                     # Parameter x=3 for job "square"
+    "join.kwargs": {"a": 1, "b": 2, "c": 3}  # Multiple kwargs for job "join"
+}
+```
+
+### Long Form (Nested Dictionaries)
+
+The long form uses nested dictionaries for a more structured format:
+
+```python
+# Long form task parameters using nested dictionaries
+task = {
+    "times": {"x": 5},                  # times(x=5) -> 10
+    "add": {"args": [100], "y": 5},     # add(100, y=5) -> 105
+                                        # 'args' takes precedence over named params for positionals
+    "square": {"x": 3},                 # square(x=3) -> 9
+                                        # This would be overridden by output of add
+    "join": {"kwargs": {"a": 1, "b": 2, "c": 3}}  # Multiple kwargs for join
+}
+```
+
+Both formats are supported and can be used interchangeably based on your preference and use case.
+
 ## FlowManager: Singleton Pattern
 
 The `FlowManager` class operates as a singleton for managing job graphs and tasks:

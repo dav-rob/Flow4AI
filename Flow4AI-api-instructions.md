@@ -6,6 +6,46 @@ This document provides instructions for using the Flow4AI API to execute job gra
 
 The following sections describe how to use the Flow4AI API, starting with simple usage patterns and progressing to more complex scenarios.
 
+### Understanding the DSL (Domain Specific Language)
+
+The Flow4AI DSL allows you to define complex job graphs with elegant syntax. Underneath, the DSL is transformed into a precedence graph structure that determines the execution flow.
+
+#### DSL Operators
+
+- **Sequence operator `>>`**: Connects jobs in sequence (output of one job becomes input to the next)
+- **Parallel operator `|`**: Creates parallel branches (both jobs receive the same input)
+- **Parallel function `p()`**: Groups multiple jobs to be executed in parallel
+
+#### Graph Structure and Validation
+
+When you create a DSL, it's transformed into a precedence graph via `dsl_to_precedence_graph()`. This graph is then validated to ensure it's a proper directed acyclic graph (DAG) with the following checks:
+
+1. No cycles in the graph
+2. No cross-graph reference violations
+3. Proper head node structure (default head node added if multiple head nodes exist)
+4. Proper tail node structure (default tail node added if multiple tail nodes exist)
+
+This validation ensures your job graph can execute correctly without deadlocks or unintended behavior.
+
+#### Simple vs Complex DSL Example
+
+**Simple Linear Pipeline:**
+```python
+# Linear sequence: job1 >> job2 >> job3
+dsl = jobs["job1"] >> jobs["job2"] >> jobs["job3"]
+```
+
+**Complex Pipeline with Parallel Branches:**
+```python
+# Multiple parallel sources into a transformer, then branching, then aggregation
+dsl = (p(jobs["analyzer"], jobs["cache_manager"], jobs["processor"]) 
+      >> jobs["transformer"] 
+      >> (jobs["branch1"] | jobs["branch2"])  # Parallel branches 
+      >> jobs["aggregator"])
+```
+
+The `dsl_to_precedence_graph()` function converts these DSL expressions into a directed graph (adjacency list) that determines how data flows through your jobs.
+
 ### 1. Basic Job Graph Execution
 
 The simplest way to execute a job graph is using the static `run` method:
@@ -31,7 +71,7 @@ jobs = wrap({
 dsl = jobs["square"] >> jobs["double"]
 
 # Execute with a task
-task = {"square.x": 5}  # Task with input for square job
+task = {"square.x": 5}  # Task with input for square job (short form)
 errors, result = FlowManager.run(dsl, task, graph_name="simple_math")
 
 # Access the result
@@ -150,7 +190,11 @@ jobs = wrap({
 jobs["generator"].save_result = True
 
 # Build the pipeline with parallel branches
+# Method 1: Using the pipe operator
 dsl = jobs["generator"] >> (jobs["square"] | jobs["double"]) >> jobs["combiner"]
+
+# Method 2: Using the p() function (alternative)
+# dsl = jobs["generator"] >> p(jobs["square"], jobs["double"]) >> jobs["combiner"]
 
 # Execute the pipeline
 fm = FlowManager()
@@ -427,6 +471,57 @@ fm.wait_for_completion()
 results = fm.pop_results()
 ```
 
+### 11. Task Parameter Formats
+
+Flow4AI supports two formats for providing task parameters:
+
+#### Short Form (Dot Notation)
+
+The short form uses dot notation to specify job parameters:
+
+```python
+# Short form task parameters using dot notation
+task = {
+    "times.x": 5,                      # Parameter x=5 for job "times"
+    "add.args": [100],                 # Positional argument 100 for job "add"
+    "add.y": 5,                        # Parameter y=5 for job "add"
+    "square.x": 3,                     # Parameter x=3 for job "square"
+    "join.kwargs": {"a": 1, "b": 2, "c": 3}  # Multiple kwargs for job "join"
+}
+```
+
+#### Long Form (Nested Dictionaries)
+
+The long form uses nested dictionaries for a more structured format:
+
+```python
+# Long form task parameters using nested dictionaries
+task = {
+    "times": {"x": 5},                  # times(x=5) -> 10
+    "add": {"args": [100], "y": 5},     # add(100, y=5) -> 105
+                                        # Note: 'args' implicitly takes precedence
+                                        # over named params for positionals
+    "square": {"x": 3},                 # square(x=3) -> 9
+                                        # This would be overridden by output of add
+    "join": {"kwargs": {"a": 1, "b": 2, "c": 3}}  # Multiple kwargs for join
+                                        # join(result=square_output, extra="data")
+}
+```
+
+Both formats are supported and can be used interchangeably based on your preference:
+
+```python
+# Create a FlowManager and add a DSL
+fm = FlowManager()
+fq_name = fm.add_dsl(dsl, "task_params_example")
+
+# Submit with short form parameters
+fm.submit({"job1.x": 5, "job2.y": 10}, fq_name)
+
+# Or submit with long form parameters
+fm.submit({"job1": {"x": 5}, "job2": {"y": 10}}, fq_name)
+```
+
 ## Clarification and Improvements
 
 While working with the Flow4AI API, I've identified several areas for clarification and potential improvements:
@@ -435,17 +530,22 @@ While working with the Flow4AI API, I've identified several areas for clarificat
 
 1. **Error Handling**: The documentation could better explain how errors in jobs are propagated and handled. The `execute` method raises exceptions, but what happens when using `submit` and `wait_for_completion`?
 
-2. **Task Parameters vs. Job Names**: The naming convention for task parameters is not always clear. Sometimes parameters use dot notation (e.g., `"square.x": 5`), and other times they don't (e.g., `"start": 1`). When should each format be used?
+2. **Task Parameters vs. Job Names**: The naming convention for task parameters is now better understood. There are two supported formats:
+   - **Short form**: Using dot notation (e.g., `"square.x": 5`) for quick, concise parameter specification
+   - **Long form**: Using nested dictionaries (e.g., `{"square": {"x": 5}}`) for more structured, explicit parameter handling
+   - **Precedence**: When using positional arguments, the `args` key takes precedence over named parameters
 
-3. **FQ_Name Generation**: The rules for generating fully qualified names (FQ names) could be clearer. How does collision detection and resolution work when adding multiple DSLs with the same graph name and variant?
+3. **DSL Transformation**: The transformation from DSL to precedence graph is now clear. The DSL provides an elegant syntax with operators (`>>`, `|`, `p()`) that get transformed into a directed graph structure via `dsl_to_precedence_graph()`. This graph is then validated for correct DAG properties.
 
-4. **Return Value Processing**: There's inconsistency in how return values are accessed. Sometimes through `result["result"]`, sometimes from saved results like `result["SAVED_RESULTS"]["job_name"]`.
+4. **FQ_Name Generation**: The rules for generating fully qualified names (FQ names) could be clearer. How does collision detection and resolution work when adding multiple DSLs with the same graph name and variant?
 
-5. **Context Variable Usage**: The documentation could provide more examples of accessing the job context (`j_ctx`) and explain all the available properties.
+5. **Return Value Processing**: There's inconsistency in how return values are accessed. Sometimes through `result["result"]`, sometimes from saved results like `result["SAVED_RESULTS"]["job_name"]`.
 
-6. **Handling Timeouts**: The behavior when tasks exceed the timeout in `wait_for_completion` could be clearer. Are results partial or lost entirely?
+6. **Graph Validation**: The graph validation process ensures jobs can execute correctly by checking for cycles, cross-graph reference violations, and proper head/tail node structure. When multiple head or tail nodes exist, default ones are added automatically.
 
-7. **Multiple Submit Behavior**: When submitting multiple tasks with the same DSL, are they processed in parallel or sequentially? How is this affected by the implementation (async vs threading)?
+7. **Handling Timeouts**: The behavior when tasks exceed the timeout in `wait_for_completion` could be clearer. Are results partial or lost entirely?
+
+8. **Multiple Submit Behavior**: When submitting multiple tasks with the same DSL, are they processed in parallel or sequentially? How is this affected by the implementation (async vs threading)?
 
 ### Potential Improvements
 
@@ -457,7 +557,7 @@ While working with the Flow4AI API, I've identified several areas for clarificat
 
 4. **Interactive Dashboards**: Implement web-based dashboards for visualizing job graphs and their execution status.
 
-5. **DSL Validation**: Add more robust validation of DSL components before execution to catch configuration errors early.
+5. **DSL Visualization**: Add tools to visualize the DSL and precedence graph structure in a human-readable format, similar to the internal `visualize_graph()` function used in tests.
 
 6. **Result Streaming**: Allow streaming of results as they become available rather than waiting for all tasks to complete.
 
@@ -468,7 +568,7 @@ While working with the Flow4AI API, I've identified several areas for clarificat
 9. **Cancellation Support**: Add the ability to cancel submitted tasks that are still pending or in progress.
 
 10. **Documentation Improvements**: 
-    - Add more code examples for common patterns
+    - Add more code examples for complex DSL patterns and task parameter formats
     - Document all parameters for each method
     - Create diagrams showing the lifecycle of tasks and jobs
     - Provide performance tips and best practices
@@ -476,3 +576,7 @@ While working with the Flow4AI API, I've identified several areas for clarificat
 11. **Synchronous API Option**: Consider providing a simpler synchronous API for cases where asynchronous execution isn't needed.
 
 12. **Execution Hooks**: Add pre/post execution hooks at the job and graph levels for cross-cutting concerns like logging and metrics.
+
+13. **Parameter Validation**: Add validation for task parameters at submission time to catch parameter format errors before execution.
+
+14. **Graph Optimization**: Implement automatic graph optimization to identify and remove redundant operations or merge compatible steps.
