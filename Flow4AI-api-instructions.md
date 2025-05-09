@@ -524,59 +524,88 @@ fm.submit({"job1": {"x": 5}, "job2": {"y": 10}}, fq_name)
 
 ## Clarification and Improvements
 
-While working with the Flow4AI API, I've identified several areas for clarification and potential improvements:
+This section addresses common questions and suggests potential enhancements based on the current codebase.
 
-### Clarifications Needed
+### Clarifications Provided
 
-1. **Error Handling**: The documentation could better explain how errors in jobs are propagated and handled. The `execute` method raises exceptions, but what happens when using `submit` and `wait_for_completion`?
+1.  **Error Handling**:
+    *   When using `submit()` and `wait_for_completion()`: Errors occurring within a job's `run` method or if a job times out waiting for its inputs are caught by `FlowManager`. These errors are collected in an internal `error_results` list. You can retrieve these errors using `fm.pop_results()`, which returns a dictionary like `{'completed': [...], 'errors': [...]}`. Each error entry typically includes the exception object and the task data.
+    *   The `fm.execute()` method simplifies this by automatically checking `pop_results()` and raising a consolidated `Exception` if any errors were recorded.
+    *   Note: If an `on_complete` callback function (passed to `FlowManager` constructor) itself raises an exception, this exception is *not* caught by `FlowManager`'s internal error handling and will propagate.
 
-2. **Task Parameters vs. Job Names**: The naming convention for task parameters is now better understood. There are two supported formats:
-   - **Short form**: Using dot notation (e.g., `"square.x": 5`) for quick, concise parameter specification
-   - **Long form**: Using nested dictionaries (e.g., `{"square": {"x": 5}}`) for more structured, explicit parameter handling
-   - **Precedence**: When using positional arguments, the `args` key takes precedence over named parameters
+2.  **Task Parameters vs. Job Names**: This is well-understood. Flow4AI supports:
+    *   **Short form (dot notation)**: e.g., `"my_job.input_param": value`. `WrappingJob` internally converts this to the long form.
+    *   **Long form (nested dictionaries)**: e.g., `{"my_job": {"input_param": value}}`.
+    *   Special keys like `"args"` (for positional arguments) and `"kwargs"` (for a dictionary of keyword arguments) are also supported within a job's parameter dictionary. `args` generally take precedence for positional mapping.
 
-3. **DSL Transformation**: The transformation from DSL to precedence graph is now clear. The DSL provides an elegant syntax with operators (`>>`, `|`, `p()`) that get transformed into a directed graph structure via `dsl_to_precedence_graph()`. This graph is then validated for correct DAG properties.
+3.  **DSL Transformation**: The process is:
+    *   User defines a DSL using operators (`>>`, `|`) or helper functions (`p()`, `s()`).
+    *   `FlowManager.add_dsl()` calls `dsl_graph.dsl_to_precedence_graph()`, which traverses the DSL structure and builds:
+        *   A `PrecedenceGraph`: A dictionary representing the graph's structure (e.g., `{'JobA': {'next': ['JobB']}}`).
+        *   A `JobsDict`: A dictionary mapping short job names to their `JobABC` instances.
+    *   `FlowManager.add_dsl()` then calls `FlowManager.add_graph()`.
+    *   `FlowManager.add_graph()` calls `f4a_graph.validate_graph()` to check for cycles, valid references, etc. It then uses `JobFactory.create_job_graph()` to link the `JobABC` instances according to the precedence graph, including adding default head/tail jobs if necessary.
 
-4. **FQ_Name Generation**: The rules for generating fully qualified names (FQ names) could be clearer. How does collision detection and resolution work when adding multiple DSLs with the same graph name and variant?
+4.  **FQ_Name Generation and Collision Handling**:
+    *   **Generation**: FQNs are created by `JobABC.create_FQName(graph_name, variant, short_job_name)`. The format is `graph_name$$variant$$short_job_name$$`.
+    *   **Collision Handling in `FlowManager.add_dsl`**:
+        *   **Same DSL Object**: If the *exact same DSL object instance* is passed to `add_dsl` multiple times, `FlowManager` attempts to detect this (using internal attributes `_f4a_already_added` on the DSL and `_f4a_source_dsl` on head jobs) and aims to return the FQ name from its first addition.
+        *   **Different DSL Objects, Same Name/Variant**: If *different DSL objects* are added but are given the same `graph_name` and `variant` by the user, `flowmanager_utils.find_unique_variant_suffix` is invoked. This utility checks `FlowManager.job_map` for existing FQNs that start with `graph_name$$variant$$`. If a potential collision is found, it generates a unique numeric suffix (e.g., `_1`, `_2`) which is appended to the `variant` string (e.g., `variant_1`). This modified variant is then used when `JobABC.create_FQName` is called, ensuring the final FQName stored in `job_map` is unique.
 
-5. **Return Value Processing**: There's inconsistency in how return values are accessed. Sometimes through `result["result"]`, sometimes from saved results like `result["SAVED_RESULTS"]["job_name"]`.
+5.  **Return Value Processing**:
+    *   The main dictionary returned by `FlowManager` (e.g., from `pop_results()` or `execute()`) primarily represents the output of the *tail job* of the executed graph.
+    *   If the tail job's `run` method returns a non-dictionary value, `JobABC._execute` wraps this into a dictionary: `{"result": <value>}`.
+    *   The key `JobABC.RETURN_JOB` (string: `'RETURN_JOB'`) in the result dictionary stores the FQ name of the job that produced this primary result (typically the tail job).
+    *   The key `JobABC.TASK_PASSTHROUGH_KEY` (string: `'task_pass_through'`) contains the original task dictionary that was submitted to the graph.
+    *   The key `JobABC.SAVED_RESULTS` (string: `'SAVED_RESULTS'`) is a dictionary containing outputs from any intermediate jobs in the pipeline that had their `save_result` attribute set to `True`. These intermediate results are keyed by their *short job names*.
+    *   Therefore, accessing `final_result["some_key"]` (where `some_key` is not one of the special keys) typically means you are accessing an output field directly from the tail job. Accessing `final_result["SAVED_RESULTS"]["intermediate_job_short_name"]` retrieves the full output dictionary from an earlier job in the pipeline.
 
-6. **Graph Validation**: The graph validation process ensures jobs can execute correctly by checking for cycles, cross-graph reference violations, and proper head/tail node structure. When multiple head or tail nodes exist, default ones are added automatically.
+6.  **Graph Validation**:
+    *   `f4a_graph.validate_graph()` is called by `FlowManager.add_graph()`. It checks for:
+        *   Cycles within the graph.
+        *   Invalid cross-graph references (ensuring nodes only reference others at the same graph level).
+        *   Presence of head nodes (nodes with no incoming edges). It logs a warning if multiple are found.
+        *   Presence of tail nodes (nodes with no outgoing edges). It logs a warning if multiple are found.
+    *   `JobFactory.create_job_graph()` (used by `FlowManager` when loading from config or processing a DSL) automatically adds a `DefaultHeadJob` if the graph definition has multiple head nodes, and a `DefaultTailJob` if there are multiple tail nodes. This ensures that the graph, as managed internally for execution, effectively has a single entry and exit point.
 
-7. **Handling Timeouts**: The behavior when tasks exceed the timeout in `wait_for_completion` could be clearer. Are results partial or lost entirely?
+7.  **Handling Timeouts**:
+    *   **`FlowManager.wait_for_completion(timeout=X)`**: This is a top-level timeout for all submitted tasks to either complete or error out.
+        *   If this timeout (`X` seconds) is reached, `wait_for_completion()` returns `False`.
+        *   If using `fm.execute()`, a `False` return from `wait_for_completion()` causes `fm.execute()` to raise a `TimeoutError`. In this scenario, `execute()` does not return any partial results.
+        *   If using `fm.submit()` and `fm.wait_for_completion()` manually, and `wait_for_completion()` returns `False`, then calling `fm.pop_results()` will provide results for any tasks that *did* complete or error out before the timeout. Tasks that were still running or pending will not be included.
+    *   **`JobABC.timeout`** (instance attribute, default 3000s): This is an internal timeout used within `JobABC._execute`. A job will wait up to `self.timeout` seconds for all its `expected_inputs` to be received from predecessor jobs. If this specific input-wait timeout occurs for an individual job, that job's execution path will raise an `asyncio.TimeoutError`. This error is caught by `FlowManager._handle_completion`, and the task is recorded in `fm.error_results`. Other independent tasks or branches in the graph can continue their execution.
 
-8. **Multiple Submit Behavior**: When submitting multiple tasks with the same DSL, are they processed in parallel or sequentially? How is this affected by the implementation (async vs threading)?
+8.  **Multiple Submit Behavior (`FlowManager`)**:
+    *   `FlowManager` (non-MP version) operates using a single `asyncio` event loop, which runs in a dedicated background thread.
+    *   When tasks are submitted (e.g., `fm.submit(task1)`, `fm.submit([task2, task3])`), the execution of each task through its job graph is scheduled as an asyncio coroutine (`_execute_with_context`) on this event loop via `asyncio.run_coroutine_threadsafe`.
+    *   These coroutines run concurrently on the event loop, managed by asyncio's cooperative multitasking. This means they yield control to allow other tasks to run, providing concurrency but not true parallelism across multiple CPU cores (for that, `FlowManagerMP` is used).
+    *   Within a single graph execution, if the DSL defines parallel branches (e.g., `A >> (B | C)`), the jobs `B` and `C` are gathered using `asyncio.gather` in `JobABC._execute`, allowing them to run concurrently within that task's execution flow.
 
 ### Potential Improvements
 
-1. **Consistent Result Access API**: Standardize how results are accessed from jobs. Consider a more intuitive API for retrieving results.
-
-2. **Enhanced Error Reporting**: Provide more detailed error information, including stack traces and the context in which errors occurred.
-
-3. **Progress Monitoring**: Add methods to monitor the progress of long-running tasks, not just completion status.
-
-4. **Interactive Dashboards**: Implement web-based dashboards for visualizing job graphs and their execution status.
-
-5. **DSL Visualization**: Add tools to visualize the DSL and precedence graph structure in a human-readable format, similar to the internal `visualize_graph()` function used in tests.
-
-6. **Result Streaming**: Allow streaming of results as they become available rather than waiting for all tasks to complete.
-
-7. **Persistent Job Graphs**: Support serialization and persistence of job graphs for reuse across application restarts.
-
-8. **Type Annotations**: Enhance type annotations throughout the codebase to improve IDE support and catch type-related errors earlier.
-
-9. **Cancellation Support**: Add the ability to cancel submitted tasks that are still pending or in progress.
-
-10. **Documentation Improvements**: 
-    - Add more code examples for complex DSL patterns and task parameter formats
-    - Document all parameters for each method
-    - Create diagrams showing the lifecycle of tasks and jobs
-    - Provide performance tips and best practices
-
-11. **Synchronous API Option**: Consider providing a simpler synchronous API for cases where asynchronous execution isn't needed.
-
-12. **Execution Hooks**: Add pre/post execution hooks at the job and graph levels for cross-cutting concerns like logging and metrics.
-
-13. **Parameter Validation**: Add validation for task parameters at submission time to catch parameter format errors before execution.
-
-14. **Graph Optimization**: Implement automatic graph optimization to identify and remove redundant operations or merge compatible steps.
+1.  **Consistent Result Access API**: While the structure is now clearer (tail job output vs. `SAVED_RESULTS`), a more streamlined API or helper methods to access specific job outputs could improve usability.
+2.  **Enhanced Error Reporting**: Provide more structured error objects in `pop_results()['errors']`, perhaps including the FQ name of the job that failed and more context. The current `execute()` method consolidates errors into a single string, which could be improved.
+3.  **Progress Monitoring**: Implement ways to query the status of submitted tasks (e.g., pending, running, percentage complete for long jobs if feasible).
+4.  **Interactive Dashboards**: Leverage `graph_pic.py` or similar to create dynamic, web-based visualizations of graph structures and their live execution status.
+5.  **DSL Visualization**: Integrate `graph_pic.py` more directly to allow users to easily visualize the graph derived from their DSL, aiding in debugging and understanding.
+6.  **Result Streaming**: For long-running jobs or graphs, allow results (or partial results/status updates) to be streamed back as they become available, rather than only via `pop_results()` after `wait_for_completion()`.
+7.  **Persistent Job Graphs**: Allow `FlowManager` to serialize its `job_map` (including graph structures) and reload it, to persist defined workflows across sessions.
+8.  **Type Annotations & Pydantic Integration**: Continue enhancing type annotations. The use of Pydantic models for job properties (as seen in `OpenAIJob` with `response_format`) is good; expand this for clearer configuration schemas.
+9.  **Task Cancellation**: Implement a mechanism to cancel tasks that have been submitted but are not yet complete, or are long-running. This would likely involve `asyncio.Task.cancel()`.
+10. **Documentation Improvements**:
+    *   More detailed examples for `add_dsl_dict` and graph/variant management.
+    *   Clearer explanation of the `JobABC.timeout` (input wait timeout) vs. `FlowManager.wait_for_completion()` timeout.
+    *   Best practices for writing `on_complete` callbacks, especially regarding error handling within them.
+11. **Synchronous API Wrapper**: For simple use cases or integration with synchronous codebases, a synchronous wrapper around `FlowManager` might be beneficial, though the core remains async.
+12. **Execution Hooks/Middleware**: Allow users to register functions that are called at various lifecycle stages (e.g., before/after job run, on task submission/completion) for metrics, logging, or custom logic.
+13. **Parameter Validation**: `WrappingJob._validate_params` checks if provided args/kwargs can be bound to the callable's signature. This could be extended, or a pre-submission validation step could be added.
+14. **Graph Optimization**: For complex graphs, explore possibilities for static analysis and optimization (e.g., merging compatible jobs, reordering independent branches).
+15. **Job-Specific Timeouts**: Allow individual `JobABC` instances to define an execution timeout for their `run` method, distinct from the input-wait timeout.
+16. **Retry Mechanisms**: Implement configurable retry policies (e.g., number of retries, backoff strategy) for jobs that might fail due to transient issues.
+17. **Dynamic Graph Modification**: (Advanced) Explore safe ways to allow modification of a loaded graph structure, though this adds significant complexity.
+18. **Granular `save_result` Control**: Instead of a boolean `save_result`, allow specifying *which* output keys from a job should be saved to `SAVED_RESULTS` to reduce memory footprint.
+19. **Context Propagation Control**: Provide more explicit mechanisms to control how context (accessed via `j_ctx` or `self.get_context()`) is shared or isolated, especially across parallel branches or within sub-graphs.
+20. **Standardized Job Configuration Schema**: While `jobs.yaml` allows arbitrary `properties`, defining a more standardized schema for common job configurations (e.g., API keys, resource limits) could improve consistency. The `OpenAIJob`'s structured `properties` (client, api, rate_limit) is a good example.
+21. **Plugin System for Job Types**: Formalize `JobFactory.register_job_type` into a more discoverable plugin system, perhaps using entry points, for easier extension by users.
+22. **Improved DSL Error Messages**: When DSL syntax is incorrect or leads to an invalid graph structure during `dsl_to_precedence_graph`, provide more user-friendly error messages that pinpoint the issue within the DSL expression.
+23. **Async Resource Management in Jobs**: Offer guidance or helper utilities for managing asynchronous resources (like `aiohttp.ClientSession`) within `JobABC.run()` methods, ensuring they are properly acquired and released, especially when jobs are part of a larger application. The `OpenAIClient` singleton is one pattern for managing shared clients.
