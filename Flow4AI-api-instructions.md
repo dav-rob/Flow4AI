@@ -15,6 +15,7 @@ The Flow4AI DSL allows you to define complex job graphs with elegant syntax. Und
 - **Sequence operator `>>`**: Connects jobs in sequence (output of one job becomes input to the next).
 - **Parallel operator `|`**: Creates parallel branches (both jobs receive the same input and can run concurrently).
 - **Parallel function `p()`**: A helper function that groups multiple jobs to be executed in parallel, often used as the first element in a sequence or as an argument to `|` or `>>`.
+- **Serial function `s()`**: A helper function that groups multiple jobs to be executed in sequence, equivalent to chaining with `>>`.
 
 #### DSL Transformation and Graph Validation
 
@@ -35,17 +36,20 @@ This entire process ensures that your DSL is converted into a valid, executable 
 
 **Simple Linear Pipeline:**
 ```python
-# Linear sequence: job1 >> job2 >> job3
-dsl = jobs["job1"] >> jobs["job2"] >> jobs["job3"]
+# Method 1: Using the >> operator
+dsl1 = jobs["job1"] >> jobs["job2"] >> jobs["job3"]
+
+# Method 2: Using the s() helper function (equivalent to dsl1)
+dsl2 = s(jobs["job1"], jobs["job2"], jobs["job3"])
 ```
 
 **Complex Pipeline with Parallel Branches:**
 ```python
 # Multiple parallel sources into a transformer, then branching, then aggregation
-dsl = (p(jobs["analyzer"], jobs["cache_manager"], jobs["processor"]) 
-      >> jobs["transformer"] 
-      >> (jobs["branch1"] | jobs["branch2"])  # Parallel branches 
-      >> jobs["aggregator"])
+dsl = (p(jobs["analyzer"], jobs["cache_manager"], jobs["processor"])  # Parallel sources
+      >> jobs["transformer"]                                      # Sequential step
+      >> (jobs["branch1"] | jobs["branch2"])                       # Parallel branches 
+      >> jobs["aggregator"])                                       # Final sequential step
 ```
 
 The `dsl_to_precedence_graph()` function converts these DSL expressions into a directed graph (adjacency list) that determines how data flows through your jobs.
@@ -628,7 +632,7 @@ The detailed explanations for these points have been integrated into the relevan
 
 1.  **Error Handling**: ✅ Errors within jobs are caught and retrievable via `pop_results()`. `execute()` raises exceptions for these. `on_complete` callback errors are not caught by `FlowManager`.
 2.  **Task Parameters vs. Job Names**: ✅ Short-form (dot notation) and long-form (nested dicts) are supported, with `args`/`kwargs` for callables.
-3.  **DSL Transformation**: ✅ `add_dsl` -> `dsl_to_precedence_graph` -> `validate_graph` -> `JobFactory.create_job_graph` (with auto default head/tail).
+3.  **DSL Transformation**: ✅ `add_dsl` -> `dsl_to_precedence_graph` (handles `>>`, `|`, `p()`, `s()`) -> `validate_graph` -> `JobFactory.create_job_graph` (with auto default head/tail).
 4.  **FQ_Name Generation and Collision Handling**: ✅ `JobABC.create_FQName` used; `FlowManager` handles same-object DSL re-addition and uses `find_unique_variant_suffix` for different DSLs with clashing names/variants.
 5.  **Return Value Processing**: ✅ Results primarily from tail job, with `RETURN_JOB`, `TASK_PASSTHROUGH_KEY`, and `SAVED_RESULTS` (keyed by short names) providing additional context.
 6.  **Graph Validation**: ✅ `validate_graph` checks cycles, references, head/tail nodes. `JobFactory` adds default head/tail jobs.

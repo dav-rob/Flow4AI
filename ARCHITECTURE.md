@@ -10,25 +10,16 @@ Flow4AI provides a powerful DSL for defining job graphs using an intuitive, chai
 
 ### DSL Operators
 
-The DSL provides three primary operators for constructing job graphs:
+The DSL provides operators and helper functions for constructing job graphs:
 
-1. **Sequence Operator `>>`**: Connects jobs in sequence where the output of one job becomes input to the next
-   ```python
-   # A >> B means job A's output feeds into job B
-   dsl = jobs["job1"] >> jobs["job2"] >> jobs["job3"]
-   ```
-
-2. **Parallel Operator `|`**: Creates parallel branches where both jobs receive the same input
-   ```python
-   # job1 | job2 means both job1 and job2 run in parallel with the same input
-   dsl = jobs["source"] >> (jobs["branch1"] | jobs["branch2"]) >> jobs["sink"]
-   ```
-
-3. **Parallel Function `p()`**: Groups multiple jobs to be executed in parallel
-   ```python
-   # p(job1, job2, job3) creates parallel execution of multiple jobs
-   dsl = p(jobs["job1"], jobs["job2"], jobs["job3"]) >> jobs["aggregator"]
-   ```
+1.  **Sequence Operator `>>`**: Connects jobs serially.
+    `dsl = jobs["A"] >> jobs["B"]` (A's output goes to B)
+2.  **Parallel Operator `|`**: Creates parallel branches.
+    `dsl = jobs["source"] >> (jobs["branch1"] | jobs["branch2"])` (source output goes to both branch1 and branch2 concurrently)
+3.  **Parallel Function `p()`**: Groups jobs for parallel execution.
+    `dsl = p(jobs["job1"], jobs["job2"]) >> jobs["sink"]`
+4.  **Serial Function `s()`**: Groups jobs for sequential execution, an alternative to chaining with `>>`.
+    `dsl = s(jobs["job1"], jobs["job2"], jobs["job3"])`
 
 ### Graph Transformation and Validation
 
