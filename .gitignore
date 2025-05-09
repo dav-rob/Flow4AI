@@ -24,6 +24,7 @@ flow4ai.egg-info/
 # IDE-specific files
 .vscode/
 .idea/
+.obsidian/
 
 
 # Test coverage reports
