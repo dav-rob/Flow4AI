@@ -1,3 +1,5 @@
+## Clarifications
+
 1.  **Error Handling**: ✅ Errors within jobs are caught and retrievable via `pop_results()`. `execute()` raises exceptions for these. `on_complete` callback errors are not caught by `FlowManager`.
 2.  **Task Parameters vs. Job Names**: ✅ Short-form (dot notation) and long-form (nested dicts) are supported, with `args`/`kwargs` for callables.
 3.  **DSL Transformation**: ✅ `add_dsl` -> `dsl_to_precedence_graph` (handles `>>`, `|`, `p()`, `s()`) -> `validate_graph` -> `JobFactory.create_job_graph` (with auto default head/tail).
@@ -5,9 +7,20 @@
 5.  **Return Value Processing**: ✅ Results primarily from tail job, with `RETURN_JOB`, `TASK_PASSTHROUGH_KEY`, and `SAVED_RESULTS` (keyed by short names) providing additional context.
 6.  **Graph Validation**: ✅ `validate_graph` checks cycles, references, head/tail nodes. `JobFactory` adds default head/tail jobs.
 7.  **Handling Timeouts**: ✅ `FlowManager.wait_for_completion(timeout=X)` is a top-level timeout. `JobABC.timeout` is for individual jobs awaiting inputs.
-8.  **Multiple Submit Behavior (`FlowManager`)**: ✅ Uses `asyncio` for concurrent (not parallel) execution on a single event loop.
+>[!COMMENT]
+> Timeouts are important, we need to have:
+> 1) sensible timeouts for long-running collectors like FlowManager and for individual jobs and for individual job graphs
+> 2) a separate docs section for timeouts
+> 3) timeouts need to be highlighted in sections for i)jobs ii) job-graphs iii) collectors
 
-### Potential Improvements
+8.  **Multiple Submit Behavior (`FlowManager`)**: ✅ Uses `asyncio` for concurrent (not parallel) execution on a single event loop.
+> [!COMMENT]
+> OK, so what this is addressing is multiprocessing vs threading (concurrency)
+> FlowManager is concurrent, FlowManagerMP is multi-threaded. I probably need
+> a high-level architecture.md file that references both.
+
+
+## Potential Improvements
 
 1.  **Consistent Result Access API**: While the structure is now clearer (tail job output vs. `SAVED_RESULTS`), a more streamlined API or helper methods to access specific job outputs could improve usability.
 2.  **Enhanced Error Reporting**: Provide more structured error objects in `pop_results()['errors']`, perhaps including the FQ name of the job that failed and more context. The current `execute()` method consolidates errors into a single string, which could be improved.

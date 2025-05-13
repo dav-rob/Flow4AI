@@ -16,14 +16,14 @@ The DSL provides operators and helper functions for constructing job graphs:
     `dsl = jobs["A"] >> jobs["B"]` (A's output goes to B)
 2.  **Parallel Operator `|`**: Creates parallel branches.
     `dsl = jobs["source"] >> (jobs["branch1"] | jobs["branch2"])` (source output goes to both branch1 and branch2 concurrently)
-3.  **Parallel Function `p()`**: Groups jobs for parallel execution.
+3.  **Parallel Function `p()`**: Groups jobs for parallel execution an alternative to using the parallel operator `|`
     `dsl = p(jobs["job1"], jobs["job2"]) >> jobs["sink"]`
 4.  **Serial Function `s()`**: Groups jobs for sequential execution, an alternative to chaining with `>>`.
     `dsl = s(jobs["job1"], jobs["job2"], jobs["job3"])`
 
 ### Graph Transformation and Validation
 
-When a DSL is added to FlowManager via `add_dsl()`, the following process occurs:
+When a DSL is added to FlowManager via the dsl_dict parameter of the constructor, or by using the `add_dsl()` or `add_dsl_dict()` methods, the following process occurs:
 
 1. The DSL is transformed into a precedence graph via `dsl_to_precedence_graph()`
 2. The resulting graph is validated to ensure it's a proper directed acyclic graph (DAG)
@@ -54,13 +54,55 @@ dsl = (
 )
 ```
 
-## Task Parameter Formats
+## Flow4AI Job Types
 
-Flow4AI supports two formats for providing task parameters:
+There are two job types in Flow4AI:
 
-### Short Form (Dot Notation)
+### JobABC
+The abstract base class that defines the core contract for job execution. All custom jobs must inherit from this class and implement the required `run` method.  For complex jobs that benefit from encapsulation, inheritance, and other OOP principles, subclassing JobABC provides a more natural structure.
 
-The short form uses dot notation to specify job parameters:
+### WrappingJob
+A specialized job implementation that wraps regular Python functions, enabling them to be integrated into Flow4AI job graphs without creating custom `JobABC` subclasses.  This method is often used to wrap functions from LangChain, LlamaIndex, or other AI and data processing frameworks, or simply by those who prefer to use regular Python functions.
+
+##  Task Parameter Formats for different job types
+
+Tasks pass data to jobs in job graphs.  A job graph can support 1000s or 10s of thousands of tasks being submitted concurrently.  Flow4AI can pass task parameters in the two formats ways:
+
+1. To any JobABC subclass
+2. To any Python function that is automatically wrapped and assigned a job name using the `wrap()` function
+
+### JobABC Subclass Task Format
+
+If the job is a JobABC subclass, it is responsible for parsing its own task parameters.  It can do this by looking at the task using `get_task()` and extracting the parameters it needs from the task.  For example in the below task a "parse_labels" job may expect  data in the task to be specified in this way, but it is up to the job to decided how to parse the task:
+
+```python
+task = {
+    "parse_labels": {
+        "llm": {
+            "model": "gpt-4",
+            "temperature": 0.2,
+            "max_tokens": 1000,
+            "top_p": 0.95,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "stop_sequences": ["\n\n", "###"]
+        },
+        "input_file": "raw_labels.csv",
+        "output_format": "json",
+        "batch_size": 50,
+        "extract_categories": True,
+        "confidence_threshold": 0.75,
+        "retry_count": 3,
+        "timeout": 60
+    }
+}
+```
+
+If the job is a wrapped function, then the parameters are passed as arguments to the function, as shown below.  Parameters can be passed in short form or long form.
+
+### Wrapped Function Short Form (Dot Notation)
+
+The short form uses dot notation to specify job parameters to wrapped functions.
 
 ```python
 # Short form task parameters using dot notation
@@ -73,9 +115,9 @@ task = {
 }
 ```
 
-### Long Form (Nested Dictionaries)
+### Wrapped Function Long Form (Nested Dictionaries)
 
-The long form uses nested dictionaries for a more structured format:
+The long form uses nested dictionaries for a more structured format that resembles the typical JobABC subclass task format.
 
 ```python
 # Long form task parameters using nested dictionaries
@@ -101,7 +143,6 @@ The `FlowManager` class operates as a singleton for managing job graphs and task
 - **Stateful Counters**: Task counts (completed, errors) are cumulative across all submit operations
 
 ```python
-# CORRECT: Create a single FlowManager instance
 fm = FlowManager()
 
 # Add multiple DSLs to the same manager
@@ -117,9 +158,8 @@ fm.wait_for_completion()
 ```
 
 ```python
-# INCORRECT: Creating multiple FlowManager instances
 fm1 = FlowManager()  # First instance
-fm2 = FlowManager()  # Second instance - unnecessary and can lead to issues
+fm2 = FlowManager()  # Second instance - the same object as the first instance.  So this can be used in different parts of the code to access the same FlowManager instance.
 ```
 
 ## DSL Handling, Graph Validation, and FQNs
@@ -180,7 +220,7 @@ fq_name1 = fm.add_dsl(dsl, "graph_name1")  # First addition
 fq_name2 = fm.add_dsl(dsl, "graph_name2")  # Second addition - modifies already modified DSL!
 ```
 
-- **One-time Addition**: Each DSL should only be added once to avoid double-transformation
+- **One-time Addition**: Each DSL should only be added once to avoid double-transformation, though there is protection against this in the code.
 - **Store the fq_name**: Always store and reuse the fq_name returned from `add_dsl`
 
 ## Tasks, Submission, State, and Results Management
