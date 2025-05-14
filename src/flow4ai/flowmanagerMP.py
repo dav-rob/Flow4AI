@@ -66,7 +66,7 @@ class FlowManagerMP(FlowManagerABC):
         # This holds a map of job name to job, 
         # when _execute is called on the job, the task must have a job_name
         # associated with it, if there is more than one job in the job_map
-        self.job_map: OrderedDict[str, JobABC] = OrderedDict()
+        #self.job_map: OrderedDict[str, JobABC] = OrderedDict()
         
         # Create a manager for sharing objects between processes
         self._manager = mp.Manager()

@@ -1,16 +1,12 @@
 import asyncio
 import threading
-from collections import defaultdict, deque
+from collections import defaultdict
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from flow4ai.flowmanager_utils import find_unique_variant_suffix
 from flow4ai.flowmanager_base import FlowManagerABC
 
 from . import JobABC
 from . import f4a_logging as logging
-from .dsl import DSLComponent, JobsDict
-from .dsl_graph import PrecedenceGraph, dsl_to_precedence_graph
-from .f4a_graph import validate_graph
 from .job import SPLIT_STR, Task, job_graph_context_manager
 from .job_loader import JobFactory
 
@@ -202,146 +198,6 @@ class FlowManager(FlowManagerABC):
                     "task": task
                 })
 
-
-    def add_dsl(self, dsl: DSLComponent, graph_name: str, variant: str = "") -> str:
-        """
-        Adds a DSL component to the FlowManager. Each DSL component should only be added once
-        as it is modified during the process by dsl_to_precedence_graph.
-        
-        Args:
-            dsl: The DSL component defining the data flow between jobs.
-                This DSL will be modified by being converted to a precedence graph.
-            graph_name: The name of the graph. Used to generate fully qualified job names.
-            variant: The variant of the graph e.g. "dev", "prod"
-        
-        Returns:
-            str: The fully qualified name of the head job in the graph, to be used with submit().
-        
-        Warning:
-            Do not add the same DSL object multiple times, as it will be modified each time.
-            Instead, get the fully qualified name (FQ name) from the first call and reuse it.
-        """
-        if not graph_name:
-            raise ValueError("graph_name cannot be None or empty")
-        if dsl is None:
-            raise ValueError("graph cannot be None")
-        
-        # Check if this DSL has a tracking attribute to prevent multiple additions
-        if hasattr(dsl, "_f4a_already_added") and dsl._f4a_already_added:
-            # Try to find the existing graph for this DSL
-            for job in self.head_jobs:
-                # Check if this job's associated DSL is the same object
-                if hasattr(job, "_f4a_source_dsl") and job._f4a_source_dsl is dsl:
-                    self.logger.info(f"DSL already added, returning existing FQ name: {job.name}")
-                    return job.name
-                
-            self.logger.warning(
-                f"DSL appears to have been added already but existing graph not found. "
-                f"Creating a new graph, which may lead to duplicate processing."
-            )
-        
-        # Transform the DSL into a precedence graph (this modifies the DSL)
-        graph, jobs = dsl_to_precedence_graph(dsl)
-        
-        # Mark this DSL as added to prevent multiple additions
-        setattr(dsl, "_f4a_already_added", True)
-        
-        # Check for FQ name collisions from different DSL objects with same structure
-        # Create a base name prefix to check for collisions
-        base_name_prefix = f"{graph_name}{SPLIT_STR}{variant}"
-        
-        # If there's already a job in job_map that would lead to a collision, 
-        # we need to make this variant name unique by adding a suffix
-        variant_suffix = find_unique_variant_suffix(self.job_map, base_name_prefix)
-        
-        # Add the suffix to the variant if needed
-        if variant_suffix:
-            self.logger.info(f"Detected potential FQ name collision, adding suffix '{variant_suffix}' to variant")
-            enhanced_variant = f"{variant}{variant_suffix}"
-        else:
-            enhanced_variant = variant
-        
-        # Add the graph to our job map with potentially modified variant name
-        fq_name = self.add_graph(graph, jobs, graph_name, enhanced_variant)
-        
-        # Store the reference to the source DSL in the head job
-        head_job = self.job_map[fq_name]
-        setattr(head_job, "_f4a_source_dsl", dsl)
-        
-        return fq_name
-        
-    def add_dsl_dict(self, dsl_dict: Dict) -> List[str]:
-        """
-        Adds multiple graphs to the task manager from a dictionary structure.
-        
-        Args:
-            dsl_dict: A dictionary containing graph definitions, with optional variants.
-                Format can be either:
-                {
-                    "graph1": {
-                        "dev": dsl1d,
-                        "prod": dsl1p
-                    }
-                    "graph2": {
-                        "dev": dsl2d,
-                        "prod": dsl2p
-                    }
-                }
-                Or without variants:
-                {
-                    "graph1": dsl1,
-                    "graph2": dsl2
-                }
-        
-        Returns:
-            List[str]: The fully qualified names of all added graphs.
-        
-        Raises:
-            ValueError: If the dictionary structure is invalid or missing required components.
-        """
-        if not dsl_dict:
-            raise ValueError("dsl_dict cannot be None or empty")
-        
-        fq_names = []
-        
-        for graph_name, graph_data in dsl_dict.items():
-            # Check if graph_data is a DSL component directly (no variants)
-            if not isinstance(graph_data, dict):
-                # No variants, graph_data is the DSL directly
-                dsl = graph_data
-                
-                fq_name = self.add_dsl(dsl, graph_name)
-                fq_names.append(fq_name)
-            else:
-                # Check if this is a variant structure or old-style direct dsl structure
-                if "dsl" in graph_data:
-                    # Old format - no variants, direct dsl
-                    dsl = graph_data.get("dsl")
-                    
-                    if dsl is None:
-                        raise ValueError(f"Graph '{graph_name}' is missing required 'dsl'")
-                        
-                    fq_name = self.add_dsl(dsl, graph_name)
-                    fq_names.append(fq_name)
-                else:
-                    # With variants - each key is a variant name, value is the DSL
-                    for variant, variant_data in graph_data.items():
-                        # Check if variant_data is a dict with 'dsl' key (old format)
-                        if isinstance(variant_data, dict) and "dsl" in variant_data:
-                            # Old format with nested 'dsl' key
-                            dsl = variant_data.get("dsl")
-                            
-                            if dsl is None:
-                                raise ValueError(f"Graph '{graph_name}' variant '{variant}' is missing required 'dsl'")
-                        else:
-                            # New format - variant_data is the DSL directly
-                            dsl = variant_data
-                            
-                        fq_name = self.add_dsl(dsl, graph_name, variant)
-                        fq_names.append(fq_name)
-        
-        return fq_names
-        
     def get_fq_names_by_graph(self, graph_name, variant=""):
         """
         Get the fully qualified names for a specific graph and variant.
@@ -413,35 +269,6 @@ class FlowManager(FlowManagerABC):
         # If exactly one match, use it
         fq_name = matching_fq_names[0]
         return self.submit(task, fq_name)
-
-    def add_graph(self, precedence_graph: PrecedenceGraph, jobs: JobsDict, graph_name: str, variant: str = "") -> str:
-        """
-        Adds a graph to the task manager.
-        
-        Args:
-            precedence_graph: A precedence graph that defines the data flow between jobs.
-            jobs: A dictionary of jobs.
-            graph_name: The name of the graph.
-            variant: The variant of the graph e.g. "dev", "pr
-        
-        Returns:
-            str: The fully qualified name of the graph.
-        """
-        if not graph_name:
-            raise ValueError("graph_name cannot be None or empty")
-        if not jobs:
-            raise ValueError("jobs cannot be None or empty")
-        if precedence_graph is None:
-            raise ValueError("precedence_graph cannot be None")
-        validate_graph(precedence_graph)
-        for (short_job_name, job) in jobs.items():
-            job.name = JobABC.create_FQName(graph_name, variant, short_job_name)
-        head_job: JobABC = JobFactory.create_job_graph(precedence_graph, jobs)
-        self.head_jobs.append(head_job)
-        self.job_map.update({job.name: job for job in self.head_jobs})
-        return head_job.name
-
-
 
     def get_counts(self):
         with self._data_lock:
