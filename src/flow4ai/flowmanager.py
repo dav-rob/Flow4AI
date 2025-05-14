@@ -5,10 +5,10 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 from flow4ai.flowmanager_base import FlowManagerABC
 
-from . import JobABC
-from . import f4a_logging as logging
-from .job import SPLIT_STR, Task, job_graph_context_manager
-from .job_loader import JobFactory
+from flow4ai.job import JobABC
+from flow4ai import f4a_logging as logging
+from flow4ai.job import SPLIT_STR, Task, job_graph_context_manager
+from flow4ai.job_loader import JobFactory
 
 
 class FlowManager(FlowManagerABC):
