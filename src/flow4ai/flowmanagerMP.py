@@ -7,15 +7,22 @@ import pickle
 import queue
 from collections import OrderedDict
 from multiprocessing import freeze_support, set_start_method
-from typing import Any, Callable, Collection, Dict, Optional, Union
+from typing import (TYPE_CHECKING, Any, Callable, Collection, Dict, Optional,
+                    Union)
 
 from pydantic import BaseModel
-from flow4ai.flowmanager_base import FlowManagerABC
 
 from . import f4a_logging as logging
-from .job import JobABC, Task, job_graph_context_manager
+# Import base class - no circular dependency here
+from .flowmanager_base import FlowManagerABC
+# Import only what's needed at runtime
+from .job import job_graph_context_manager
 from .job_loader import ConfigLoader, JobFactory
 from .utils.monitor_utils import should_log_task_stats
+
+# Use TYPE_CHECKING for imports only needed for type annotations
+if TYPE_CHECKING:
+    from .job import JobABC, Task
 
 
 class FlowManagerMP(FlowManagerABC):
@@ -46,6 +53,7 @@ class FlowManagerMP(FlowManagerABC):
 
     def __init__(self, job: Optional[Any] = None, result_processing_function: Optional[Callable[[Any], None]] = None, 
                  serial_processing: bool = False):
+        super().__init__()
         # Get logger for FlowManagerMP
         self.logger = logging.getLogger('FlowManagerMP')
         self.logger.info("Initializing FlowManagerMP")
