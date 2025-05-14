@@ -1,7 +1,7 @@
 import inspect
 from typing import Any, Callable, Dict, List, Union
 
-from flow4ai import JobABC
+from flow4ai.job import JobABC
 from flow4ai.job import Task
 
 
