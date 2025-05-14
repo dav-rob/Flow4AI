@@ -10,9 +10,9 @@ from collections import OrderedDict
 from typing import (Any, Callable, Collection, Dict, List, Optional, Set,
                     Tuple, Union)
 
-import flow4ai.f4a_logging as logging
-from flow4ai.job_abc import JobABC
-from flow4ai.task import Task
+from . import f4a_logging as logging
+from .job import JobABC
+from .job import Task
 
 
 class FlowManagerABC(ABC):
