@@ -4,6 +4,7 @@ from collections import defaultdict, deque
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from flow4ai.flowmanager_utils import find_unique_variant_suffix
+from flow4ai.flowmanager_base import FlowManagerABC
 
 from . import JobABC
 from . import f4a_logging as logging
@@ -14,7 +15,7 @@ from .job import SPLIT_STR, Task, job_graph_context_manager
 from .job_loader import JobFactory
 
 
-class FlowManager:
+class FlowManager(FlowManagerABC):
     _instance = None
     _lock = threading.Lock()  # Class-level lock for singleton creation
 
@@ -79,7 +80,7 @@ class FlowManager:
         # Execute the job within the context manager
         async with job_graph_context_manager(job_set):
             return await job._execute(task)
-            
+    
     def submit(self, task: Union[Task, List[Task]], fq_name: str = None):
         """
         Submit a task or list of tasks to the FlowManager.

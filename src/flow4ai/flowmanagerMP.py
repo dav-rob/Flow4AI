@@ -10,6 +10,7 @@ from multiprocessing import freeze_support, set_start_method
 from typing import Any, Callable, Collection, Dict, Optional, Union
 
 from pydantic import BaseModel
+from flow4ai.flowmanager_base import FlowManagerABC
 
 from . import f4a_logging as logging
 from .job import JobABC, Task, job_graph_context_manager
@@ -17,7 +18,7 @@ from .job_loader import ConfigLoader, JobFactory
 from .utils.monitor_utils import should_log_task_stats
 
 
-class FlowManagerMP:
+class FlowManagerMP(FlowManagerABC):
     """
     FlowManagerMP executes up to thousands of tasks in parallel using one or more Jobs passed into constructor.
     FlowManagerMP is a multiprocessing implementation of FlowManager, so tasks and results are passed between entirely
