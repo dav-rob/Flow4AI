@@ -6,7 +6,7 @@ for all Flow Manager implementations in the Flow4AI framework.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import Collection, Dict, List
 
 from .dsl import DSLComponent, JobsDict
 from .dsl_graph import PrecedenceGraph, dsl_to_precedence_graph
@@ -287,3 +287,30 @@ class FlowManagerABC(ABC):
             suffix_num += 1
         
         return f"_{suffix_num}"
+
+    def create_job_map(self, dsl):
+        if isinstance(dsl, Dict):
+            pass # SimpleJobFactory is deprecated
+            # job_context: Dict[str, Any] = job.get("job_context") or {}
+            # loaded_job = SimpleJobFactory.load_job(job_context)
+            # if isinstance(loaded_job, JobABC):
+            #     self.job_map[loaded_job.name] = loaded_job
+        elif isinstance(dsl, Collection) and not isinstance(dsl, (str, bytes, bytearray)):
+            # Handle collections first, before checking for DSLComponent
+            if not dsl:  # Check if collection is empty
+                raise ValueError("Job collection cannot be empty")
+
+            # Process each item in the collection individually
+            for j in dsl:
+                # Add the job to DSL if it's a DSLComponent
+                if isinstance(j, DSLComponent):  # Check if it's a DSLComponent
+                    self.add_dsl(j)
+                else:
+                    raise TypeError(f"Items in job collection must be DSLComponent instances, got {type(j)}")
+        elif isinstance(dsl, DSLComponent):  # Check if it's a DSLComponent
+            # Process as a single DSL component
+            self.add_dsl(dsl)
+        else:
+            raise TypeError(f"dsl must be either Dict[str, Any], DSLComponent instance, or Collection of DSLComponent instances, got {type(dsl)}")
+
+
