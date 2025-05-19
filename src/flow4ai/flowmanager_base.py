@@ -11,7 +11,6 @@ from typing import Dict, List
 from .dsl import DSLComponent, JobsDict
 from .dsl_graph import PrecedenceGraph, dsl_to_precedence_graph
 from .f4a_graph import validate_graph
-from .flowmanager_utils import find_unique_variant_suffix
 from .job import SPLIT_STR, JobABC
 from .job_loader import JobFactory
 
@@ -85,7 +84,7 @@ class FlowManagerABC(ABC):
 
         # If there's already a job in job_map that would lead to a collision,
         # we need to make this variant name unique by adding a suffix
-        variant_suffix = find_unique_variant_suffix(self.job_map, base_name_prefix)
+        variant_suffix = self.find_unique_variant_suffix(base_name_prefix)
 
         # Add the suffix to the variant if needed
         if variant_suffix:
@@ -201,3 +200,47 @@ class FlowManagerABC(ABC):
         self.head_jobs.append(head_job)
         self.job_map.update({job.name: job for job in self.head_jobs})
         return head_job.name
+
+    def find_unique_variant_suffix(self, base_name_prefix: str) -> str:
+        """
+        Find a unique numeric suffix to append to a variant name to avoid FQ name collisions.
+        
+        This function checks for existing keys in job_map that start with the given base_name_prefix
+        and returns a suffix that will make the name unique when appended to the variant name.
+        
+        Args:
+            job_map: The job map dictionary containing existing job FQ names as keys
+            base_name_prefix: The prefix of the FQ name to check for collisions (graph_name$$variant)
+            
+        Returns:
+            str: A numeric suffix (empty string if no collision found, or "_1", "_2", etc.)
+        """
+        # If no collision in job_map, no suffix needed
+        collision_found = False
+        for existing_key in self.job_map.keys():
+            if existing_key.startswith(base_name_prefix):
+                collision_found = True
+                break
+                
+        if not collision_found:
+            return ""
+            
+        # Find existing suffixes by looking at keys with the same base name prefix
+        # Extract suffix numbers from variants like "graph_name$$_1$$job_name$$"
+        existing_suffixes = set()
+        import re
+
+        # Match variants with numeric suffixes in the format "prefix_N$$"
+        suffix_pattern = re.compile(re.escape(base_name_prefix) + r'_([0-9]+)\$\$')
+        
+        for existing_key in self.job_map.keys():
+            match = suffix_pattern.match(existing_key)
+            if match and match.group(1).isdigit():
+                existing_suffixes.add(int(match.group(1)))
+        
+        # Find the next available suffix number
+        suffix_num = 1
+        while suffix_num in existing_suffixes:
+            suffix_num += 1
+        
+        return f"_{suffix_num}"
