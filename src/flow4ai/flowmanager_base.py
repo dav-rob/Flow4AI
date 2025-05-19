@@ -290,11 +290,7 @@ class FlowManagerABC(ABC):
 
     def create_job_map(self, dsl):
         if isinstance(dsl, Dict):
-            pass # SimpleJobFactory is deprecated
-            # job_context: Dict[str, Any] = job.get("job_context") or {}
-            # loaded_job = SimpleJobFactory.load_job(job_context)
-            # if isinstance(loaded_job, JobABC):
-            #     self.job_map[loaded_job.name] = loaded_job
+            self.add_dsl_dict(dsl)
         elif isinstance(dsl, Collection) and not isinstance(dsl, (str, bytes, bytearray)):
             # Handle collections first, before checking for DSLComponent
             if not dsl:  # Check if collection is empty

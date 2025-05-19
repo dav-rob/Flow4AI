@@ -3,11 +3,9 @@ import threading
 from collections import defaultdict
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from flow4ai.flowmanager_base import FlowManagerABC
-
-from flow4ai.job import JobABC
 from flow4ai import f4a_logging as logging
-from flow4ai.job import SPLIT_STR, Task, job_graph_context_manager
+from flow4ai.flowmanager_base import FlowManagerABC
+from flow4ai.job import SPLIT_STR, JobABC, Task, job_graph_context_manager
 from flow4ai.job_loader import JobFactory
 
 
@@ -22,7 +20,14 @@ class FlowManager(FlowManagerABC):
                 cls._instance.__initialized = False
         return cls._instance
 
-    def __init__(self, dsl_dict=None, jobs_dir_mode=False, on_complete: Optional[Callable[[Any], None]] = None):
+    def __init__(self, dsl=None, jobs_dir_mode=False, on_complete: Optional[Callable[[Any], None]] = None):
+        """Initialize the FlowManager.
+        
+        Args:
+            dsl: A dictionary of job DSLs, a job DSL, a JobABC instance, or a collection of JobABC instances.
+            jobs_dir_mode: If True, the FlowManager will load jobs from a directory.
+            on_complete: A callback function to be called when a job is completed.
+        """  
         self.jobs_dir_mode = jobs_dir_mode
         self.on_complete = on_complete
         if not hasattr(self, '_TaskManager__initialized') or not self.__initialized:
@@ -32,8 +37,8 @@ class FlowManager(FlowManagerABC):
                     self.__initialized = True
         
         # Add DSL dictionary if provided
-        if dsl_dict:
-            self.add_dsl_dict(dsl_dict)
+        if dsl:
+            self.create_job_map(dsl)
 
     def _initialize(self):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -218,7 +223,7 @@ class FlowManager(FlowManagerABC):
         
         # Import re for regex pattern matching
         import re
-        
+
         # Find exact match first
         for job_name in self.job_map.keys():
             if job_name.startswith(base_prefix + SPLIT_STR):

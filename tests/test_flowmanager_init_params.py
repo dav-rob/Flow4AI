@@ -1,12 +1,14 @@
 """Tests for enhanced FlowManager API with convenience methods."""
 
-import pytest
 from typing import Dict, List
+
+import pytest
 
 from flow4ai import f4a_logging as logging
 from flow4ai.dsl import DSLComponent, JobsDict, wrap
 from flow4ai.flowmanager import FlowManager
-from flow4ai.job import JobABC, Task, SPLIT_STR  # Import the separator constant
+from flow4ai.job import (SPLIT_STR, JobABC,  # Import the separator constant
+                         Task)
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -127,7 +129,7 @@ def test_flowmanager_constructor_with_dsl_dict():
     
     # Initialize FlowManager with DSL dict
     logger.info("Initializing FlowManager with DSL dict")
-    fm = FlowManager(dsl_dict=dsl_dict)
+    fm = FlowManager(dsl=dsl_dict)
     
     # Verify all graphs are properly loaded
     # We should have 4 different FQ names in job_map
@@ -206,7 +208,7 @@ def test_submit_by_graph():
     }
     
     # Initialize FlowManager with DSL dict
-    fm = FlowManager(dsl_dict=dsl_dict)
+    fm = FlowManager(dsl=dsl_dict)
     
     # Create test task - numbers 1 through 5
     task_data = {
@@ -294,7 +296,7 @@ def test_combined_workflow():
     }
     
     # Initialize FlowManager with DSL dict
-    fm = FlowManager(dsl_dict=dsl_dict)
+    fm = FlowManager(dsl=dsl_dict)
     
     # Get FQ name for verification
     simple_fq_names = fm.get_fq_names_by_graph("workflow", "simple")
