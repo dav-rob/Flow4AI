@@ -73,12 +73,6 @@ def test_parallel_execution_multiple_jobs():
         # Create 5 jobs with the same delay
         jobs = [DelayedMockJob(f'job_{i}', delay) for i in range(5)]
         
-        # Create tasks for each job
-        tasks = []
-        for i in range(5):
-            for j in range(4):  # 4 tasks per job = 20 total tasks
-                tasks.append({f'job_{i}': {'task': f'task_{i}_{j}', 'job_name': f'job_{i}'}})
-
         # Time the execution
         start_time = time.time()
         
@@ -87,6 +81,18 @@ def test_parallel_execution_multiple_jobs():
         def result_collector(result):
             results.append(result)
         flowmanagerMP = FlowManagerMP(jobs, result_collector, serial_processing=True)
+        
+        # Get the actual job names from the head_jobs
+        head_jobs = flowmanagerMP.get_head_jobs()
+        assert len(head_jobs) == 5, "Expected 5 head jobs"
+        job_names = [job.name for job in head_jobs]
+        
+        # Create tasks for each job using actual job names
+        tasks = []
+        for i in range(5):
+            job_name = job_names[i]
+            for j in range(4):  # 4 tasks per job = 20 total tasks
+                tasks.append({job_name: {'task': f'task_{i}_{j}', 'job_name': job_name}})
         for task in tasks:
             job_name = next(iter(task.keys()))  # Get the job name from the task dict
             flowmanagerMP.submit_task(task, job_name=job_name)

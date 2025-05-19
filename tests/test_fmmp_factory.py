@@ -144,11 +144,16 @@ async def test_concurrent_task_execution():
     FlowManagerMPFactory(AsyncTestJob(), collect_result, serial_processing=True)
     flowmanagerMP = FlowManagerMPFactory.get_instance()
     
+    # Get the head job's name to use in task submissions
+    head_jobs = flowmanagerMP.get_head_jobs()
+    assert len(head_jobs) > 0, "No head jobs found in the flow manager"
+    job_name = head_jobs[0].name
+    
     # Submit tasks with different delays
     tasks = [
-        {'AsyncTestJob': {'task_id': 1, 'delay': 0.2}},
-        {'AsyncTestJob': {'task_id': 2, 'delay': 0.1}},
-        {'AsyncTestJob': {'task_id': 3, 'delay': 0.3}}
+        {job_name: {'task_id': 1, 'delay': 0.2}},
+        {job_name: {'task_id': 2, 'delay': 0.1}},
+        {job_name: {'task_id': 3, 'delay': 0.3}}
     ]
     
     for task in tasks:
@@ -178,13 +183,18 @@ async def test_job_instantiation_and_execution():
     FlowManagerMPFactory(BasicTestJob(), collect_result, serial_processing=True)
     flowmanagerMP = FlowManagerMPFactory.get_instance()
     
+    # Get the head job's name to use in task submissions
+    head_jobs = flowmanagerMP.get_head_jobs()
+    assert len(head_jobs) > 0, "No head jobs found in the flow manager"
+    job_name = head_jobs[0].name
+    
     # Submit a simple task
-    flowmanagerMP.submit_task({'BasicTestJob': {}})
+    flowmanagerMP.submit_task({job_name: {}})
     flowmanagerMP.mark_input_completed()
     
     # Verify job execution
     assert len(results) == 1
-    assert results[0]['BasicTestJob'] == "completed"
+    assert results[0][job_name] == "completed"
     
     # Verify we can get the same instance again
     same_flowmanagerMP = FlowManagerMPFactory.get_instance()

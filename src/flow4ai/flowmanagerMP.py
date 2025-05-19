@@ -11,6 +11,7 @@ from typing import Any, Callable, Collection, Dict, Optional, Union
 
 from pydantic import BaseModel
 
+from flow4ai.dsl import DSLComponent, Parallel, Serial
 from flow4ai.flowmanager_base import FlowManagerABC
 
 from . import f4a_logging as logging
@@ -89,23 +90,24 @@ class FlowManagerMP(FlowManagerABC):
             # loaded_job = SimpleJobFactory.load_job(job_context)
             # if isinstance(loaded_job, JobABC):
             #     self.job_map[loaded_job.name] = loaded_job
-        elif isinstance(job, JobABC):
-            self.job_map[job.name] = job
         elif isinstance(job, Collection) and not isinstance(job, (str, bytes, bytearray)):
+            # Handle collections first, before checking for DSLComponent
             if not job:  # Check if collection is empty
                 raise ValueError("Job collection cannot be empty")
-            if not all(isinstance(j, JobABC) for j in job):
-                raise TypeError("All items in job collection must be JobABC instances")
+            
+            # Process each item in the collection individually
             for j in job:
-                if isinstance(j, JobABC):
-                    if j.name in self.job_map:
-                        raise ValueError(f"Duplicate job name found: {j.name}")
-                    self.job_map[j.name] = j
+                # Add the job to DSL if it's a DSLComponent
+                if isinstance(j, DSLComponent):  # Check if it's a DSLComponent
+                    self.add_dsl(j)
                 else:
-                    raise TypeError("Items in job collection must be JobABC instances")
+                    raise TypeError(f"Items in job collection must be DSLComponent instances, got {type(j)}")
+        elif isinstance(job, DSLComponent):  # Check if it's a DSLComponent
+            # Process as a single DSL component
+            self.add_dsl(job)
         else:
-            raise TypeError("job must be either Dict[str, Any], JobABC instance, or Collection[JobABC]")
-
+            raise TypeError(f"job must be either Dict[str, Any], DSLComponent instance, or Collection of DSLComponent instances, got {type(job)}")
+        
         self._job_name_map.clear()
         self._job_name_map.update({job.name: job.job_set_str() for job in self.job_map.values()})
 

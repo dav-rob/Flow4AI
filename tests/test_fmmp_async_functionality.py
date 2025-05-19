@@ -40,11 +40,16 @@ async def test_concurrent_task_execution():
     
     flowmanagerMP = FlowManagerMP(AsyncTestJob(), collect_result, serial_processing=True)
     
-    # Submit tasks with different delays
+    # Get the head job's name to use in task submissions
+    head_jobs = flowmanagerMP.get_head_jobs()
+    assert len(head_jobs) > 0, "No head jobs found in the flow manager"
+    job_name = head_jobs[0].name
+    
+    # Submit tasks with different delays using the head job's name
     tasks = [
-        {'AsyncTestJob': {'task_id': 1, 'delay': 0.2}},
-        {'AsyncTestJob': {'task_id': 2, 'delay': 0.1}},
-        {'AsyncTestJob': {'task_id': 3, 'delay': 0.3}}
+        {job_name: {'task_id': 1, 'delay': 0.2}},
+        {job_name: {'task_id': 2, 'delay': 0.1}},
+        {job_name: {'task_id': 3, 'delay': 0.3}}
     ]
     
     for task in tasks:
@@ -97,11 +102,16 @@ async def test_async_exception_handling():
     
     flowmanagerMP = FlowManagerMP(AsyncTestJob(), collect_result, serial_processing=True)
     
+    # Get the head job's name to use in task submissions
+    head_jobs = flowmanagerMP.get_head_jobs()
+    assert len(head_jobs) > 0, "No head jobs found in the flow manager"
+    job_name = head_jobs[0].name
+    
     # Submit mix of successful and failing tasks
     tasks = [
-        {'AsyncTestJob': {'task_id': 1}},
-        {'AsyncTestJob': {'task_id': 2, 'fail': True}},
-        {'AsyncTestJob': {'task_id': 3}}
+        {job_name: {'task_id': 1}},
+        {job_name: {'task_id': 2, 'fail': True}},
+        {job_name: {'task_id': 3}}
     ]
     
     for task in tasks:
@@ -123,10 +133,15 @@ async def test_parallel_task_limit():
     
     flowmanagerMP = FlowManagerMP(AsyncTestJob(), collect_result, serial_processing=True)
     
+    # Get the head job's name to use in task submissions
+    head_jobs = flowmanagerMP.get_head_jobs()
+    assert len(head_jobs) > 0, "No head jobs found in the flow manager"
+    job_name = head_jobs[0].name
+    
     # Submit many quick tasks
     num_tasks = 100
     for i in range(num_tasks):
-        flowmanagerMP.submit_task({'AsyncTestJob': {'task_id': i, 'delay': 0.01}})
+        flowmanagerMP.submit_task({job_name: {'task_id': i, 'delay': 0.01}})
     
     flowmanagerMP.mark_input_completed()
     

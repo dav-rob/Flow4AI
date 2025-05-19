@@ -53,12 +53,17 @@ def test_basic_error_handling():
     
     flowmanagerMP = FlowManagerMP(ErrorTestJob(), collect_result, serial_processing=True)
     
+    # Get the head job's name to use in task submissions
+    head_jobs = flowmanagerMP.get_head_jobs()
+    assert len(head_jobs) > 0, "No head jobs found in the flow manager"
+    job_name = head_jobs[0].name
+    
     # Submit mix of successful and failing tasks
     tasks = [
-        {'ErrorTestJob': {'task_id': 1}},
-        {'ErrorTestJob': {'task_id': 2, 'raise_error': True, 'error_message': 'Task 2 error'}},
-        {'ErrorTestJob': {'task_id': 3}},
-        {'ErrorTestJob': {'task_id': 4, 'raise_error': True, 'error_message': 'Task 4 error'}}
+        {job_name: {'task_id': 1}},
+        {job_name: {'task_id': 2, 'raise_error': True, 'error_message': 'Task 2 error'}},
+        {job_name: {'task_id': 3}},
+        {job_name: {'task_id': 4, 'raise_error': True, 'error_message': 'Task 4 error'}}
     ]
     
     for task in tasks:
@@ -81,11 +86,16 @@ def test_timeout_handling():
     
     flowmanagerMP = FlowManagerMP(ErrorTestJob(), collect_result, serial_processing=True)
     
+    # Get the head job's name to use in task submissions
+    head_jobs = flowmanagerMP.get_head_jobs()
+    assert len(head_jobs) > 0, "No head jobs found in the flow manager"
+    job_name = head_jobs[0].name
+    
     # Submit tasks with varying timeouts
     tasks = [
-        {'ErrorTestJob': {'task_id': 1, 'timeout': 0.3}},
-        {'ErrorTestJob': {'task_id': 2, 'timeout': 0.2}},
-        {'ErrorTestJob': {'task_id': 3, 'timeout': 0.1}}
+        {job_name: {'task_id': 1, 'timeout': 0.3}},
+        {job_name: {'task_id': 2, 'timeout': 0.2}},
+        {job_name: {'task_id': 3, 'timeout': 0.1}}
     ]
     
     for task in tasks:

@@ -34,6 +34,17 @@ class FlowManagerABC(ABC):
         """
         self.job_map: Dict[str, JobABC] = {}
         self.head_jobs: List[JobABC] = []
+        
+    def get_head_jobs(self) -> List[JobABC]:
+        """
+        Get all head jobs in the job graph.
+        
+        Head jobs are the entry points of the job graph with no predecessors.
+        
+        Returns:
+            List[JobABC]: A list of all head jobs in the job graph
+        """
+        return self.head_jobs
 
     def create_graph_name(self, graph: Dict[str, Dict[str, List[str]]]) -> str:
         """
