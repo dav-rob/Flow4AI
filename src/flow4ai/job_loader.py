@@ -267,7 +267,8 @@ class JobFactory:
     @classmethod
     def create_job_graph(cls, graph_definition: dict[str, dict], job_instances: dict[str, JobABC]) -> JobABC:
         """
-        graph definition defines the job graph and looks like this:
+        Takes the below inputs and creates a job graph by adding next_jobs and expected_inputs fields to each job in 
+        the job_instances dictionary, default head and tail jobs are added to the graph, if necessary.
 
         graph_definition: dict[str, Any] = {
             "A": {"next": ["B", "C"]},

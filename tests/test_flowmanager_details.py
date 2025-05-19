@@ -247,8 +247,11 @@ def test_new_dsl_with_same_structure():
     
     # Add first DSL
     logger.info("Adding first DSL")
-    fq_name1 = fm.add_dsl(dsl1, "test_graph")
+    fq_name1 = fm.add_dsl(dsl1)
     logger.info(f"First DSL FQ name: {fq_name1}")
+    
+    # Extract the auto-generated graph name
+    graph_name1 = fq_name1.split('$$')[0]
     
     # Create second DSL with same structure but different objects
     job3 = SimpleJob("job1")  # Same name but different object
@@ -261,8 +264,11 @@ def test_new_dsl_with_same_structure():
     
     # Add second DSL
     logger.info("Adding second DSL with same structure but different objects")
-    fq_name2 = fm.add_dsl(dsl2, "test_graph")
+    fq_name2 = fm.add_dsl(dsl2)
     logger.info(f"Second DSL FQ name: {fq_name2}")
+    
+    # Extract the auto-generated graph name
+    graph_name2 = fq_name2.split('$$')[0]
     
     # New behavior: Different DSLs should get unique FQ names even with the same structure
     assert fq_name1 != fq_name2, "Different DSL objects with same structure should get unique FQ names"
@@ -288,8 +294,11 @@ def test_new_dsl_with_same_structure():
     
     # Add third DSL
     logger.info("Adding third DSL with different job names")
-    fq_name3 = fm.add_dsl(dsl3, "test_graph")
+    fq_name3 = fm.add_dsl(dsl3)
     logger.info(f"Third DSL FQ name: {fq_name3}")
+    
+    # Extract the auto-generated graph name
+    graph_name3 = fq_name3.split('$$')[0]
     
     # FQ name should be different with different job names
     assert fq_name1 != fq_name3, "DSLs with different job names should get different FQ names"

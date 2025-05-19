@@ -184,8 +184,13 @@ def test_execute_job_graph_from_dsl():
     )
         
     fm = FlowManager()
-    fq_name =fm.add_dsl(dsl, "test_execute_job_graph_from_dsl")
-    print(fq_name)
+    # Using add_dsl without a graph_name - it should generate one based on head jobs
+    fq_name = fm.add_dsl(dsl)
+    print(f"Auto-generated FQ name: {fq_name}")
+    
+    # Extract the auto-generated graph name from the FQ name
+    # FQ name format is typically: graph_name$$$$job_name$$
+    auto_graph_name = fq_name.split('$$')[0]
     task = {"times": {"fn.x": 1}, "add": {"fn.x": 2}, "square": {"fn.x": 3}}
     fm.submit(task,fq_name)
     success = fm.wait_for_completion()
@@ -215,7 +220,9 @@ def test_execute_job_graph_from_dsl():
     print("\nResults:")
     print(results["completed"].values())
     result_dict = list(results["completed"].values())[0][0] # [0]= first job
-    assert result_dict["result"] == "Processor test_execute_job_graph_from_dsl$$$$aggregator$$ of type aggregate"
+    # Assert using the auto-generated graph name instead of hardcoded name
+    expected_result = f"Processor {auto_graph_name}$$$$aggregator$$ of type aggregate"
+    assert result_dict["result"] == expected_result
     assert result_dict["task_pass_through"] == task
     assert result_dict["SAVED_RESULTS"] == {"times": 2, "add": 5, "square": 9}
 

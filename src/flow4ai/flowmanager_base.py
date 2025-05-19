@@ -35,7 +35,34 @@ class FlowManagerABC(ABC):
         self.job_map: Dict[str, JobABC] = {}
         self.head_jobs: List[JobABC] = []
 
-    def add_dsl(self, dsl: DSLComponent, graph_name: str, variant: str = "") -> str:
+    def create_graph_name(self, graph: Dict[str, Dict[str, List[str]]]) -> str:
+        """
+        Create a default graph name based on head jobs in the graph.
+        Head jobs are jobs with no predecessors.
+
+        Args:
+            graph: The precedence graph structure
+
+        Returns:
+            str: A suitable graph name
+        """
+        # Find all jobs that are referenced as successors
+        all_jobs = set(graph.keys())
+        successor_jobs = set()
+        for job, details in graph.items():
+            successor_jobs.update(details['next'])
+
+        # Head jobs are those not present in any 'next' list
+        head_jobs = all_jobs - successor_jobs
+
+        if head_jobs:
+            # Use the first head job name
+            return next(iter(sorted(head_jobs)))  # Sort for deterministic behavior
+        else:
+            # Fallback to the first job in the graph if no clear head job
+            return next(iter(sorted(graph.keys())))
+
+    def add_dsl(self, dsl: DSLComponent, graph_name: str = "", variant: str = "") -> str:
         """
         Adds a DSL component to the FlowManager. Each DSL component should only be added once
         as it is modified during the process by dsl_to_precedence_graph.
@@ -44,6 +71,7 @@ class FlowManagerABC(ABC):
             dsl: The DSL component defining the data flow between jobs.
                 This DSL will be modified by being converted to a precedence graph.
             graph_name: The name of the graph. Used to generate fully qualified job names.
+                If empty, a name will be automatically generated based on head jobs.
             variant: The variant of the graph e.g. "dev", "prod"
 
         Returns:
@@ -53,8 +81,6 @@ class FlowManagerABC(ABC):
             Do not add the same DSL object multiple times, as it will be modified each time.
             Instead, get the fully qualified name (FQ name) from the first call and reuse it.
         """
-        if not graph_name:
-            raise ValueError("graph_name cannot be None or empty")
         if dsl is None:
             raise ValueError("graph cannot be None")
 
@@ -77,6 +103,11 @@ class FlowManagerABC(ABC):
 
         # Mark this DSL as added to prevent multiple additions
         setattr(dsl, "_f4a_already_added", True)
+        
+        # If no graph_name was provided, generate one based on head jobs
+        if not graph_name:
+            graph_name = self.create_graph_name(graph)
+            self.logger.info(f"Auto-generated graph name: {graph_name}")
 
         # Check for FQ name collisions from different DSL objects with same structure
         # Create a base name prefix to check for collisions
@@ -176,7 +207,8 @@ class FlowManagerABC(ABC):
 
     def add_graph(self, precedence_graph: PrecedenceGraph, jobs: JobsDict, graph_name: str, variant: str = "") -> str:
         """
-        Adds a graph to the task manager.
+        Validates the precedence graph then calls JobFactory.create_job_graph which adds next_jobs and expected_inputs to 
+        the job instances, also adds default head and tail jobs to the graph, if necessary.
 
         Args:
             precedence_graph: A precedence graph that defines the data flow between jobs.

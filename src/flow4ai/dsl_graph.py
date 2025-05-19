@@ -20,8 +20,8 @@ def dsl_to_precedence_graph(dsl_obj) -> Tuple[PrecedenceGraph, JobsDict]:
     Returns:
         Dict[str, Dict[str, List[str]]]: A graph definition in the format:
         {
-            'Task A': {'next': ['Task B', 'Task C']},
-            'Task B': {'next': []},
+            'Job A': {'next': ['Job B', 'Job C']},
+            'Job B': {'next': []},
             ...
         }
         Where keys are node string representations and values are dictionaries with 'next' key
