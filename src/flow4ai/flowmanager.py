@@ -82,7 +82,33 @@ class FlowManager(FlowManagerABC):
         async with job_graph_context_manager(job_set):
             return await job._execute(task)
     
-    def submit(self, task: Union[Task, List[Task]], fq_name: str = None):
+    def _record_error(self, task: Union[Task, List[Task]], job_key: str, error_msg: str):
+        """Helper method to record errors for both single tasks and lists of tasks.
+        
+        Args:
+            task: A Task or list of Tasks that encountered an error
+            job_key: The job key for tracking errors
+            error_msg: The error message
+            
+        Returns:
+            None
+        """
+        with self._data_lock:
+            if isinstance(task, list):
+                self.error_count += len(task)
+                for single_task in task:
+                    self.error_results[job_key].append({
+                        "error": ValueError(error_msg),
+                        "task": single_task
+                    })
+            else:
+                self.error_count += 1
+                self.error_results[job_key].append({
+                    "error": ValueError(error_msg),
+                    "task": task
+                })
+
+    def submit(self, task: Union[Dict[str, Any], List[Dict[str, Any]]], fq_name: str = None):
         """
         Submit a task or list of tasks to the FlowManager.
         
@@ -108,75 +134,39 @@ class FlowManager(FlowManagerABC):
             else:
                 error_msg = "fq_name must be specified when multiple job graphs are available"
                 self.logger.error(error_msg)
-                # Handle error for single task or list of tasks
-                job_key = "unknown"
-                if isinstance(task, list):
-                    with self._data_lock:
-                        self.error_count += len(task)
-                        for single_task in task:
-                            self.error_results[job_key].append({
-                                "error": ValueError(error_msg),
-                                "task": single_task
-                            })
-                else:
-                    with self._data_lock:
-                        self.error_count += 1
-                        self.error_results[job_key].append({
-                            "error": ValueError(error_msg),
-                            "task": task
-                        })
+                self._record_error(task, "unknown", error_msg)
                 return
-    
+
         # Get the JobABC instance from the job_map
-        job_key = fq_name
-        job = None
-        
-        # Find the job by matching the start of the name
-        if fq_name in self.job_map:
-            job = self.job_map[fq_name]
-                
+        job = self.job_map.get(fq_name)
         if job is None:
-            self.logger.error(f"No job found for graph_name: {fq_name}")
-            # Handle error for single task or list of tasks
-            if isinstance(task, list):
-                with self._data_lock:
-                    self.error_count += len(task)
-                    for single_task in task:
-                        self.error_results[job_key].append({
-                            "error": ValueError(f"No job found for graph_name: {fq_name}"),
-                            "task": single_task
-                        })
-            else:
-                with self._data_lock:
-                    self.error_count += 1
-                    self.error_results[job_key].append({
-                        "error": ValueError(f"No job found for graph_name: {fq_name}"),
-                        "task": task
-                    })
+            error_msg = f"No job found for graph_name: {fq_name}"
+            self.logger.error(error_msg)
+            self._record_error(task, fq_name, error_msg)
             return
 
         # Handle single task or list of tasks
         if isinstance(task, list):
             for single_task in task:
-                self._submit_single_task(job, single_task, job_key)
+                self._submit_single_task(job, single_task, fq_name)
         else:
-            self._submit_single_task(job, task, job_key)
+            self._submit_single_task(job, task, fq_name)
 
-    def _submit_single_task(self, job, task: Task, job_key: str):
+    def _submit_single_task(self, job, task: Dict[str, Any], fq_name: str):
         """Helper method to submit a single task to the job.
         
         Args:
             job: The job to execute
             task: The task to submit
-            job_key: The job key for tracking
+            fq_name: The fully qualified name of the job graph
         """
         with self._data_lock:
             self.submitted_count += 1
-
-        coro = self._execute_with_context(job, task)
+        task_obj = Task(task, fq_name)
+        coro = self._execute_with_context(job, task_obj)
         future = asyncio.run_coroutine_threadsafe(coro, self.loop)
         future.add_done_callback(
-            lambda f: self._handle_completion(f, job, task)
+            lambda f: self._handle_completion(f, job, task_obj)
         )
 
     def _handle_completion(self, future, job: JobABC, task: Task):
@@ -186,6 +176,7 @@ class FlowManager(FlowManagerABC):
             result = future.result()
             with self._data_lock:
                 self.completed_count += 1
+                # job.name is fq_name
                 self.completed_results[job.name].append(result)
                 
             if self.on_complete:

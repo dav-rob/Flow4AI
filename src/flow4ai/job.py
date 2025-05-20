@@ -67,10 +67,10 @@ class Task(dict):
     Args:
         data (Union[Dict[str, Any], str]): The task data as a dictionary or string. If a string,
                                             it will be converted to a dictionary with a 'task' key.
-        job_name (Optional[str], optional): The name of the job that will process this task.
+        fq_name (Optional[str], optional): The name of the job graph that will process this task.
                                             Required if there is more than one job graph in the
                                             FlowManagerMP class"""
-    def __init__(self, data: Union[Dict[str, Any], str], job_name: Optional[str] = None):
+    def __init__(self, data: Union[Dict[str, Any], str], fq_name: Optional[str] = None):
         # Convert string input to dict
         if isinstance(data, str):
             data = {'task': data}
@@ -81,8 +81,8 @@ class Task(dict):
         
         super().__init__(data)
         self.task_id:str = str(uuid.uuid4())
-        if job_name is not None:
-            self['job_name'] = job_name
+        if fq_name is not None:
+            self['job_name'] = fq_name
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Task):
