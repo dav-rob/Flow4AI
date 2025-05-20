@@ -185,48 +185,42 @@ class FlowManagerMP(FlowManagerABC):
             ValueError: If job_name is required but not provided, or if the specified job cannot be found.
             TypeError: If the task is not a dictionary or string.
         """
-        try:
-            # Wait for jobs to be loaded
-            if not self._jobs_loaded.wait(timeout=self.JOB_MAP_LOAD_TIME):
-                raise TimeoutError("Timed out waiting for jobs to be loaded")
+        # Wait for jobs to be loaded
+        if not self._jobs_loaded.wait(timeout=self.JOB_MAP_LOAD_TIME):
+            raise TimeoutError("Timed out waiting for jobs to be loaded")
 
-            if task is None:
-                self.logger.warning("Received None task, skipping")
-                return
-            
-            if isinstance(task, str):
-                task_dict = {'task': task}
-            elif isinstance(task, dict):
-                task_dict = task.copy()
-            else:
-                self.logger.warning(f"Received invalid task type {type(task)}, converting to string")
-                task_dict = {'task': str(task)}
+        if task is None:
+            self.logger.warning("Received None task, skipping")
+            return
 
-            # If job_name parameter is provided, it takes precedence
-            if job_name is not None and job_name not in self._job_name_map:
+        # If job_name parameter is provided, it takes precedence
+        if job_name is not None and job_name not in self._job_name_map:
+            raise ValueError(
+                f"Job '{job_name}' not found. Available jobs: {list(self._job_name_map.keys())}"
+            )
+        
+        # If there's more than one job, we need a valid job name
+        if len(self._job_name_map) > 1:
+            if job_name not in self._job_name_map and ('job_name' not in task_dict or not isinstance(task_dict['job_name'], str)):
                 raise ValueError(
-                    f"Job '{job_name}' not found. Available jobs: {list(self._job_name_map.keys())}"
+                    "When multiple jobs are present, you must either:\n"
+                    "1) Provide the job_name parameter in submit_task() OR\n"
+                    "2) Include a non-empty string 'job_name' in the task dictionary"
                 )
-            
-            # If there's more than one job, we need a valid job name
-            if len(self._job_name_map) > 1:
-                if job_name not in self._job_name_map and ('job_name' not in task_dict or not isinstance(task_dict['job_name'], str)):
-                    raise ValueError(
-                        "When multiple jobs are present, you must either:\n"
-                        "1) Provide the job_name parameter in submit_task() OR\n"
-                        "2) Include a non-empty string 'job_name' in the task dictionary"
-                    )
-            elif len(self._job_name_map) == 1:
-                # If there's only one job, use its name
-                job_name = next(iter(self._job_name_map.keys()))
-            else:
-                raise ValueError("No jobs available in FlowManagerMP")
+        elif len(self._job_name_map) == 1:
+            # If there's only one job, use its name
+            job_name = next(iter(self._job_name_map.keys()))
+        else:
+            raise ValueError("No jobs available in FlowManagerMP")
+        
+        if isinstance(task, dict):
+            task_dict = task.copy()
+        else:
+            task_dict = {'task': str(task)}
 
-            task_obj = Task(task_dict, job_name)
-            self._task_queue.put(task_obj)
-        except Exception as e:
-            self.logger.error(f"Error submitting task: {e}")
-            self.logger.info("Detailed stack trace:", exc_info=True)
+        task_obj = Task(task_dict, job_name)
+        self._task_queue.put(task_obj)
+
 
     def mark_input_completed(self):
         """Signal completion of input and wait for all processes to finish and shut down."""
