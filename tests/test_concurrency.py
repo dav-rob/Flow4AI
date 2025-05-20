@@ -32,7 +32,6 @@ async def test_concurrency_by_expected_returns():
     
     # Create FlowManagerMP with parallel processing
     flowmanagerMP = FlowManagerMP(result_processing_function=collector)
-    logging.info(f"Names of jobs in head job: {flowmanagerMP.get_job_graph_mapping()}")
 
     def submit_task(range_val:int):
         for i in range(range_val):

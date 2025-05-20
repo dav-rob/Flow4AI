@@ -491,22 +491,6 @@ class FlowManagerMP(FlowManagerABC):
         
         return list(self._job_name_map.keys())
 
-    def get_job_graph_mapping(self) -> dict[str, set[str]]:
-        """
-        Returns a mapping of head job names to their complete set of job names in their graph.
-        
-        Returns:
-            dict[str, set[str]]: Dictionary mapping each head job name to a set of all job names
-                                reachable from that job (including itself).
-
-        Raises:
-            TimeoutError: If waiting for jobs to be loaded exceeds timeout
-        """
-        self.logger.debug("Waiting for jobs to be loaded before returning job graph mapping")
-        if not self._jobs_loaded.wait(timeout=self.JOB_MAP_LOAD_TIME):
-            raise TimeoutError("Timed out waiting for jobs to be loaded")
-        
-        return dict(self._job_name_map)
 
 class FlowManagerMPFactory:
     _instance = None
