@@ -113,7 +113,7 @@ class FlowManager(FlowManagerABC):
         Submit a task or list of tasks to the FlowManager.
         
         Args:
-            task: A Task or list of Tasks to submit
+            task: A Dictionary or list of Dictionaries to submit
             fq_name: Fully qualified name of the job graph to submit to, optional, if there is
             only one job graph in job_map, it will be used automatically without an fq_name
             lookup.
