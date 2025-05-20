@@ -310,6 +310,7 @@ class FlowManager(FlowManagerABC):
         
         while (time.time() - start_time) < timeout:
             counts = self.get_counts()
+            self.logger.info(f"Submitted: {counts['submitted']}, Completed: {counts['completed']}, Errors: {counts['errors']}")
             if counts['submitted'] > 0 and counts['submitted'] == (counts['completed'] + counts['errors']):
                 return True
             time.sleep(check_interval)

@@ -203,32 +203,26 @@ class FlowManagerMP(FlowManagerABC):
                 task_dict = {'task': str(task)}
 
             # If job_name parameter is provided, it takes precedence
-            if job_name is not None:
-                if job_name not in self._job_name_map:
-                    raise ValueError(
-                        f"Job '{job_name}' not found. Available jobs: {list(self._job_name_map.keys())}"
-                    )
-                task_dict['job_name'] = job_name
+            if job_name is not None and job_name not in self._job_name_map:
+                raise ValueError(
+                    f"Job '{job_name}' not found. Available jobs: {list(self._job_name_map.keys())}"
+                )
             
             # If there's more than one job, we need a valid job name
             if len(self._job_name_map) > 1:
-                if 'job_name' not in task_dict or not isinstance(task_dict['job_name'], str) or not task_dict['job_name']:
+                if job_name not in self._job_name_map and ('job_name' not in task_dict or not isinstance(task_dict['job_name'], str)):
                     raise ValueError(
                         "When multiple jobs are present, you must either:\n"
                         "1) Provide the job_name parameter in submit_task() OR\n"
                         "2) Include a non-empty string 'job_name' in the task dictionary"
                     )
-                if task_dict['job_name'] not in self._job_name_map:
-                    raise ValueError(
-                        f"Job '{task_dict['job_name']}' not found. Available jobs: {list(self._job_name_map.keys())}"
-                    )
             elif len(self._job_name_map) == 1:
                 # If there's only one job, use its name
-                task_dict['job_name'] = next(iter(self._job_name_map.keys()))
+                job_name = next(iter(self._job_name_map.keys()))
             else:
                 raise ValueError("No jobs available in FlowManagerMP")
 
-            task_obj = Task(task_dict)
+            task_obj = Task(task_dict, job_name)
             self._task_queue.put(task_obj)
         except Exception as e:
             self.logger.error(f"Error submitting task: {e}")
