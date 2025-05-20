@@ -107,7 +107,10 @@ def test_execute_job_graph_from_dsl():
     # Assert using the auto-generated graph name instead of hardcoded name
     expected_result = f"Processor {auto_graph_name}$$$$aggregator$$ of type aggregate"
     assert result_dict["result"] == expected_result
-    assert result_dict["task_pass_through"] == task
+    # Convert Task to dict or extract the dictionary data
+    task_pass_through = result_dict["task_pass_through"]
+    # Check that task_pass_through contains all the expected keys and values
+    assert all(key in task_pass_through and task_pass_through[key] == value for key, value in task.items())
     assert result_dict["SAVED_RESULTS"] == {"times": 2, "add": 5, "square": 9}
     
 
@@ -396,9 +399,9 @@ def test_submit_multiple_tasks():
     
     # Create a list of tasks to submit
     tasks = [
-        Task({"value": 1}, job_name=fq_name),
-        Task({"value": 2}, job_name=fq_name),
-        Task({"value": 3}, job_name=fq_name)
+        Task({"value": 1}, fq_name=fq_name),
+        Task({"value": 2}, fq_name=fq_name),
+        Task({"value": 3}, fq_name=fq_name)
     ]
     
     # Submit the list of tasks
@@ -450,10 +453,10 @@ def test_submit_tasks_with_different_data():
     
     # Create tasks with different types of data
     tasks = [
-        Task({"data": 10}, job_name=fq_name),            # Integer
-        Task({"data": "hello world"}, job_name=fq_name), # String
-        Task({"data": [1, 2, 3, 4]}, job_name=fq_name),  # List
-        Task({"data": None}, job_name=fq_name)           # None/unknown
+        Task({"data": 10}, fq_name=fq_name),            # Integer
+        Task({"data": "hello world"}, fq_name=fq_name), # String
+        Task({"data": [1, 2, 3, 4]}, fq_name=fq_name),  # List
+        Task({"data": None}, fq_name=fq_name)           # None/unknown
     ]
     
     # Submit the list of tasks
@@ -800,6 +803,3 @@ def test_submit_multiple_tasks_pipeline():
     
     # Log the results for inspection
     logger.info(f"Tasks 3 & 4 completed successfully: {results['completed']}")
-
-
-

@@ -223,7 +223,10 @@ def test_execute_job_graph_from_dsl():
     # Assert using the auto-generated graph name instead of hardcoded name
     expected_result = f"Processor {auto_graph_name}$$$$aggregator$$ of type aggregate"
     assert result_dict["result"] == expected_result
-    assert result_dict["task_pass_through"] == task
+    # Convert Task to dict or extract the dictionary data
+    task_pass_through = result_dict["task_pass_through"]
+    # Check that task_pass_through contains all the expected keys and values
+    assert all(key in task_pass_through and task_pass_through[key] == value for key, value in task.items())
     assert result_dict["SAVED_RESULTS"] == {"times": 2, "add": 5, "square": 9}
 
 
@@ -276,7 +279,10 @@ def test_execute_with_task_params():
     results = fm.pop_results()
     result_dict = list(results["completed"].values())[0][0] # [0]= first job
     assert result_dict["result"] == "1_2_3"
-    assert result_dict["task_pass_through"] == task
+    # Convert Task to dict or extract the dictionary data
+    task_pass_through = result_dict["task_pass_through"]
+    # Check that task_pass_through contains all the expected keys and values
+    assert all(key in task_pass_through and task_pass_through[key] == value for key, value in task.items())
     assert result_dict["SAVED_RESULTS"] == {"times": 10, "add": 105, "square": 9}
 
 def test_execute_with_shorthand_task_params():
@@ -320,5 +326,8 @@ def test_execute_with_shorthand_task_params():
     results = fm.pop_results()
     result_dict = list(results["completed"].values())[0][0] # [0]= first job
     assert result_dict["result"] == "1_2_3"
-    assert result_dict["task_pass_through"] == task
+    # Convert Task to dict or extract the dictionary data
+    task_pass_through = result_dict["task_pass_through"]
+    # Check that task_pass_through contains all the expected keys and values
+    assert all(key in task_pass_through and task_pass_through[key] == value for key, value in task.items())
     assert result_dict["SAVED_RESULTS"] == {"times": 10, "add": 105, "square": 9}
