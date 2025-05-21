@@ -6,13 +6,14 @@ import multiprocessing as mp
 import pickle
 import queue
 from multiprocessing import freeze_support, set_start_method
-from typing import Any, Callable, Collection, Dict, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from pydantic import BaseModel
 
 from flow4ai.flowmanager_base import FlowManagerABC
 
 from . import f4a_logging as logging
+from .dsl import DSLComponent
 from .job import JobABC, Task, job_graph_context_manager
 from .job_loader import ConfigLoader, JobFactory
 from .utils.monitor_utils import should_log_task_stats
@@ -26,9 +27,9 @@ class FlowManagerMP(FlowManagerABC):
     Optionally passes results to a pre-existing result processing function after task completion.
 
     Args:
-        job (Union[Dict[str, Any], JobABC, Collection[JobABC]]): If missing, jobs will be loaded from config file.
+        dsl (Union[Dict[str, Any], DSLComponent, List[DSLComponent]]): If missing, jobs will be loaded from config file.
             Otherwise either a dictionary containing job configuration,
-            a single JobABC instance, or a collection of JobABC instances.
+            a single DSLComponent instance, or a list of DSLComponent instances.
 
         result_processing_function (Optional[Callable[[Any], None]]): Code to handle results after the Job executes its task.
             By default, this hand-off happens in parallel, immediately after a Job processes a task.
@@ -71,7 +72,8 @@ class FlowManagerMP(FlowManagerABC):
         
         # Create a manager for sharing objects between processes
         self._manager = mp.Manager()
-        # Create a shared dictionary for job name mapping
+        # !! This object allows us to pass the job name map between processes
+        #     so we don't have to pickle the entire job map
         self._job_name_map = self._manager.dict()
         # Create an event to signal when jobs are loaded
         self._jobs_loaded = mp.Event()
@@ -171,7 +173,7 @@ class FlowManagerMP(FlowManagerABC):
             self.logger.info(f"Result processor process started with PID {self.result_processor_process.pid}")
     # TODO: add ability to submit a task or an iterable: Iterable
     # TODO: add resource usage monitoring which returns False if resource use is too high.
-    def submit_task(self, task: Union[Dict[str, Any], str], fq_name: Optional[str] = None):
+    def submit_task(self, task: Union[Dict[str, Any], List[Dict[str, Any]], str], fq_name: Optional[str] = None):
         """
         Submit a task to be processed by the job.
 
@@ -183,7 +185,6 @@ class FlowManagerMP(FlowManagerABC):
 
         Raises:
             ValueError: If fq_name is required but not provided, or if the specified job cannot be found.
-            TypeError: If the task is not a dictionary or string.
         """
         # Wait for jobs to be loaded
         if not self._jobs_loaded.wait(timeout=self.JOB_MAP_LOAD_TIME):
@@ -210,16 +211,19 @@ class FlowManagerMP(FlowManagerABC):
         elif len(self._job_name_map) == 1:
             # If there's only one job, use its name
             fq_name = next(iter(self._job_name_map.keys()))
-        else:
-            raise ValueError("No jobs available in FlowManagerMP")
-        
-        if not isinstance(task, dict):
-            task_dict = {'task': str(task)}
-        else:
-            task_dict = task
 
-        task_obj = Task(task_dict, fq_name)
-        self._task_queue.put(task_obj)
+
+        if isinstance(task, list):
+            for single_task in task:
+                if not isinstance(single_task, dict):
+                    single_task = {'task': str(single_task)}
+                task_obj = Task(single_task, fq_name)
+                self._task_queue.put(task_obj)
+        else:
+            if not isinstance(task, dict):
+                task = {'task': str(task)}
+            task_obj = Task(task, fq_name)
+            self._task_queue.put(task_obj)
 
 
     def mark_input_completed(self):

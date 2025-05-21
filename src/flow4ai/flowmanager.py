@@ -107,6 +107,38 @@ class FlowManager(FlowManagerABC):
                     "error": ValueError(error_msg),
                     "task": task
                 })
+    def check_fq_name_in_job_graph_map(self, fq_name):
+        """
+        Check that the job graph map is not None or empty and that the specified fq_name exists in the map.
+        
+        Args:
+            fq_name: The fully qualified name of the job graph to check.
+            
+        Returns:
+            Tuple[str, JobABC]: The fq_name and the JobABC instance.
+            
+        Raises:
+            ValueError: If job_map is None or empty, or if the specified fq_name does not exist in the map.
+        """
+        # Check that job_map is not None or empty
+        if not self.job_graph_map:
+            error_msg = "job_map is None or empty"
+            raise ValueError(error_msg)
+        # If fq_name is None and there's only one job graph in job_map, use that one
+        if fq_name is None:
+            if len(self.job_graph_map) == 1:
+                fq_name = next(iter(self.job_graph_map))
+                self.logger.debug(f"Using the only available job graph: {fq_name}")
+            else:
+                error_msg = "fq_name must be specified when multiple job graphs are available"
+                raise ValueError(error_msg)
+        # Get the JobABC instance from the job_map
+        job = self.job_graph_map.get(fq_name)
+        if job is None:
+            error_msg = f"No job found for graph_name: {fq_name}"
+            raise ValueError(error_msg)
+        return fq_name, job
+
 
     def submit(self, task: Union[Dict[str, Any], List[Dict[str, Any]]], fq_name: str = None):
         """

@@ -309,24 +309,4 @@ class FlowManagerABC(ABC):
         else:
             raise TypeError(f"dsl must be either Dict[str, Any], DSLComponent instance, or Collection of DSLComponent instances, got {type(dsl)}")
 
-    def check_fq_name_in_job_graph_map(self, fq_name):
-        # Check that job_map is not None or empty
-        if not self.job_graph_map:
-            error_msg = "job_map is None or empty"
-            raise ValueError(error_msg)
-        # If fq_name is None and there's only one job graph in job_map, use that one
-        if fq_name is None:
-            if len(self.job_graph_map) == 1:
-                fq_name = next(iter(self.job_graph_map))
-                self.logger.debug(f"Using the only available job graph: {fq_name}")
-            else:
-                error_msg = "fq_name must be specified when multiple job graphs are available"
-                raise ValueError(error_msg)
-        # Get the JobABC instance from the job_map
-        job = self.job_graph_map.get(fq_name)
-        if job is None:
-            error_msg = f"No job found for graph_name: {fq_name}"
-            raise ValueError(error_msg)
-        return fq_name, job
-
-
+    
