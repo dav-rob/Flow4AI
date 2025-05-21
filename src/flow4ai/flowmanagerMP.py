@@ -171,21 +171,9 @@ class FlowManagerMP(FlowManagerABC):
             )
             self.result_processor_process.start()
             self.logger.info(f"Result processor process started with PID {self.result_processor_process.pid}")
-    # TODO: add ability to submit a task or an iterable: Iterable
+
     # TODO: add resource usage monitoring which returns False if resource use is too high.
     def submit_task(self, task: Union[Dict[str, Any], List[Dict[str, Any]], str], fq_name: Optional[str] = None):
-        """
-        Submit a task to be processed by the job.
-
-        Args:
-            task: Either a dictionary containing task data or a string that will be converted to a task.
-                    if this is None then the task will be skipped.
-            fq_name: The fully qualified name of the job to execute this task. Required if there is more than one job in the job_map,
-                     unless the task is a dictionary that includes a 'fq_name' key.
-
-        Raises:
-            ValueError: If fq_name is required but not provided, or if the specified job cannot be found.
-        """
         # Wait for jobs to be loaded and the self._job_name_map to be populated
         if not self._jobs_loaded.wait(timeout=self.JOB_MAP_LOAD_TIME):
             raise TimeoutError("Timed out waiting for jobs to be loaded")

@@ -109,20 +109,7 @@ class FlowManager(FlowManagerABC):
                 })
 
 
-
     def submit_task(self, task: Union[Dict[str, Any], List[Dict[str, Any]], str], fq_name: str = None):
-        """
-        Submit a task or list of tasks to the FlowManager.
-        
-        Args:
-            task: A Dictionary or list of Dictionaries to submit
-            fq_name: Fully qualified name of the job graph to submit to, optional, if there is
-            only one job graph in job_map, it will be used automatically without an fq_name
-            lookup.
-            
-        Returns:
-            None
-        """
         fq_name, job = self.check_fq_name_in_job_graph_map(fq_name)
 
         # Handle single task or list of tasks

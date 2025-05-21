@@ -6,7 +6,7 @@ for all Flow Manager implementations in the Flow4AI framework.
 """
 
 from abc import ABC, abstractmethod
-from typing import Collection, Dict, List
+from typing import Any, Collection, Dict, List, Union
 
 from .dsl import DSLComponent, JobsDict
 from .dsl_graph import PrecedenceGraph, dsl_to_precedence_graph
@@ -45,6 +45,26 @@ class FlowManagerABC(ABC):
             List[JobABC]: A list of all head jobs in the job graph
         """
         return self.head_jobs
+
+    @abstractmethod
+    def submit_task(self, task: Union[Dict[str, Any], List[Dict[str, Any]]], fq_name: str = None) -> None:
+        """
+        Submit a task or list of tasks to be processed by the job graph. Must be implemented by subclasses.
+        
+        Args:
+            task: A single task dictionary or a list of task dictionaries to be processed.
+                  Each task should contain the necessary input data for the job graph.
+            fq_name: The fully qualified name of the job graph to execute the task(s) against.
+                   If not provided and there is only one job graph, it will be used automatically.
+                   Required if multiple job graphs are registered.
+                   
+        Returns:
+            None
+            
+        Raises:
+            ValueError: If fq_name is required but not provided, or if the specified job graph cannot be found.
+        """
+        pass
 
     def create_graph_name(self, graph: Dict[str, Dict[str, List[str]]]) -> str:
         """
