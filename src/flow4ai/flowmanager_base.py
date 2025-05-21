@@ -309,4 +309,42 @@ class FlowManagerABC(ABC):
         else:
             raise TypeError(f"dsl must be either Dict[str, Any], DSLComponent instance, or Collection of DSLComponent instances, got {type(dsl)}")
 
-    
+    def check_fq_name_in_job_graph_map(self, fq_name, job_map=None):
+        """
+        Check that the job graph map is not None or empty and that the specified fq_name exists in the map.
+        
+        Args:
+            fq_name: The fully qualified name of the job graph to check.
+            job_map: Optional dictionary mapping job names to JobABC instances or job strings.
+                    If None, uses self.job_graph_map.
+            
+        Returns:
+            Tuple[str, Union[JobABC, str]]: A tuple containing the fq_name and the job instance or job string.
+            
+        Raises:
+            ValueError: If job_map is None or empty, or if the specified fq_name does not exist in the map.
+        """
+        # Use provided job_map or default to self.job_graph_map
+        job_map_to_use = job_map if job_map is not None else self.job_graph_map
+        
+        # Check that job_map is not None or empty
+        if not job_map_to_use:
+            error_msg = "job_map is None or empty"
+            raise ValueError(error_msg)
+            
+        # If fq_name is None and there's only one job graph in job_map, use that one
+        if fq_name is None:
+            if len(job_map_to_use) == 1:
+                fq_name = next(iter(job_map_to_use))
+                self.logger.debug(f"Using the only available job graph: {fq_name}")
+            else:
+                error_msg = "fq_name must be specified when multiple job graphs are available"
+                raise ValueError(error_msg)
+                
+        # Get the job instance or job string from the job_map
+        job = job_map_to_use.get(fq_name)
+        if job is None:
+            error_msg = f"No job found for graph_name: {fq_name}"
+            raise ValueError(error_msg)
+            
+        return fq_name, job

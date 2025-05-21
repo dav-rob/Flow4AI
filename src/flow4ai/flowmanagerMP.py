@@ -186,7 +186,7 @@ class FlowManagerMP(FlowManagerABC):
         Raises:
             ValueError: If fq_name is required but not provided, or if the specified job cannot be found.
         """
-        # Wait for jobs to be loaded
+        # Wait for jobs to be loaded and the self._job_name_map to be populated
         if not self._jobs_loaded.wait(timeout=self.JOB_MAP_LOAD_TIME):
             raise TimeoutError("Timed out waiting for jobs to be loaded")
 
@@ -194,24 +194,7 @@ class FlowManagerMP(FlowManagerABC):
             self.logger.warning("Received None task, skipping")
             return
 
-        # If job_name parameter is provided, it takes precedence
-        if fq_name is not None and fq_name not in self._job_name_map:
-            raise ValueError(
-                f"Job '{fq_name}' not found. Available jobs: {list(self._job_name_map.keys())}"
-            )
-        
-        # If there's more than one job, we need a valid job name
-        if len(self._job_name_map) > 1:
-            if fq_name not in self._job_name_map and ('job_name' not in task_dict or not isinstance(task_dict['job_name'], str)):
-                raise ValueError(
-                    "When multiple jobs are present, you must either:\n"
-                    "1) Provide the job_name parameter in submit_task() OR\n"
-                    "2) Include a non-empty string 'job_name' in the task dictionary"
-                )
-        elif len(self._job_name_map) == 1:
-            # If there's only one job, use its name
-            fq_name = next(iter(self._job_name_map.keys()))
-
+        fq_name, _ = self.check_fq_name_in_job_graph_map(fq_name, self._job_name_map)
 
         if isinstance(task, list):
             for single_task in task:
