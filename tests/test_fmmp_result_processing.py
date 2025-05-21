@@ -98,7 +98,7 @@ def serial_mode():
         # Submit some tasks
         expected_tasks = {f"Task {i}" for i in range(3)}
         for task in expected_tasks:
-            flowmanagerMP.submit_task({job.name: {'task': task}}, job_name=job.name)
+            flowmanagerMP.submit_task({job.name: {'task': task}}, fq_name=job.name)
             time.sleep(0.1)
         
         # Process tasks and wait for completion

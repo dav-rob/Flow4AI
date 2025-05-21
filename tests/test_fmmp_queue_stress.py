@@ -56,7 +56,7 @@ def test_queue_high_volume():
     # Submit a high volume of tasks
     num_tasks = 10000
     for i in range(num_tasks):
-        flowmanagerMP.submit_task({job.name: {'task_id': i}}, job_name=job.name)
+        flowmanagerMP.submit_task({job.name: {'task_id': i}}, fq_name=job.name)
     
     flowmanagerMP.mark_input_completed()
     
@@ -82,7 +82,7 @@ def test_queue_memory_pressure():
                 'memory_intensive': True,
                 'size': 1000000  # 1M integers
             }
-        }, job_name=job.name)
+        }, fq_name=job.name)
     
     flowmanagerMP.mark_input_completed()
     
@@ -109,7 +109,7 @@ def test_queue_backpressure():
     start_time = time.time()
     
     for i in range(num_tasks):
-        flowmanagerMP.submit_task({job.name: {'task_id': i}}, job_name=job.name)
+        flowmanagerMP.submit_task({job.name: {'task_id': i}}, fq_name=job.name)
         if i % 10 == 0:
             time.sleep(0.001)  # Small delay to prevent overwhelming
     
@@ -163,7 +163,7 @@ def test_queue_mixed_workload():
     ]
     
     for task in tasks:
-        flowmanagerMP.submit_task({job.name: task}, job_name=job.name)
+        flowmanagerMP.submit_task({job.name: task}, fq_name=job.name)
     
     flowmanagerMP.mark_input_completed()
     

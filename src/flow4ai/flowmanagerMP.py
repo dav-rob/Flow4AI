@@ -171,18 +171,18 @@ class FlowManagerMP(FlowManagerABC):
             self.logger.info(f"Result processor process started with PID {self.result_processor_process.pid}")
     # TODO: add ability to submit a task or an iterable: Iterable
     # TODO: add resource usage monitoring which returns False if resource use is too high.
-    def submit_task(self, task: Union[Dict[str, Any], str], job_name: Optional[str] = None):
+    def submit_task(self, task: Union[Dict[str, Any], str], fq_name: Optional[str] = None):
         """
         Submit a task to be processed by the job.
 
         Args:
             task: Either a dictionary containing task data or a string that will be converted to a task.
                     if this is None then the task will be skipped.
-            job_name: The name of the job to execute this task. Required if there is more than one job in the job_map,
-                     unless the task is a dictionary that includes a 'job_name' key.
+            fq_name: The fully qualified name of the job to execute this task. Required if there is more than one job in the job_map,
+                     unless the task is a dictionary that includes a 'fq_name' key.
 
         Raises:
-            ValueError: If job_name is required but not provided, or if the specified job cannot be found.
+            ValueError: If fq_name is required but not provided, or if the specified job cannot be found.
             TypeError: If the task is not a dictionary or string.
         """
         # Wait for jobs to be loaded
@@ -194,14 +194,14 @@ class FlowManagerMP(FlowManagerABC):
             return
 
         # If job_name parameter is provided, it takes precedence
-        if job_name is not None and job_name not in self._job_name_map:
+        if fq_name is not None and fq_name not in self._job_name_map:
             raise ValueError(
-                f"Job '{job_name}' not found. Available jobs: {list(self._job_name_map.keys())}"
+                f"Job '{fq_name}' not found. Available jobs: {list(self._job_name_map.keys())}"
             )
         
         # If there's more than one job, we need a valid job name
         if len(self._job_name_map) > 1:
-            if job_name not in self._job_name_map and ('job_name' not in task_dict or not isinstance(task_dict['job_name'], str)):
+            if fq_name not in self._job_name_map and ('job_name' not in task_dict or not isinstance(task_dict['job_name'], str)):
                 raise ValueError(
                     "When multiple jobs are present, you must either:\n"
                     "1) Provide the job_name parameter in submit_task() OR\n"
@@ -209,16 +209,16 @@ class FlowManagerMP(FlowManagerABC):
                 )
         elif len(self._job_name_map) == 1:
             # If there's only one job, use its name
-            job_name = next(iter(self._job_name_map.keys()))
+            fq_name = next(iter(self._job_name_map.keys()))
         else:
             raise ValueError("No jobs available in FlowManagerMP")
         
-        if isinstance(task, dict):
-            task_dict = task.copy()
-        else:
+        if not isinstance(task, dict):
             task_dict = {'task': str(task)}
+        else:
+            task_dict = task
 
-        task_obj = Task(task_dict, job_name)
+        task_obj = Task(task_dict, fq_name)
         self._task_queue.put(task_obj)
 
 

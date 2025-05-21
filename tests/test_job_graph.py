@@ -95,7 +95,7 @@ def test_parallel_execution_multiple_jobs():
                 tasks.append({job_name: {'task': f'task_{i}_{j}', 'job_name': job_name}})
         for task in tasks:
             job_name = next(iter(task.keys()))  # Get the job name from the task dict
-            flowmanagerMP.submit_task(task, job_name=job_name)
+            flowmanagerMP.submit_task(task, fq_name=job_name)
         flowmanagerMP.mark_input_completed()
         
         end_time = time.time()

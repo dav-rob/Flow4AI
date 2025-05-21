@@ -359,7 +359,7 @@ async def test_head_jobs_in_flowmanagerMP_serial():
     
     # Submit tasks for each job
     for job in head_jobs:
-        flowmanagerMP.submit_task({"task": "Test task"}, job_name=job)
+        flowmanagerMP.submit_task({"task": "Test task"}, fq_name=job)
     
     # Mark input as completed and wait for all tasks to finish
     flowmanagerMP.mark_input_completed()
@@ -421,7 +421,7 @@ async def test_head_jobs_in_flowmanagerMP_parallel():
     
     # Submit tasks for each job
     for job in head_jobs:
-        flowmanagerMP.submit_task({"task": "Test task"}, job_name=job)
+        flowmanagerMP.submit_task({"task": "Test task"}, fq_name=job)
     
     # Mark input as completed and wait for all processing to finish
     flowmanagerMP.mark_input_completed()
@@ -553,8 +553,8 @@ async def test_pydantic_jobs_in_flowmanagerMP_serial():
     
     # Submit tasks for each job
     for job in head_jobs:
-        flowmanagerMP.submit_task({"prompt": "Create a male user."}, job_name=job)
-        flowmanagerMP.submit_task({"prompt": "Create a female user."}, job_name=job)
+        flowmanagerMP.submit_task({"prompt": "Create a male user."}, fq_name=job)
+        flowmanagerMP.submit_task({"prompt": "Create a female user."}, fq_name=job)
     
     # Mark input as completed and wait for all tasks to finish
     flowmanagerMP.mark_input_completed()
@@ -610,7 +610,7 @@ async def test_multiple_head_jobs_in_flowmanagerMP_serial(caplog):
         assert parsed_name == "DefaultHeadJob", \
             f"Parsed name mismatch. Expected 'DefaultHeadJob' got {parsed_name}"
         logging.info(f"Submitting task for job: {job}")
-        flowmanagerMP.submit_task({"task": "Multi-head test task"}, job_name=job)
+        flowmanagerMP.submit_task({"task": "Multi-head test task"}, fq_name=job)
     
     # Mark input as completed and wait for all tasks to finish
     logging.info("Marking input as completed")
@@ -679,7 +679,7 @@ async def test_multiple_tail_jobs_in_flowmanagerMP_serial(caplog):
     
     # Submit tasks for the head job
     logging.info(f"Submitting task for job: {head_job_name}")
-    flowmanagerMP.submit_task({"task": "Multi-tail test task"}, job_name=head_job_name)
+    flowmanagerMP.submit_task({"task": "Multi-tail test task"}, fq_name=head_job_name)
     
     # Mark input as completed and wait for all tasks to finish
     logging.info("Marking input as completed")
@@ -745,7 +745,7 @@ async def test_multiple_tail_jobs_2_parameters(caplog):
         logging.debug(f"Head job name: {head_job_name}")
         # Submit tasks for the head job
         logging.info(f"Submitting task for job: {head_job_name}")
-        flowmanagerMP.submit_task({"task": "Multi-tail test task"}, job_name=head_job_name)
+        flowmanagerMP.submit_task({"task": "Multi-tail test task"}, fq_name=head_job_name)
     
     # Mark input as completed and wait for all tasks to finish
     logging.info("Marking input as completed")
@@ -817,7 +817,7 @@ async def test_simple_parallel_jobs_in_flowmanagerMP_serial(caplog):
     
     # Submit tasks for the head job
     logging.info(f"Submitting task for job: {head_job_name}")
-    flowmanagerMP.submit_task({"task": "Simple parallel test task"}, job_name=head_job_name)
+    flowmanagerMP.submit_task({"task": "Simple parallel test task"}, fq_name=head_job_name)
     
     # Mark input as completed and wait for all tasks to finish
     logging.info("Marking input as completed")
@@ -869,7 +869,7 @@ async def test_save_result():
     
     # Submit tasks for each job
     for job in head_jobs:
-        flowmanagerMP.submit_task({"task": "Test task"}, job_name=job)
+        flowmanagerMP.submit_task({"task": "Test task"}, fq_name=job)
     
     # Mark input as completed and wait for all tasks to finish
     flowmanagerMP.mark_input_completed()

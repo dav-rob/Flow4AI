@@ -123,8 +123,8 @@ class FlowManager(FlowManagerABC):
         """
         # Check that job_map is not None or empty
         if not self.job_map:
-            self.logger.error("job_map is None or empty")
-            return
+            error_msg = "job_map is None or empty"
+            raise ValueError(error_msg)
         
         # If fq_name is None and there's only one job graph in job_map, use that one
         if fq_name is None:
@@ -133,17 +133,13 @@ class FlowManager(FlowManagerABC):
                 self.logger.debug(f"Using the only available job graph: {fq_name}")
             else:
                 error_msg = "fq_name must be specified when multiple job graphs are available"
-                self.logger.error(error_msg)
-                self._record_error(task, "unknown", error_msg)
-                return
+                raise ValueError(error_msg)
 
         # Get the JobABC instance from the job_map
         job = self.job_map.get(fq_name)
         if job is None:
             error_msg = f"No job found for graph_name: {fq_name}"
-            self.logger.error(error_msg)
-            self._record_error(task, fq_name, error_msg)
-            return
+            raise ValueError(error_msg)
 
         # Handle single task or list of tasks
         if isinstance(task, list):

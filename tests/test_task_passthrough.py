@@ -161,7 +161,7 @@ def test_task_passthrough():
                 logging.info(f"Submitting task: {task}")
                 # Use a different graph for each task
                 graph_num = i + 1
-                flowmanagerMP.submit_task(task, job_name=f'text_processing_graph{graph_num}$$$$text_capitalize$$')
+                flowmanagerMP.submit_task(task, fq_name=f'text_processing_graph{graph_num}$$$$text_capitalize$$')
             
             # Mark completion and wait for processing
             flowmanagerMP.mark_input_completed()
@@ -256,7 +256,7 @@ def test_multiple_task_submissions():
                         task_copy['task_id'] = f"{task['task_id']}_head{head_job}_iter{iteration}"
                         submitted_tasks.append(task_copy)
                         logging.info(f"Submitting task {task_copy['task_id']} to head job {head_job}")
-                        flowmanagerMP.submit_task(task_copy, job_name=head_job)
+                        flowmanagerMP.submit_task(task_copy, fq_name=head_job)
             
             # Mark completion and wait for processing
             flowmanagerMP.mark_input_completed()
