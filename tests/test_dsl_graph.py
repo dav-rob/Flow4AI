@@ -192,7 +192,7 @@ def test_execute_job_graph_from_dsl():
     # FQ name format is typically: graph_name$$$$job_name$$
     auto_graph_name = fq_name.split('$$')[0]
     task = {"times": {"fn.x": 1}, "add": {"fn.x": 2}, "square": {"fn.x": 3}}
-    fm.submit(task,fq_name)
+    fm.submit_task(task,fq_name)
     success = fm.wait_for_completion()
     assert success, "Timed out waiting for tasks to complete"
     
@@ -272,7 +272,7 @@ def test_execute_with_task_params():
     }
 
     # Submit task and wait
-    fm.submit(task, fq_name)
+    fm.submit_task(task, fq_name)
     success = fm.wait_for_completion()
     assert success, "Timed out waiting for tasks to complete"
     
@@ -319,7 +319,7 @@ def test_execute_with_shorthand_task_params():
     fm = FlowManager()
     fq_name = fm.add_dsl(dsl, "test_shorthand_params")
     task = {"times.x": 5,"add.args": [100], "add.y": 5, "square.x": 3, "join.kwargs": {"a": 1, "b": 2, "c": 3}} 
-    fm.submit(task, fq_name)
+    fm.submit_task(task, fq_name)
     success = fm.wait_for_completion()
     assert success, "Timed out waiting for  tasks to complete"
     

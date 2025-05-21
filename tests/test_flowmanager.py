@@ -76,7 +76,7 @@ def test_execute_job_graph_from_dsl():
     # FQ name format is typically: graph_name$$$$job_name$$
     auto_graph_name = fq_name.split('$$')[0]
     task = {"times.x": 1, "add.x": 2, "square.x": 3}
-    fm.submit(task,fq_name)
+    fm.submit_task(task,fq_name)
     success = fm.wait_for_completion()
     assert success, "Timed out waiting for tasks to complete"
     
@@ -133,7 +133,7 @@ def execute_tm_with_delay(delay, task_count=10):
     task = {"delayed": delay}
     start_time = time.perf_counter()
     for i in range(task_count):
-        tm.submit(task, fq_name)
+        tm.submit_task(task, fq_name)
     tm.wait_for_completion()
     end_time = time.perf_counter()
     execution_time = end_time - start_time
@@ -330,7 +330,7 @@ def test_display_results(capsys):
     # Verify we can call display_results without providing results
     # Use the same graph name as above
     task = {"add.x": 20}
-    fm.submit(task, fq_name)
+    fm.submit_task(task, fq_name)
     success = fm.wait_for_completion()
     assert success, "Timed out waiting for tasks to complete"
     
@@ -406,7 +406,7 @@ def test_submit_multiple_tasks():
     
     # Submit the list of tasks
     logger.info("Submitting multiple tasks at once")
-    fm.submit(tasks, fq_name)
+    fm.submit_task(tasks, fq_name)
     
     # Wait for completion
     success = fm.wait_for_completion()
@@ -461,7 +461,7 @@ def test_submit_tasks_with_different_data():
     
     # Submit the list of tasks
     logger.info("Submitting tasks with different data types")
-    fm.submit(tasks, fq_name)
+    fm.submit_task(tasks, fq_name)
     
     # Wait for completion
     success = fm.wait_for_completion()
@@ -516,7 +516,7 @@ def test_submit_without_fqname():
     
     # Submit the task WITHOUT specifying fq_name
     logger.info("Submitting task without specifying fq_name")
-    fm.submit(task)
+    fm.submit_task(task)
     
     # Wait for completion
     success = fm.wait_for_completion()
@@ -659,7 +659,7 @@ def test_submit_multiple_tasks_pipeline():
     
     # Submit task 1
     logger.info("Submitting task 1 (square operation)")
-    fm.submit(task1, fq_name)
+    fm.submit_task(task1, fq_name)
     
     # Wait for task 1 to complete
     success = fm.wait_for_completion()
@@ -700,7 +700,7 @@ def test_submit_multiple_tasks_pipeline():
     
     # Submit task 2
     logger.info("Submitting task 2 (double operation)")
-    fm.submit(task2) # fq_name is optional when there is only one job graph
+    fm.submit_task(task2) # fq_name is optional when there is only one job graph
     
     # Wait for task 2 to complete
     success = fm.wait_for_completion()
@@ -754,7 +754,7 @@ def test_submit_multiple_tasks_pipeline():
     
     # Submit multiple tasks at once
     logger.info("Submitting tasks 3 & 4 as a batch")
-    fm.submit(tasks) # fq_name is optional when there is only one job graph
+    fm.submit_task(tasks) # fq_name is optional when there is only one job graph
     
     # Wait for all tasks to complete
     success = fm.wait_for_completion()

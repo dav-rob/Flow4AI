@@ -110,7 +110,7 @@ class FlowManager(FlowManagerABC):
 
 
 
-    def submit(self, task: Union[Dict[str, Any], List[Dict[str, Any]], str], fq_name: str = None):
+    def submit_task(self, task: Union[Dict[str, Any], List[Dict[str, Any]], str], fq_name: str = None):
         """
         Submit a task or list of tasks to the FlowManager.
         
@@ -246,7 +246,7 @@ class FlowManager(FlowManagerABC):
         
         # If exactly one match, use it
         fq_name = matching_fq_names[0]
-        return self.submit(task, fq_name)
+        return self.submit_task(task, fq_name)
 
     def get_counts(self):
         with self._data_lock:
@@ -318,7 +318,7 @@ class FlowManager(FlowManagerABC):
         if not fq_name:
             raise ValueError("Either provide both dsl and graph_name or an fq_name")
             
-        self.submit(task, fq_name)
+        self.submit_task(task, fq_name)
         success = self.wait_for_completion(timeout=timeout)
         
         if not success:

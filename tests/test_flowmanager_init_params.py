@@ -367,5 +367,5 @@ def test_completion_callback():
     fq_name =fm.add_dsl(dsl, "test_completion_callback")
     print(fq_name)
     task = {"once.x": "once ", "ina.x": "in a "}
-    fm.submit(task,fq_name)
+    fm.submit_task(task,fq_name)
     fm.wait_for_completion()

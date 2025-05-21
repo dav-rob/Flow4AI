@@ -198,7 +198,7 @@ def test_dsl_submission_with_tasks():
     
     # Create and submit a task
     task = Task({"input": "test data"})
-    fm.submit(task, fq_name)
+    fm.submit_task(task, fq_name)
     
     # Wait for completion
     success = fm.wait_for_completion()
@@ -215,7 +215,7 @@ def test_dsl_submission_with_tasks():
     
     # Submit another task using the returned FQ name
     task2 = Task({"input": "more test data"})
-    fm.submit(task2, same_fq_name)
+    fm.submit_task(task2, same_fq_name)
     
     # Wait for completion
     success = fm.wait_for_completion()
@@ -358,7 +358,7 @@ def test_add_dsl_dict_single_graph_no_variants():
         "operation": "square"
     })
     logger.info("Submitting task to the graph")
-    fm.submit(task)  # No need to specify fq_name when only one graph exists
+    fm.submit_task(task)  # No need to specify fq_name when only one graph exists
     
     success = fm.wait_for_completion()
     assert success, "Timed out waiting for task to complete"
@@ -477,7 +477,7 @@ def test_add_dsl_dict_single_graph_with_variants():
     })
     
     # Submit to the dev variant
-    fm.submit(dev_task, dev_fq_name)
+    fm.submit_task(dev_task, dev_fq_name)
     success = fm.wait_for_completion()
     assert success, "Timed out waiting for dev task to complete"
     
@@ -518,7 +518,7 @@ def test_add_dsl_dict_single_graph_with_variants():
     })
     
     # Submit to the prod variant
-    fm.submit(prod_task, prod_fq_name)
+    fm.submit_task(prod_task, prod_fq_name)
     success = fm.wait_for_completion()
     assert success, "Timed out waiting for prod task to complete"
     
@@ -624,10 +624,10 @@ def test_add_dsl_dict_multiple_graphs_no_variants():
     
     # Submit tasks to each graph
     logger.info(f"Submitting task to sum graph: {sum_fq_name}")
-    fm.submit(Task(task_data), sum_fq_name)  # Must specify fq_name with multiple graphs
+    fm.submit_task(Task(task_data), sum_fq_name)  # Must specify fq_name with multiple graphs
     
     logger.info(f"Submitting task to multiply graph: {multiply_fq_name}")
-    fm.submit(Task(task_data), multiply_fq_name)  # Must specify fq_name with multiple graphs
+    fm.submit_task(Task(task_data), multiply_fq_name)  # Must specify fq_name with multiple graphs
     
     success = fm.wait_for_completion()
     assert success, "Timed out waiting for tasks to complete"
@@ -761,7 +761,7 @@ def test_add_dsl_dict_multiple_graphs_with_variants():
         logger.info(f"Testing {combo['graph']}-{combo['variant']} with {combo['operation']} operation: {fq_name}")
         
         # Submit the task
-        fm.submit(Task(task_data), fq_name)
+        fm.submit_task(Task(task_data), fq_name)
         
         # Wait for completion
         success = fm.wait_for_completion()

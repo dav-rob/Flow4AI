@@ -92,7 +92,7 @@ def test_fq_name_collision_resolution():
     # Create and submit task for first DSL
     task_a = Task({"id": "A"})
     logger.info(f"Submitting task A to DSL A with FQ name: {fq_name_a}")
-    fm.submit(task_a, fq_name_a)
+    fm.submit_task(task_a, fq_name_a)
     success = fm.wait_for_completion()
     assert success, "Task A did not complete successfully"
     
@@ -115,7 +115,7 @@ def test_fq_name_collision_resolution():
     # Create and submit task for second DSL
     task_b = Task({"id": "B"})
     logger.info(f"Submitting task B to DSL B with FQ name: {fq_name_b}")
-    fm.submit(task_b, fq_name_b)
+    fm.submit_task(task_b, fq_name_b)
     success = fm.wait_for_completion()
     assert success, "Task B did not complete successfully"
     
@@ -159,7 +159,7 @@ def test_fq_name_collision_resolution():
     # Create and submit task for third DSL
     task_c = Task({"id": "C"})
     logger.info(f"Submitting task C to DSL C with FQ name: {fq_name_c}")
-    fm.submit(task_c, fq_name_c)
+    fm.submit_task(task_c, fq_name_c)
     success = fm.wait_for_completion()
     assert success, "Task C did not complete successfully"
     
