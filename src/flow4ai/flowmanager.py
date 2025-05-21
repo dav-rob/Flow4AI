@@ -121,11 +121,20 @@ class FlowManager(FlowManagerABC):
         Returns:
             None
         """
+        fq_name, job = self.check_fq_name_in_job_graph(fq_name)
+
+        # Handle single task or list of tasks
+        if isinstance(task, list):
+            for single_task in task:
+                self._submit_single_task(job, single_task, fq_name)
+        else:
+            self._submit_single_task(job, task, fq_name)
+
+    def check_fq_name_in_job_graph(self, fq_name):
         # Check that job_map is not None or empty
         if not self.job_map:
             error_msg = "job_map is None or empty"
             raise ValueError(error_msg)
-        
         # If fq_name is None and there's only one job graph in job_map, use that one
         if fq_name is None:
             if len(self.job_map) == 1:
@@ -134,19 +143,12 @@ class FlowManager(FlowManagerABC):
             else:
                 error_msg = "fq_name must be specified when multiple job graphs are available"
                 raise ValueError(error_msg)
-
         # Get the JobABC instance from the job_map
         job = self.job_map.get(fq_name)
         if job is None:
             error_msg = f"No job found for graph_name: {fq_name}"
             raise ValueError(error_msg)
-
-        # Handle single task or list of tasks
-        if isinstance(task, list):
-            for single_task in task:
-                self._submit_single_task(job, single_task, fq_name)
-        else:
-            self._submit_single_task(job, task, fq_name)
+        return fq_name, job
 
     def _submit_single_task(self, job, task: Dict[str, Any], fq_name: str):
         """Helper method to submit a single task to the job.
