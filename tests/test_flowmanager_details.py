@@ -56,8 +56,8 @@ class MathOperation(JobABC):
         elif operation == "sum":
             result = [sum(numbers)]
         elif operation == "multiply":
-            from functools import reduce
             import operator
+            from functools import reduce
             result = [reduce(operator.mul, numbers, 1)]
         else:
             result = numbers
@@ -149,7 +149,7 @@ def test_add_dsl_resubmission():
     assert dsl._f4a_already_added is True
     
     # Verify head job has reference to source DSL
-    head_job = fm.job_map[fq_name1]
+    head_job = fm.job_graph_map[fq_name1]
     assert hasattr(head_job, "_f4a_source_dsl")
     assert head_job._f4a_source_dsl is dsl
     
@@ -274,12 +274,12 @@ def test_new_dsl_with_same_structure():
     assert fq_name1 != fq_name2, "Different DSL objects with same structure should get unique FQ names"
     
     # Check the _f4a_source_dsl reference for the first DSL's head job
-    head_job1 = fm.job_map[fq_name1]
+    head_job1 = fm.job_graph_map[fq_name1]
     assert hasattr(head_job1, "_f4a_source_dsl")
     assert head_job1._f4a_source_dsl is dsl1, "First head job should reference first DSL"
     
     # Check the _f4a_source_dsl reference for the second DSL's head job
-    head_job2 = fm.job_map[fq_name2]
+    head_job2 = fm.job_graph_map[fq_name2]
     assert hasattr(head_job2, "_f4a_source_dsl")
     assert head_job2._f4a_source_dsl is dsl2, "Second head job should reference second DSL"
     
@@ -349,7 +349,7 @@ def test_add_dsl_dict_single_graph_no_variants():
     logger.info(f"Received FQ name: {fq_name}")
     
     # Verify the head job exists in the job map
-    assert fq_name in fm.job_map, f"FQ name {fq_name} should be in job_map"
+    assert fq_name in fm.job_graph_map, f"FQ name {fq_name} should be in job_map"
     
     # Submit a task with numbers 1-5 to be squared
     task = Task({
@@ -464,7 +464,7 @@ def test_add_dsl_dict_single_graph_with_variants():
     
     # Verify the head jobs exist in the job map
     for fq_name in fq_names:
-        assert fq_name in fm.job_map, f"FQ name {fq_name} should be in job_map"
+        assert fq_name in fm.job_graph_map, f"FQ name {fq_name} should be in job_map"
     
     # Test the dev variant (square operation)
     dev_fq_name = [name for name in fq_names if "dev" in name][0]
@@ -610,7 +610,7 @@ def test_add_dsl_dict_multiple_graphs_no_variants():
     
     # Verify the head jobs exist in the job map
     for fq_name in fq_names:
-        assert fq_name in fm.job_map, f"FQ name {fq_name} should be in job_map"
+        assert fq_name in fm.job_graph_map, f"FQ name {fq_name} should be in job_map"
     
     # Test data for both graphs - numbers 1 through 5
     task_data = {
@@ -735,7 +735,7 @@ def test_add_dsl_dict_multiple_graphs_with_variants():
     
     # Verify the head jobs exist in the job map
     for fq_name in fq_names:
-        assert fq_name in fm.job_map, f"FQ name {fq_name} should be in job_map"
+        assert fq_name in fm.job_graph_map, f"FQ name {fq_name} should be in job_map"
     
     # Function to find a specific graph-variant combination from fq_names
     def find_fq_name(graph, variant):

@@ -27,7 +27,8 @@ class FlowManager(FlowManagerABC):
             dsl: A dictionary of job DSLs, a job DSL, a JobABC instance, or a collection of JobABC instances.
             jobs_dir_mode: If True, the FlowManager will load jobs from a directory.
             on_complete: A callback function to be called when a job is completed.
-        """  
+        """
+        super().__init__()
         self.jobs_dir_mode = jobs_dir_mode
         self.on_complete = on_complete
         if not hasattr(self, '_TaskManager__initialized') or not self.__initialized:
@@ -38,18 +39,17 @@ class FlowManager(FlowManagerABC):
         
         # Add DSL dictionary if provided
         if dsl:
-            self.create_job_map(dsl)
+            self.create_job_graph_map(dsl)
 
     def _initialize(self):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.loop = asyncio.new_event_loop()
         self.thread = threading.Thread(target=self._run_loop, daemon=True)
         self.thread.start()
-        self.job_map: Dict[str, JobABC] = {}
         self.head_jobs: List[JobABC] = []
         if self.jobs_dir_mode:
             self.head_jobs = JobFactory.get_head_jobs_from_config()
-            self.job_map = {job.name: job for job in self.head_jobs}
+            self.job_graph_map = {job.name: job for job in self.head_jobs}
         self.submitted_count = 0
         self.completed_count = 0
         self.error_count = 0
@@ -121,7 +121,7 @@ class FlowManager(FlowManagerABC):
         Returns:
             None
         """
-        fq_name, job = self.check_fq_name_in_job_graph(fq_name)
+        fq_name, job = self.check_fq_name_in_job_graph_map(fq_name)
 
         # Handle single task or list of tasks
         if isinstance(task, list):
@@ -129,26 +129,6 @@ class FlowManager(FlowManagerABC):
                 self._submit_single_task(job, single_task, fq_name)
         else:
             self._submit_single_task(job, task, fq_name)
-
-    def check_fq_name_in_job_graph(self, fq_name):
-        # Check that job_map is not None or empty
-        if not self.job_map:
-            error_msg = "job_map is None or empty"
-            raise ValueError(error_msg)
-        # If fq_name is None and there's only one job graph in job_map, use that one
-        if fq_name is None:
-            if len(self.job_map) == 1:
-                fq_name = next(iter(self.job_map))
-                self.logger.debug(f"Using the only available job graph: {fq_name}")
-            else:
-                error_msg = "fq_name must be specified when multiple job graphs are available"
-                raise ValueError(error_msg)
-        # Get the JobABC instance from the job_map
-        job = self.job_map.get(fq_name)
-        if job is None:
-            error_msg = f"No job found for graph_name: {fq_name}"
-            raise ValueError(error_msg)
-        return fq_name, job
 
     def _submit_single_task(self, job, task: Dict[str, Any], fq_name: str):
         """Helper method to submit a single task to the job.
@@ -214,7 +194,7 @@ class FlowManager(FlowManagerABC):
         import re
 
         # Find exact match first
-        for job_name in self.job_map.keys():
+        for job_name in self.job_graph_map.keys():
             if job_name.startswith(base_prefix + SPLIT_STR):
                 matching_names.append(job_name)
                 
@@ -223,7 +203,7 @@ class FlowManager(FlowManagerABC):
                            re.escape(variant) + r'_\d+' + 
                            re.escape(SPLIT_STR))
         
-        for job_name in self.job_map.keys():
+        for job_name in self.job_graph_map.keys():
             if pattern.match(job_name):
                 # Only add if not already added (could happen if exact match already found)
                 if job_name not in matching_names:

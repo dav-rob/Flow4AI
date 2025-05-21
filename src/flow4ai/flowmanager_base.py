@@ -32,7 +32,7 @@ class FlowManagerABC(ABC):
         
         Each implementation should handle its own initialization with appropriate parameters.
         """
-        self.job_map: Dict[str, JobABC] = {}
+        self.job_graph_map: Dict[str, JobABC] = {}
         self.head_jobs: List[JobABC] = []
         
     def get_head_jobs(self) -> List[JobABC]:
@@ -135,11 +135,11 @@ class FlowManagerABC(ABC):
         else:
             enhanced_variant = variant
 
-        # Add the graph to our job map with potentially modified variant name
-        fq_name = self.add_graph(graph, jobs, graph_name, enhanced_variant)
+        # Add the graph to our job graph map with potentially modified variant name
+        fq_name = self.add_to_job_graph_map(graph, jobs, graph_name, enhanced_variant)
 
         # Store the reference to the source DSL in the head job
-        head_job = self.job_map[fq_name]
+        head_job = self.job_graph_map[fq_name]
         setattr(head_job, "_f4a_source_dsl", dsl)
 
         return fq_name
@@ -216,7 +216,7 @@ class FlowManagerABC(ABC):
 
         return fq_names
 
-    def add_graph(self, precedence_graph: PrecedenceGraph, jobs: JobsDict, graph_name: str, variant: str = "") -> str:
+    def add_to_job_graph_map(self, precedence_graph: PrecedenceGraph, jobs: JobsDict, graph_name: str, variant: str = "") -> str:
         """
         Validates the precedence graph then calls JobFactory.create_job_graph which adds next_jobs and expected_inputs to 
         the job instances, also adds default head and tail jobs to the graph, if necessary.
@@ -241,7 +241,7 @@ class FlowManagerABC(ABC):
             job.name = JobABC.create_FQName(graph_name, variant, short_job_name)
         head_job: JobABC = JobFactory.create_job_graph(precedence_graph, jobs)
         self.head_jobs.append(head_job)
-        self.job_map.update({job.name: job for job in self.head_jobs})
+        self.job_graph_map.update({job.name: job for job in self.head_jobs})
         return head_job.name
 
     def find_unique_variant_suffix(self, base_name_prefix: str) -> str:
@@ -260,7 +260,7 @@ class FlowManagerABC(ABC):
         """
         # If no collision in job_map, no suffix needed
         collision_found = False
-        for existing_key in self.job_map.keys():
+        for existing_key in self.job_graph_map.keys():
             if existing_key.startswith(base_name_prefix):
                 collision_found = True
                 break
@@ -276,7 +276,7 @@ class FlowManagerABC(ABC):
         # Match variants with numeric suffixes in the format "prefix_N$$"
         suffix_pattern = re.compile(re.escape(base_name_prefix) + r'_([0-9]+)\$\$')
         
-        for existing_key in self.job_map.keys():
+        for existing_key in self.job_graph_map.keys():
             match = suffix_pattern.match(existing_key)
             if match and match.group(1).isdigit():
                 existing_suffixes.add(int(match.group(1)))
@@ -288,7 +288,7 @@ class FlowManagerABC(ABC):
         
         return f"_{suffix_num}"
 
-    def create_job_map(self, dsl):
+    def create_job_graph_map(self, dsl):
         if isinstance(dsl, Dict):
             self.add_dsl_dict(dsl)
         elif isinstance(dsl, Collection) and not isinstance(dsl, (str, bytes, bytearray)):
@@ -308,5 +308,25 @@ class FlowManagerABC(ABC):
             self.add_dsl(dsl)
         else:
             raise TypeError(f"dsl must be either Dict[str, Any], DSLComponent instance, or Collection of DSLComponent instances, got {type(dsl)}")
+
+    def check_fq_name_in_job_graph_map(self, fq_name):
+        # Check that job_map is not None or empty
+        if not self.job_graph_map:
+            error_msg = "job_map is None or empty"
+            raise ValueError(error_msg)
+        # If fq_name is None and there's only one job graph in job_map, use that one
+        if fq_name is None:
+            if len(self.job_graph_map) == 1:
+                fq_name = next(iter(self.job_graph_map))
+                self.logger.debug(f"Using the only available job graph: {fq_name}")
+            else:
+                error_msg = "fq_name must be specified when multiple job graphs are available"
+                raise ValueError(error_msg)
+        # Get the JobABC instance from the job_map
+        job = self.job_graph_map.get(fq_name)
+        if job is None:
+            error_msg = f"No job found for graph_name: {fq_name}"
+            raise ValueError(error_msg)
+        return fq_name, job
 
 

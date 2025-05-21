@@ -77,9 +77,9 @@ class FlowManagerMP(FlowManagerABC):
         self._jobs_loaded = mp.Event()
 
         if dsl:
-            self.create_job_map(dsl)
+            self.create_job_graph_map(dsl)
             self._job_name_map.clear()
-            self._job_name_map.update({job.name: job.job_set_str() for job in self.job_map.values()})
+            self._job_name_map.update({job.name: job.job_set_str() for job in self.job_graph_map.values()})
         
         self._start()
 
@@ -154,7 +154,7 @@ class FlowManagerMP(FlowManagerABC):
         self.logger.debug("Starting job executor process")
         self.job_executor_process = mp.Process(
             target=self._async_worker,
-            args=(self.job_map, self._task_queue, self._result_queue, self._job_name_map, self._jobs_loaded, ConfigLoader.directories),
+            args=(self.job_graph_map, self._task_queue, self._result_queue, self._job_name_map, self._jobs_loaded, ConfigLoader.directories),
             name="JobExecutorProcess"
         )
         self.job_executor_process.start()
@@ -326,7 +326,7 @@ class FlowManagerMP(FlowManagerABC):
     # Must be static because it's passed as a target to multiprocessing.Process
     # Instance methods can't be pickled properly for multiprocessing
     @staticmethod
-    def _async_worker(job_map: Dict[str, JobABC], task_queue: 'mp.Queue', result_queue: 'mp.Queue', 
+    def _async_worker(job_graph_map: Dict[str, JobABC], task_queue: 'mp.Queue', result_queue: 'mp.Queue', 
                      job_name_map: 'mp.managers.DictProxy', jobs_loaded: 'mp.Event', 
                      directories: list[str] = []):
         """Process that handles making workflow calls using asyncio."""
@@ -335,7 +335,7 @@ class FlowManagerMP(FlowManagerABC):
         logger.debug("Starting async worker")
 
         # If job_map is empty, create it from SimpleJobLoader
-        if not job_map:
+        if not job_graph_map:
             # logger.info("Creating job map from SimpleJobLoader")
             # job = SimpleJobFactory.load_job({"type": "file", "params": {}})
             # job_map = {job.name: job}
@@ -344,7 +344,7 @@ class FlowManagerMP(FlowManagerABC):
             ConfigLoader._set_directories(directories)
             ConfigLoader.reload_configs()
             head_jobs = JobFactory.get_head_jobs_from_config()
-            job_map = {job.name: job for job in head_jobs}
+            job_graph_map = {job.name: job for job in head_jobs}
             # Update the shared job_name_map with each head job's complete set of reachable jobs
             job_name_map.clear()
             job_name_map.update({job.name: job.job_set_str() for job in head_jobs})
@@ -359,14 +359,14 @@ class FlowManagerMP(FlowManagerABC):
             logger.debug(f"[TASK_TRACK] Starting task {task_id}")
             try:
                 # If there's only one job, use it directly
-                if len(job_map) == 1:
-                    job = next(iter(job_map.values()))
+                if len(job_graph_map) == 1:
+                    job = next(iter(job_graph_map.values()))
                 else:
                     # Otherwise, get the job from the map using job_name
                     job_name = task.get('job_name')
                     if not job_name:
                         raise ValueError("Task missing job_name when multiple jobs are present")
-                    job = job_map[job_name]
+                    job = job_graph_map[job_name]
                 job_set = JobABC.job_set(job) #TODO: create a map of job to jobset in _async_worker
                 async with job_graph_context_manager(job_set):
                     result = await job._execute(task)

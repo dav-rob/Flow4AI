@@ -133,7 +133,7 @@ def test_flowmanager_constructor_with_dsl_dict():
     
     # Verify all graphs are properly loaded
     # We should have 4 different FQ names in job_map
-    assert len(fm.job_map) == 4, f"Expected 4 graphs, got {len(fm.job_map)}"
+    assert len(fm.job_graph_map) == 4, f"Expected 4 graphs, got {len(fm.job_graph_map)}"
     
     # All expected head jobs should be present
     first_dev_jobs = fm.get_fq_names_by_graph("first", "dev")
@@ -147,7 +147,7 @@ def test_flowmanager_constructor_with_dsl_dict():
     assert len(second_prod_jobs) == 1, f"Expected 1 second-prod job, got {len(second_prod_jobs)}"
     
     # Ensure the jobs have the expected FQ name structure
-    for fq_name in fm.job_map.keys():
+    for fq_name in fm.job_graph_map.keys():
         logger.info(f"Found FQ name: {fq_name}")
         parts = fq_name.split(SPLIT_STR)
         assert len(parts) >= 3, f"FQ name should have at least 3 parts: {fq_name}"
