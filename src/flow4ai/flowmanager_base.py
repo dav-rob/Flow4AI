@@ -54,6 +54,8 @@ class FlowManagerABC(ABC):
         Args:
             task: A single task dictionary or a list of task dictionaries to be processed.
                   Each task should contain the necessary input data for the job graph.
+                  Optionally, each task dict can contain a "fq_name" key to specify the job graph 
+                  to execute the task against, if not provided, the fq_name param will be used.
             fq_name: The fully qualified name of the job graph to execute the task(s) against.
                    If not provided and there is only one job graph, it will be used automatically.
                    Required if multiple job graphs are registered.
@@ -329,14 +331,14 @@ class FlowManagerABC(ABC):
         else:
             raise TypeError(f"dsl must be either Dict[str, Any], DSLComponent instance, or Collection of DSLComponent instances, got {type(dsl)}")
 
-    def check_fq_name_in_job_graph_map(self, fq_name, job_map=None):
+    def check_fq_name_and_job_graph_map(self, fq_name, job_map=None):
         """
         Check that the job graph map is not None or empty and that the specified fq_name exists in the map.
         
         Args:
             fq_name: The fully qualified name of the job graph to check.
-            job_map: Optional dictionary mapping job names to JobABC instances or job strings.
-                    If None, uses self.job_graph_map.
+            job_map: Uses lightweight job_graph_map for multiprocessing mode, or job_graph_map 
+            for thread-based single process mode. If None, uses self.job_graph_map.
             
         Returns:
             Tuple[str, Union[JobABC, str]]: A tuple containing the fq_name and the job instance or job string.
@@ -353,18 +355,8 @@ class FlowManagerABC(ABC):
             raise ValueError(error_msg)
             
         # If fq_name is None and there's only one job graph in job_map, use that one
-        if fq_name is None:
-            if len(job_map_to_use) == 1:
-                fq_name = next(iter(job_map_to_use))
-                self.logger.debug(f"Using the only available job graph: {fq_name}")
-            else:
-                error_msg = "fq_name must be specified when multiple job graphs are available"
-                raise ValueError(error_msg)
-                
-        # Get the job instance or job string from the job_map
-        job = job_map_to_use.get(fq_name)
-        if job is None:
-            error_msg = f"No job found for graph_name: {fq_name}"
-            raise ValueError(error_msg)
-            
-        return fq_name, job
+        if fq_name is None and len(job_map_to_use) == 1:
+            fq_name = next(iter(job_map_to_use))
+            self.logger.debug(f"Using the only available job graph: {fq_name}")
+
+        return fq_name

@@ -300,6 +300,15 @@ def test_parallel_execution_with_tracing(tmp_path):
             del os.environ['FLOW4AI_OT_CONFIG']
         TracerFactory._instance = None
         TracerFactory._config = None
+class DelayedMockJob(JobABC):
+    """A mock job that introduces a configurable delay in processing."""
+    def __init__(self, name: str, delay: float):
+        super().__init__(name=name)
+        self.delay = delay
+
+    async def run(self, task):
+        await asyncio.sleep(self.delay)
+        return {'input': task, 'output': f'processed by {self.name}'}
 
 def test_parallel_execution_multiple_jobs():
     """Test parallel execution with multiple jobs in a job graph."""

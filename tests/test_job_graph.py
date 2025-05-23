@@ -15,15 +15,7 @@ class MockJob(JobABC):
 class MockJobSubclass(MockJob):
     pass
 
-class DelayedMockJob(MockJob):
-    """A mock job that introduces a configurable delay in processing."""
-    def __init__(self, name: str, delay: float):
-        super().__init__(name=name)
-        self.delay = delay
 
-    async def run(self, task):
-        await asyncio.sleep(self.delay)
-        return {'input': task, 'output': f'processed by {self.name}'}
 
 def test_job_name_always_present():
     # Test with explicit name

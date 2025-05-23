@@ -65,11 +65,16 @@ class Task(dict):
     """A task dictionary with a unique identifier.
     
     Args:
-        data (Union[Dict[str, Any], str]): The task data as a dictionary or string. If a string,
-                                            it will be converted to a dictionary with a 'task' key.
-        fq_name (Optional[str], optional): The name of the job graph that will process this task.
-                                            Required if there is more than one job graph in the
-                                            FlowManagerMP class"""
+        data (Union[Dict[str, Any], str]): 
+            The task data as a dictionary or string. If a string,
+            it will be converted to a dictionary with a 'task' key.
+        fq_name (Optional[str], optional): 
+            The name of the job graph that will process this task.
+            Required if there is more than one job graph in the
+            FlowManagerMP class. If "fq_name" key is already in
+            the data dictionary, it will be used instead of the
+            fq_name parameter.
+    """
     def __init__(self, data: Dict[str, Any], fq_name: Optional[str] = None):
         # Convert string input to dict
         if isinstance(data, dict):
@@ -79,13 +84,16 @@ class Task(dict):
         
         super().__init__(data)
         self.task_id:str = str(uuid.uuid4())
-        if fq_name is not None:
+        if fq_name is not None and self.get('fq_name') is None:
             self['fq_name'] = fq_name
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Task):
             return NotImplemented
         return self.task_id == other.task_id
+    
+    def get_fq_name(self) -> str:
+        return self.get('fq_name')
 
     # mypy highlights this as an error because dicts are mutable
     #   and so not hashable, but I want each Task to have a unique id

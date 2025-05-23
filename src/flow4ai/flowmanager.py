@@ -110,20 +110,19 @@ class FlowManager(FlowManagerABC):
 
 
     def submit_task(self, task: Union[Dict[str, Any], List[Dict[str, Any]], str], fq_name: str = None):
-        fq_name, job = self.check_fq_name_in_job_graph_map(fq_name)
+        fq_name = self.check_fq_name_and_job_graph_map(fq_name)
 
         # Handle single task or list of tasks
         if isinstance(task, list):
             for single_task in task:
-                self._submit_single_task(job, single_task, fq_name)
+                self._submit_single_task(single_task, fq_name)
         else:
-            self._submit_single_task(job, task, fq_name)
+            self._submit_single_task(task, fq_name)
 
-    def _submit_single_task(self, job, task: Dict[str, Any], fq_name: str):
+    def _submit_single_task(self, task: Dict[str, Any], fq_name: str):
         """Helper method to submit a single task to the job.
         
         Args:
-            job: The job to execute
             task: The task to submit
             fq_name: The fully qualified name of the job graph
         """
@@ -132,6 +131,9 @@ class FlowManager(FlowManagerABC):
         if not isinstance(task, dict):
             task = {'task': str(task)}
         task_obj = Task(task, fq_name)
+        job = self.job_graph_map.get(task_obj.get_fq_name())
+        if job is None:
+            raise ValueError(f"Job not found for fq_name: {task_obj.get_fq_name()}")
         coro = self._execute_with_context(job, task_obj)
         future = asyncio.run_coroutine_threadsafe(coro, self.loop)
         future.add_done_callback(

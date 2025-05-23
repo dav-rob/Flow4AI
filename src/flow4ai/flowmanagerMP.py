@@ -182,19 +182,31 @@ class FlowManagerMP(FlowManagerABC):
             self.logger.warning("Received None task, skipping")
             return
 
-        fq_name, _ = self.check_fq_name_in_job_graph_map(fq_name, self._fq_name_map)
+        fq_name = self.check_fq_name_and_job_graph_map(fq_name, self._fq_name_map)
 
         if isinstance(task, list):
             for single_task in task:
-                if not isinstance(single_task, dict):
-                    single_task = {'task': str(single_task)}
-                task_obj = Task(single_task, fq_name)
-                self._task_queue.put(task_obj)
+                self._submit_single_task(single_task, fq_name)
         else:
-            if not isinstance(task, dict):
-                task = {'task': str(task)}
-            task_obj = Task(task, fq_name)
-            self._task_queue.put(task_obj)
+            self._submit_single_task(task, fq_name)
+
+    def _submit_single_task(self, task: Union[Dict[str, Any], str], fq_name: str) -> None:
+        """Process and submit a single task to the task queue.
+        
+        Args:
+            task: The task to process, either as a dictionary or string
+            fq_name: The fully qualified name for the task
+        """
+        if not isinstance(task, dict):
+            task = {'task': str(task)}
+        task_obj = Task(task, fq_name)
+        # Check the string based _fq_name_map to ensure the fq_name is valid
+        # Once the task is sent to the separate process the job graph will be 
+        # looked up by the job name
+        job_name = self._fq_name_map.get(task_obj.get_fq_name())
+        if job_name is None:
+            raise ValueError(f"Job not found for fq_name: {task_obj.get_fq_name()}")
+        self._task_queue.put(task_obj)  
 
 
     def mark_input_completed(self):
