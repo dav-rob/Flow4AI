@@ -47,6 +47,29 @@ class FlowManagerABC(ABC):
         return self.head_jobs
 
     @abstractmethod
+    def _submit_single_task(self, task: Union[Dict[str, Any], str], fq_name: str) -> None:
+        """
+        Process and submit a single task to be executed by the job graph. Must be implemented by subclasses.
+        
+        This is an internal method that handles the submission of a single task. It should:
+        1. Convert the dict or string to a Task object if it isn't already one
+        2. Validate that the specified job graph exists
+        3. Submit the task for execution according to the implementation's concurrency model
+        
+        Args:
+            task: The task to process, either as a dictionary or string. If a string is provided,
+                 it will be wrapped in a dictionary with the key 'task'.
+            fq_name: The fully qualified name of the job graph to execute the task against.
+                   
+        Returns:
+            None
+            
+        Raises:
+            ValueError: If the specified job graph cannot be found for the given fq_name.
+        """
+        pass
+        
+    @abstractmethod
     def submit_task(self, task: Union[Dict[str, Any], List[Dict[str, Any]]], fq_name: str = None) -> None:
         """
         Submit a task or list of tasks to be processed by the job graph. Must be implemented by subclasses.
