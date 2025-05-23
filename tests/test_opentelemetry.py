@@ -245,7 +245,7 @@ def test_job_metaclass_tracing(trace_file, setup_file_exporter):
             return result
     # Create and execute job
     job = TestJob("test")
-    task = Task("test task", job.name)
+    task = Task({"task": "test task"}, job.name)
     job_set = JobABC.job_set(job)
 
     result = asyncio.run(run_job(job_set))

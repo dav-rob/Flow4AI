@@ -70,14 +70,12 @@ class Task(dict):
         fq_name (Optional[str], optional): The name of the job graph that will process this task.
                                             Required if there is more than one job graph in the
                                             FlowManagerMP class"""
-    def __init__(self, data: Union[Dict[str, Any], str], fq_name: Optional[str] = None):
+    def __init__(self, data: Dict[str, Any], fq_name: Optional[str] = None):
         # Convert string input to dict
-        if isinstance(data, str):
-            data = {'task': data}
-        elif isinstance(data, dict):
+        if isinstance(data, dict):
             data = data.copy()  # Create a copy to avoid modifying the original
         else:
-            data = {'task': str(data)}
+            raise ValueError("Task data must be a dictionary")
         
         super().__init__(data)
         self.task_id:str = str(uuid.uuid4())
