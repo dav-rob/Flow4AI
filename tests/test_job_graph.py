@@ -22,7 +22,6 @@ class DelayedMockJob(MockJob):
         self.delay = delay
 
     async def run(self, task):
-        task = task[self.name]  # Get the task from inputs dict
         await asyncio.sleep(self.delay)
         return {'input': task, 'output': f'processed by {self.name}'}
 
@@ -92,10 +91,9 @@ def test_parallel_execution_multiple_jobs():
         for i in range(5):
             job_name = job_names[i]
             for j in range(4):  # 4 tasks per job = 20 total tasks
-                tasks.append({job_name: {'task': f'task_{i}_{j}', 'job_name': job_name}})
+                tasks.append({'task': f'task_{i}_{j}', 'job_name': job_name})
         for task in tasks:
-            job_name = next(iter(task.keys()))  # Get the job name from the task dict
-            flowmanagerMP.submit_task(task, fq_name=job_name)
+            flowmanagerMP.submit_task(task)
         flowmanagerMP.mark_input_completed()
         
         end_time = time.time()
