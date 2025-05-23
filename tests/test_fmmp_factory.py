@@ -33,7 +33,6 @@ class AsyncTestJob(JobABC):
         super().__init__(name="AsyncTestJob")
     
     async def run(self, task):
-        task = task[self.name]
         if isinstance(task, dict) and task.get('delay'):
             await asyncio.sleep(task['delay'])
         return {'task': task, 'completed': True}
@@ -151,9 +150,9 @@ async def test_concurrent_task_execution():
     
     # Submit tasks with different delays
     tasks = [
-        {job_name: {'task_id': 1, 'delay': 0.2}},
-        {job_name: {'task_id': 2, 'delay': 0.1}},
-        {job_name: {'task_id': 3, 'delay': 0.3}}
+        {'task_id': 1, 'delay': 0.2},
+        {'task_id': 2, 'delay': 0.1},
+        {'task_id': 3, 'delay': 0.3}
     ]
     
     for task in tasks:
@@ -189,7 +188,7 @@ async def test_job_instantiation_and_execution():
     job_name = head_jobs[0].name
     
     # Submit a simple task
-    flowmanagerMP.submit_task({job_name: {}})
+    flowmanagerMP.submit_task({})
     flowmanagerMP.mark_input_completed()
     
     # Verify job execution
