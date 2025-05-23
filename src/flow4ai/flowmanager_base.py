@@ -333,7 +333,8 @@ class FlowManagerABC(ABC):
 
     def check_fq_name_and_job_graph_map(self, fq_name, job_map=None):
         """
-        Check that the job graph map is not None or empty and that the specified fq_name exists in the map.
+        Check that the job graph map is not None or empty and sets the fq_name if it is None and there 
+        is only one job graph in the map.
         
         Args:
             fq_name: The fully qualified name of the job graph to check.
@@ -341,7 +342,7 @@ class FlowManagerABC(ABC):
             for thread-based single process mode. If None, uses self.job_graph_map.
             
         Returns:
-            Tuple[str, Union[JobABC, str]]: A tuple containing the fq_name and the job instance or job string.
+            The fq_name.
             
         Raises:
             ValueError: If job_map is None or empty, or if the specified fq_name does not exist in the map.
