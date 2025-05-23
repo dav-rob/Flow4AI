@@ -355,7 +355,7 @@ async def test_head_jobs_in_flowmanagerMP_serial():
     flowmanagerMP = FlowManagerMP(dsl=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
-    head_jobs = flowmanagerMP.get_job_names()
+    head_jobs = flowmanagerMP.get_fq_names()
     
     # Submit tasks for each job
     for job in head_jobs:
@@ -417,7 +417,7 @@ async def test_head_jobs_in_flowmanagerMP_parallel():
     flowmanagerMP = FlowManagerMP(dsl=None, result_processing_function=process_result)
     
     # Get head jobs from config to know their names
-    head_jobs = flowmanagerMP.get_job_names()
+    head_jobs = flowmanagerMP.get_fq_names()
     
     # Submit tasks for each job
     for job in head_jobs:
@@ -549,7 +549,7 @@ async def test_pydantic_jobs_in_flowmanagerMP_serial():
     flowmanagerMP = FlowManagerMP(dsl=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
-    head_jobs = flowmanagerMP.get_job_names()
+    head_jobs = flowmanagerMP.get_fq_names()
     
     # Submit tasks for each job
     for job in head_jobs:
@@ -598,7 +598,7 @@ async def test_multiple_head_jobs_in_flowmanagerMP_serial(caplog):
     flowmanagerMP = FlowManagerMP(dsl=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
-    head_jobs = flowmanagerMP.get_job_names()
+    head_jobs = flowmanagerMP.get_fq_names()
     logging.info(f"Identified head jobs: {head_jobs}")
     
     # Verify there is exactly two head job (the DefaultHeadJob), one for each parameter group
@@ -663,7 +663,7 @@ async def test_multiple_tail_jobs_in_flowmanagerMP_serial(caplog):
     flowmanagerMP = FlowManagerMP(dsl=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
-    head_jobs = flowmanagerMP.get_job_names()
+    head_jobs = flowmanagerMP.get_fq_names()
     logging.info(f"Identified head jobs: {head_jobs}")
     
     # Print head job name for debugging
@@ -735,7 +735,7 @@ async def test_multiple_tail_jobs_2_parameters(caplog):
     flowmanagerMP = FlowManagerMP(dsl=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
-    head_jobs = flowmanagerMP.get_job_names()
+    head_jobs = flowmanagerMP.get_fq_names()
     logging.info(f"Identified head jobs: {head_jobs}")
     
     # Verify there is exactly two head jobs
@@ -802,7 +802,7 @@ async def test_simple_parallel_jobs_in_flowmanagerMP_serial(caplog):
     flowmanagerMP = FlowManagerMP(dsl=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
-    head_jobs = flowmanagerMP.get_job_names()
+    head_jobs = flowmanagerMP.get_fq_names()
     logging.info(f"Identified head jobs: {head_jobs}")
     
     # Verify there is exactly one head job (the DefaultHeadJob)
@@ -865,7 +865,7 @@ async def test_save_result():
     flowmanagerMP = FlowManagerMP(dsl=None, result_processing_function=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
-    head_jobs = flowmanagerMP.get_job_names()
+    head_jobs = flowmanagerMP.get_fq_names()
     
     # Submit tasks for each job
     for job in head_jobs:

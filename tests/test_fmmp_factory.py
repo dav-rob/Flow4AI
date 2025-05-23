@@ -116,7 +116,7 @@ def test_empty_initialization():
     FlowManagerMPFactory()
     
     # Get head jobs from config to know their names
-    head_jobs = sorted(FlowManagerMPFactory.get_instance().get_job_names())
+    head_jobs = sorted(FlowManagerMPFactory.get_instance().get_fq_names())
     
     # Verify head jobs are loaded - these are the entry point jobs from all graphs and parameter sets
     expected_jobs = sorted([

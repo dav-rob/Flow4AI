@@ -154,7 +154,7 @@ def test_task_passthrough():
             # Submit text processing tasks with unique identifiers
             submitted_tasks = []
 
-            head_jobs = flowmanagerMP.get_job_names()
+            head_jobs = flowmanagerMP.get_fq_names()
             
             for i, task in enumerate(test_tasks):
                 submitted_tasks.append(task)
@@ -241,7 +241,7 @@ def test_multiple_task_submissions():
             flowmanagerMP = FlowManagerMP(result_processing_function=collector)
             
             # Get all head jobs
-            head_jobs = flowmanagerMP.get_job_names()
+            head_jobs = flowmanagerMP.get_fq_names()
             
             # Submit text processing tasks with unique identifiers
             num_iterations = 2

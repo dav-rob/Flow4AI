@@ -80,7 +80,7 @@ class Task(dict):
         super().__init__(data)
         self.task_id:str = str(uuid.uuid4())
         if fq_name is not None:
-            self['job_name'] = fq_name
+            self['fq_name'] = fq_name
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Task):
@@ -94,9 +94,9 @@ class Task(dict):
         return hash(self.task_id)
 
     def __repr__(self) -> str:
-        job_name = self.get('job_name', 'None')
+        fq_name = self.get('fq_name', 'None')
         task_preview = str(dict(self))[:50] + '...' if len(str(dict(self))) > 50 else str(dict(self))
-        return f"Task(id={self.task_id}, job_name={job_name}, data={task_preview})"
+        return f"Task(id={self.task_id}, fq_name={fq_name}, data={task_preview})"
 
 class JobState:
   def __init__(self):

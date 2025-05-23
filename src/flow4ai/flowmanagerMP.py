@@ -53,7 +53,7 @@ class FlowManagerMP(FlowManagerABC):
         self.logger.info("Initializing FlowManagerMP")
         if not serial_processing and result_processing_function:
             self._check_picklable(result_processing_function)
-        # tasks are created by submit_task(), with ["job_name"] added to the task dict
+        # tasks are created by submit_task(), with [fq_name] added to the task dict
         # tasks are then sent to queue for processing
         self._task_queue: mp.Queue[Task] = mp.Queue()  
         # INTERNAL USE ONLY. DO NOT ACCESS DIRECTLY.
@@ -74,14 +74,14 @@ class FlowManagerMP(FlowManagerABC):
         self._manager = mp.Manager()
         # !! This object allows us to pass the job name map between processes
         #     so we don't have to pickle the entire job map
-        self._job_name_map = self._manager.dict()
+        self._fq_name_map = self._manager.dict()
         # Create an event to signal when jobs are loaded
         self._jobs_loaded = mp.Event()
 
         if dsl:
             self.create_job_graph_map(dsl)
-            self._job_name_map.clear()
-            self._job_name_map.update({job.name: job.job_set_str() for job in self.job_graph_map.values()})
+            self._fq_name_map.clear()
+            self._fq_name_map.update({job.name: job.job_set_str() for job in self.job_graph_map.values()})
         
         self._start()
 
@@ -156,7 +156,7 @@ class FlowManagerMP(FlowManagerABC):
         self.logger.debug("Starting job executor process")
         self.job_executor_process = mp.Process(
             target=self._async_worker,
-            args=(self.job_graph_map, self._task_queue, self._result_queue, self._job_name_map, self._jobs_loaded, ConfigLoader.directories),
+            args=(self.job_graph_map, self._task_queue, self._result_queue, self._fq_name_map, self._jobs_loaded, ConfigLoader.directories),
             name="JobExecutorProcess"
         )
         self.job_executor_process.start()
@@ -182,7 +182,7 @@ class FlowManagerMP(FlowManagerABC):
             self.logger.warning("Received None task, skipping")
             return
 
-        fq_name, _ = self.check_fq_name_in_job_graph_map(fq_name, self._job_name_map)
+        fq_name, _ = self.check_fq_name_in_job_graph_map(fq_name, self._fq_name_map)
 
         if isinstance(task, list):
             for single_task in task:
@@ -337,11 +337,11 @@ class FlowManagerMP(FlowManagerABC):
                 if len(job_graph_map) == 1:
                     job = next(iter(job_graph_map.values()))
                 else:
-                    # Otherwise, get the job from the map using job_name
-                    job_name = task.get('job_name')
-                    if not job_name:
-                        raise ValueError("Task missing job_name when multiple jobs are present")
-                    job = job_graph_map[job_name]
+                    # Otherwise, get the job from the map using fq_name
+                    fq_name = task.get('fq_name')
+                    if not fq_name:
+                        raise ValueError("Task missing fq_name when multiple jobs are present")
+                    job = job_graph_map[fq_name]
                 job_set = JobABC.job_set(job) #TODO: create a map of job to jobset in _async_worker
                 async with job_graph_context_manager(job_set):
                     result = await job._execute(task)
@@ -438,12 +438,12 @@ class FlowManagerMP(FlowManagerABC):
             logger.info("Closing event loop")
             loop.close()
 
-    def get_job_names(self) -> list[str]:
+    def get_fq_names(self) -> list[str]:
         """
-        Returns a list of job names after ensuring the job_name_map is loaded.
+        Returns a list of fully qualified job names after ensuring the fq_name_map is loaded.
 
         Returns:
-            list[str]: List of job names from the job_name_map
+            list[str]: List of fully qualified job names from the fq_name_map
 
         Raises:
             TimeoutError: If waiting for jobs to be loaded exceeds timeout
@@ -452,7 +452,7 @@ class FlowManagerMP(FlowManagerABC):
         if not self._jobs_loaded.wait(timeout=self.JOB_MAP_LOAD_TIME):
             raise TimeoutError("Timed out waiting for jobs to be loaded")
         
-        return list(self._job_name_map.keys())
+        return list(self._fq_name_map.keys())
 
 
 class FlowManagerMPFactory:

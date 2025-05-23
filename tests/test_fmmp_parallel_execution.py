@@ -300,3 +300,50 @@ def test_parallel_execution_with_tracing(tmp_path):
             del os.environ['FLOW4AI_OT_CONFIG']
         TracerFactory._instance = None
         TracerFactory._config = None
+
+def test_parallel_execution_multiple_jobs():
+    """Test parallel execution with multiple jobs in a job graph."""
+    # Test with both 1s and 2s delays
+    for delay in [1.0, 2.0]:
+        # Create 5 jobs with the same delay
+        jobs = [DelayedMockJob(f'job_{i}', delay) for i in range(5)]
+        
+        # Time the execution
+        start_time = time.time()
+        
+        # Run the FlowManagerMP with all jobs and collect results
+        results = []
+        def result_collector(result):
+            results.append(result)
+        flowmanagerMP = FlowManagerMP(jobs, result_collector, serial_processing=True)
+        
+        # Get the actual fq_names from the head_jobs
+        head_jobs = flowmanagerMP.get_head_jobs()
+        assert len(head_jobs) == 5, "Expected 5 head jobs"
+        fq_names = [job.name for job in head_jobs]
+        
+        # Create tasks for each job using the fq_name of each job
+        tasks = []
+        for i in range(5):
+            fq_name = fq_names[i]
+            for j in range(4):  # 4 tasks per job = 20 total tasks
+                tasks.append({'task': f'task_{i}_{j}', 'fq_name': fq_name})
+        for task in tasks:
+            flowmanagerMP.submit_task(task)
+        flowmanagerMP.mark_input_completed()
+        
+        end_time = time.time()
+        execution_time = end_time - start_time
+
+        # Verify results
+        assert len(results) == 20  # Should have 20 results
+        
+        # Check that each task was processed by the correct job
+        for result in results:
+            input_task = result['input']
+            fq_name = input_task['fq_name']
+            assert result['output'] == f'processed by {fq_name}'
+        
+        # Verify parallel execution - should take ~4 * delay seconds (4 batches of tasks)
+        # Add some buffer time for overhead
+        assert execution_time < (4 * delay + 1), f"Execution took {execution_time} seconds, expected less than {4 * delay + 1} seconds"
