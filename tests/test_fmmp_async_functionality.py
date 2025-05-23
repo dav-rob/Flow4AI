@@ -22,7 +22,6 @@ class AsyncTestJob(JobABC):
         super().__init__(name="AsyncTestJob")
     
     async def run(self, task):
-        task = task[self.name]  # Get the task from inputs dict
         if isinstance(task, dict) and task.get('fail'):
             raise ValueError("Simulated task failure")
         if isinstance(task, dict) and task.get('delay'):
@@ -47,9 +46,9 @@ async def test_concurrent_task_execution():
     
     # Submit tasks with different delays using the head job's name
     tasks = [
-        {job_name: {'task_id': 1, 'delay': 0.2}},
-        {job_name: {'task_id': 2, 'delay': 0.1}},
-        {job_name: {'task_id': 3, 'delay': 0.3}}
+        {'task_id': 1, 'delay': 0.2},
+        {'task_id': 2, 'delay': 0.1},
+        {'task_id': 3, 'delay': 0.3}
     ]
     
     for task in tasks:
@@ -71,7 +70,7 @@ async def test_async_task_cancellation():
     flowmanagerMP = FlowManagerMP(AsyncTestJob())
     
     # Submit a long-running task
-    flowmanagerMP.submit_task({'AsyncTestJob': {'delay': 1.0}})
+    flowmanagerMP.submit_task({'delay': 1.0})
     
     # Force cleanup before completion
     flowmanagerMP._cleanup()
@@ -86,7 +85,7 @@ async def test_event_loop_handling():
     flowmanagerMP = FlowManagerMP(AsyncTestJob())
     
     # Submit a simple task
-    flowmanagerMP.submit_task({'AsyncTestJob': {'task_id': 1}})
+    flowmanagerMP.submit_task({'task_id': 1})
     flowmanagerMP.mark_input_completed()
     
     # Verify process cleanup
@@ -109,9 +108,9 @@ async def test_async_exception_handling():
     
     # Submit mix of successful and failing tasks
     tasks = [
-        {job_name: {'task_id': 1}},
-        {job_name: {'task_id': 2, 'fail': True}},
-        {job_name: {'task_id': 3}}
+        {'task_id': 1},
+        {'task_id': 2, 'fail': True},
+        {'task_id': 3}
     ]
     
     for task in tasks:
@@ -141,7 +140,7 @@ async def test_parallel_task_limit():
     # Submit many quick tasks
     num_tasks = 100
     for i in range(num_tasks):
-        flowmanagerMP.submit_task({job_name: {'task_id': i, 'delay': 0.01}})
+        flowmanagerMP.submit_task({'task_id': i, 'delay': 0.01})
     
     flowmanagerMP.mark_input_completed()
     

@@ -25,7 +25,6 @@ class ErrorTestJob(JobABC):
         super().__init__(name="ErrorTestJob")
     
     async def run(self, task):
-        task = task[self.name]  # Get the task from inputs dict
         if task.get('raise_error'):
             raise Exception(task.get('error_message', 'Simulated error'))
         if task.get('timeout'):
@@ -60,10 +59,10 @@ def test_basic_error_handling():
     
     # Submit mix of successful and failing tasks
     tasks = [
-        {job_name: {'task_id': 1}},
-        {job_name: {'task_id': 2, 'raise_error': True, 'error_message': 'Task 2 error'}},
-        {job_name: {'task_id': 3}},
-        {job_name: {'task_id': 4, 'raise_error': True, 'error_message': 'Task 4 error'}}
+        {'task_id': 1},
+        {'task_id': 2, 'raise_error': True, 'error_message': 'Task 2 error'},
+        {'task_id': 3},
+        {'task_id': 4, 'raise_error': True, 'error_message': 'Task 4 error'}
     ]
     
     for task in tasks:
@@ -93,9 +92,9 @@ def test_timeout_handling():
     
     # Submit tasks with varying timeouts
     tasks = [
-        {job_name: {'task_id': 1, 'timeout': 0.3}},
-        {job_name: {'task_id': 2, 'timeout': 0.2}},
-        {job_name: {'task_id': 3, 'timeout': 0.1}}
+        {'task_id': 1, 'timeout': 0.3},
+        {'task_id': 2, 'timeout': 0.2},
+        {'task_id': 3, 'timeout': 0.1}
     ]
     
     for task in tasks:
@@ -116,7 +115,7 @@ def test_process_termination():
     flowmanagerMP = FlowManagerMP(ErrorTestJob())
     
     # Submit a long-running task
-    flowmanagerMP.submit_task({'ErrorTestJob': {'task_id': 1, 'timeout': 1.0}})
+    flowmanagerMP.submit_task({'task_id': 1, 'timeout': 1.0})
     
     # Force terminate the process
     flowmanagerMP.job_executor_process.terminate()
@@ -151,7 +150,7 @@ def test_resource_cleanup():
     
     # Submit some tasks
     for i in range(5):
-        flowmanagerMP.submit_task({'ErrorTestJob': {'task_id': i}})
+        flowmanagerMP.submit_task({'task_id': i})
     
     # Get queue references
     task_queue = flowmanagerMP._task_queue
@@ -178,7 +177,7 @@ def test_error_in_result_processing():
     
     # Submit tasks
     for i in range(3):
-        flowmanagerMP.submit_task({'ErrorTestJob': {'task_id': i}})
+        flowmanagerMP.submit_task({'task_id': i})
     
     flowmanagerMP.mark_input_completed()
     # Should complete without hanging or crashing
@@ -192,7 +191,7 @@ def test_memory_error_handling():
     flowmanagerMP = FlowManagerMP(ErrorTestJob(), collect_result, serial_processing=True)
     
     # Submit task that will cause memory error
-    flowmanagerMP.submit_task({'ErrorTestJob': {'task_id': 1, 'memory_error': True}})
+    flowmanagerMP.submit_task({'task_id': 1, 'memory_error': True})
     
     flowmanagerMP.mark_input_completed()
     
@@ -208,7 +207,7 @@ def test_unpicklable_result():
     flowmanagerMP = FlowManagerMP(ErrorTestJob(), collect_result, serial_processing=True)
     
     # Submit task that returns unpicklable result
-    flowmanagerMP.submit_task({'ErrorTestJob': {'task_id': 1, 'invalid_result': True}})
+    flowmanagerMP.submit_task({'task_id': 1, 'invalid_result': True})
     
     flowmanagerMP.mark_input_completed()
     
