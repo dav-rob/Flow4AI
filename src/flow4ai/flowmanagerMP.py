@@ -528,6 +528,9 @@ class FlowManagerMP(FlowManagerABC):
     def poll_for_updates(self, interval: float = 1.0, timeout: Optional[float] = None):
         """
         Periodically logs the status of task processing counters.
+        Exits when all submitted tasks have been processed by worker processes.
+        Note: This does not guarantee that post-processing (if any) is complete.
+              `wait_for_completion` ensures all stages, including post-processing, are finished.
 
         Args:
             interval (float, optional): The polling interval in seconds. Defaults to 1.0.
@@ -550,18 +553,17 @@ class FlowManagerMP(FlowManagerABC):
                     f"Completed={completed}, Post-Processing={post_processing}" # Added Errors to log
                 )
 
-                # Break if all submitted tasks are completed
+                # Break if all submitted tasks are completed by workers
                 if submitted > 0 and completed >= submitted: # Using >= for robustness
                     self.logger.info("All submitted tasks have been processed by workers.")
-                    # Check if post-processing is also complete if it's active
                     if self._result_processing_function:
-                        if post_processing >= completed:
-                             self.logger.info("All completed tasks have been post-processed.")
-                             break
-                        else:
-                            self.logger.info(f"Waiting for post-processing: {post_processing}/{completed}")
-                    else: # No post-processing function, so completion means worker completion
-                        break 
+                        # Log current post-processing status but don't wait here.
+                        # wait_for_completion will ensure post-processing finishes.
+                        self.logger.info(
+                            f"Worker processing complete. Current post-processing: {post_processing}/{completed}. "
+                            "Final post-processing will be handled by wait_for_completion."
+                        )
+                    break 
                 
                 # Break if timeout is reached
                 if timeout is not None and (time.time() - start_time) > timeout:
