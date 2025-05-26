@@ -174,14 +174,13 @@ async def test_poll_for_updates():
         flowmanagerMP.submit_task({'task_id': i, 'delay': delay})
     
     # Poll for updates with a 12-second timeout
-    #flowmanagerMP.poll_for_updates(interval=1.0, timeout=12.0)
+    flowmanagerMP.poll_for_updates(interval=1.0, timeout=12.0)
     
-    # Call _wait_for_completion to ensure all processes are properly closed
-    flowmanagerMP._wait_for_completion()
+    # Call wait_for_completion to ensure all processes are properly closed
+    flowmanagerMP.wait_for_completion()
     
-    # Check that at least some tasks have completed (the ones with shorter delays)
-    # We're not asserting all tasks complete since the polling has a timeout
-    assert len(results) > 0, "No tasks completed during polling period"
+    # Check that all tasks have completed after wait_for_completion
+    assert len(results) == num_tasks, "Not all tasks completed after polling and waiting"
     
     # Verify task integrity for the completed tasks
     completed_task_ids = {r['task']['task_id'] for r in results}
