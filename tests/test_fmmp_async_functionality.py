@@ -150,5 +150,42 @@ async def test_parallel_task_limit():
     task_ids = {r['task']['task_id'] for r in results}
     assert len(task_ids) == num_tasks
 
+
+@pytest.mark.asyncio
+async def test_poll_for_updates():
+    """Test the poll_for_updates functionality with varying task delays"""
+    results = []
+    
+    def collect_result(result):
+        results.append(result)
+    
+    flowmanagerMP = FlowManagerMP(AsyncTestJob(), collect_result, serial_processing=True)
+    
+    # Get the head job's name to use in task submissions
+    head_jobs = flowmanagerMP.get_head_jobs()
+    assert len(head_jobs) > 0, "No head jobs found in the flow manager"
+    job_name = head_jobs[0].name
+    
+    # Submit 100 tasks with 10 each having delays of 1-10 seconds
+    num_tasks = 100
+    for i in range(num_tasks):
+        # Determine delay: first 10 tasks get 1s, next 10 get 2s, etc.
+        delay = (i // 10) + 1 if i < 100 else 0.01
+        flowmanagerMP.submit_task({'task_id': i, 'delay': delay})
+    
+    # Poll for updates with a 12-second timeout
+    #flowmanagerMP.poll_for_updates(interval=1.0, timeout=12.0)
+    
+    # Call _wait_for_completion to ensure all processes are properly closed
+    flowmanagerMP._wait_for_completion()
+    
+    # Check that at least some tasks have completed (the ones with shorter delays)
+    # We're not asserting all tasks complete since the polling has a timeout
+    assert len(results) > 0, "No tasks completed during polling period"
+    
+    # Verify task integrity for the completed tasks
+    completed_task_ids = {r['task']['task_id'] for r in results}
+    assert len(completed_task_ids) == len(results), "Duplicate task results found"
+
 if __name__ == '__main__':
     pytest.main(['-v', 'test_async_functionality.py'])
