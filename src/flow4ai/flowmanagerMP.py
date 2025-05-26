@@ -5,7 +5,7 @@ import asyncio
 import multiprocessing as mp
 import pickle
 import queue
-import time # Added for poll_for_updates
+import time  # Added for poll_for_updates
 from multiprocessing import freeze_support, set_start_method
 from typing import Any, Callable, Dict, List, Optional, Union
 
@@ -388,7 +388,7 @@ class FlowManagerMP(FlowManagerABC):
                 async with job_graph_context_manager(job_set):
                     result = await job._execute(task)
                     processed_result = FlowManagerMP._replace_pydantic_models(result)
-                    logger.info(f"[TASK_TRACK] Completed task {task_id}, returned by job {processed_result[JobABC.RETURN_JOB]}")
+                    logger.debug(f"[TASK_TRACK] Completed task {task_id}, returned by job {processed_result[JobABC.RETURN_JOB]}")
                     
                     if tasks_completed_counter:
                         with tasks_completed_counter.get_lock():
