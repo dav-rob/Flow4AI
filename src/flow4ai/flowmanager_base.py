@@ -354,6 +354,23 @@ class FlowManagerABC(ABC):
         else:
             raise TypeError(f"dsl must be either Dict[str, Any], DSLComponent instance, or Collection of DSLComponent instances, got {type(dsl)}")
 
+    @abstractmethod
+    def wait_for_completion(self, timeout=10, check_interval=1):
+        """
+        Wait for all submitted tasks to complete within the specified timeout.
+        
+        Args:
+            timeout: Maximum time in seconds to wait for completion.
+            check_interval: Time in seconds between completion checks.
+            
+        Returns:
+            bool: True if all tasks completed, False if timeout occurred.
+            
+        Raises:
+            TimeoutError: If timeout is reached before all tasks complete (implementation dependent).
+        """
+        pass
+        
     def check_fq_name_and_job_graph_map(self, fq_name, job_map=None):
         """
         Check that the job graph map is not None or empty and sets the fq_name if it is None and there 

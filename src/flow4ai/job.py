@@ -295,22 +295,6 @@ class JobABC(ABC, metaclass=JobMeta):
         # Return a unique name based on the current class
         return f"{cls.__name__}_{cls._instance_counts[cls]}"
 
-    @classmethod
-    def get_input_from(cls, inputs: Dict[str, Any], job_name: str) -> Dict[str, Any]:
-        """Get input data from a specific job in the inputs dictionary.
-        
-        Args:
-            inputs (Dict[str, Any]): Dictionary of inputs from various jobs
-            job_name (str): Name of the job whose input we want to retrieve
-            
-        Returns:
-            Dict[str, Any]: The input data from the specified job, or empty dict if not found
-        """
-        for key in inputs.keys():
-            if cls.parse_job_name(key) == job_name:
-                return inputs[key]
-        return {}
-
 
     @classmethod
     def job_set(cls, job) -> set['JobABC']:

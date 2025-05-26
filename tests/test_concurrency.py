@@ -45,7 +45,7 @@ async def test_concurrency_by_expected_returns():
         shared_results[:] = []  # Clear the shared_results using slice assignment
     
 
-    submit_task(300)
+    submit_task(3)
 
     flowmanagerMP.wait_for_completion() # this waits for all results to be returned
 

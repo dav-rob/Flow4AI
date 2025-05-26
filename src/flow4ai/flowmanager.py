@@ -256,7 +256,7 @@ class FlowManager(FlowManagerABC):
                 'errors': errors
             }
             
-    def wait_for_completion(self, timeout=10, check_interval=0.1):
+    def wait_for_completion(self, timeout=10, check_interval=1):
         """
         Wait for all submitted tasks to complete or error out.
         

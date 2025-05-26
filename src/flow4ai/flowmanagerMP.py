@@ -82,6 +82,7 @@ class FlowManagerMP(FlowManagerABC):
         self.tasks_in_progress = mp.Value('i', 0)
         self.tasks_completed = mp.Value('i', 0)
         self.post_processing_tasks = mp.Value('i', 0)
+        self.job_errors = mp.Value('i', 0) # Added job_errors counter
 
         if dsl:
             self.create_job_graph_map(dsl)
@@ -169,7 +170,7 @@ class FlowManagerMP(FlowManagerABC):
             target=self._async_worker,
             args=(self.job_graph_map, self._task_queue, self._result_queue, 
                   self._fq_name_map, self._jobs_loaded, ConfigLoader.directories,
-                  self.tasks_in_progress, self.tasks_completed), # Pass counters
+                  self.tasks_in_progress, self.tasks_completed, self.job_errors), # Pass counters
             name="JobExecutorProcess"
         )
         self.job_executor_process.start()
@@ -239,11 +240,12 @@ class FlowManagerMP(FlowManagerABC):
             self.tasks_submitted.value += 1
 
 
-    def wait_for_completion(self):
+    def wait_for_completion(self, timeout=10, check_interval=1):
         """Signal completion of input and wait for all processes to finish and shut down."""
         self.logger.debug("Marking input as completed")
         self.logger.info("*** task_queue ended ***")
         self._task_queue.put(None)
+        self.poll_for_updates(interval=check_interval, timeout=timeout)
         self._close_running_processes()
 
     # Must be static because it's passed as a target to multiprocessing.Process
@@ -362,7 +364,8 @@ class FlowManagerMP(FlowManagerABC):
                      job_name_map: 'mp.managers.DictProxy', jobs_loaded: 'mp.Event', 
                      directories: list[str] = [],
                      tasks_in_progress_counter: 'mp.Value' = None, 
-                     tasks_completed_counter: 'mp.Value' = None):
+                     tasks_completed_counter: 'mp.Value' = None,
+                     job_errors_counter: 'mp.Value' = None): # Added job_errors_counter
         """Process that handles making workflow calls using asyncio."""
         # Get logger for AsyncWorker
         logger = logging.getLogger('AsyncWorker')
@@ -413,6 +416,9 @@ class FlowManagerMP(FlowManagerABC):
             except Exception as e:
                 logger.error(f"[TASK_TRACK] Failed task {task_id}: {e}")
                 logger.info("Detailed stack trace:", exc_info=True)
+                if job_errors_counter: # Increment job_errors_counter
+                    with job_errors_counter.get_lock():
+                        job_errors_counter.value += 1
                 raise
 
         async def queue_monitor():
@@ -537,10 +543,11 @@ class FlowManagerMP(FlowManagerABC):
                 in_progress = self.tasks_in_progress.value
                 completed = self.tasks_completed.value
                 post_processing = self.post_processing_tasks.value
+                errors = self.job_errors.value # Get job_errors value
 
                 self.logger.info(
-                    f"Task Stats: Submitted={submitted}, In Progress={in_progress}, "
-                    f"Completed={completed}, Post-Processing={post_processing}"
+                    f"Task Stats: \nErrors={errors}, Submitted={submitted}, In Progress={in_progress}, "
+                    f"Completed={completed}, Post-Processing={post_processing}" # Added Errors to log
                 )
 
                 # Break if all submitted tasks are completed

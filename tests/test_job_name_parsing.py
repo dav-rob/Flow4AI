@@ -67,31 +67,3 @@ def test_parse_job_loader_name():
         result = JobABC.parse_job_loader_name(invalid_case)
         assert result == {"parsing_message": "UNSUPPORTED NAME FORMAT"}, f"Failed for case: {invalid_case}"
 
-def test_get_input_from():
-    # Create mock input data with realistic job names
-    mock_inputs = {
-        'four_stage_parameterized$$params1$$read_file$$': {'file_content': 'data1'},
-        'four_stage_parameterized$$params1$$ask_llm$$': {'llm_response': 'answer1'},
-        'four_stage_parameterized$$params1$$save_to_db$$': {'db_status': 'saved'},
-        'four_stage_parameterized$$params1$$summarize$$': {'summary': 'text1'},
-        'three_stage$$params1$$ask_llm_mini$$': {'mini_response': 'short_answer'},
-        'three_stage_reasoning$$$$ask_llm_reasoning$$': {'reasoning': 'explanation'}
-    }
-
-    # Test getting input by short job name
-    assert JobABC.get_input_from(mock_inputs, 'read_file') == {'file_content': 'data1'}
-    assert JobABC.get_input_from(mock_inputs, 'ask_llm') == {'llm_response': 'answer1'}
-    assert JobABC.get_input_from(mock_inputs, 'save_to_db') == {'db_status': 'saved'}
-    assert JobABC.get_input_from(mock_inputs, 'summarize') == {'summary': 'text1'}
-    assert JobABC.get_input_from(mock_inputs, 'ask_llm_mini') == {'mini_response': 'short_answer'}
-    assert JobABC.get_input_from(mock_inputs, 'ask_llm_reasoning') == {'reasoning': 'explanation'}
-
-    # Test non-existent job name returns empty dict
-    assert JobABC.get_input_from(mock_inputs, 'non_existent_job') == {}
-
-    # Test with empty inputs dict
-    assert JobABC.get_input_from({}, 'read_file') == {}
-
-    # Test that we get the first matching job when multiple jobs have same short name
-    # In this case, read_file appears in both params1 and params2
-    assert JobABC.get_input_from(mock_inputs, 'read_file') == {'file_content': 'data1'}
