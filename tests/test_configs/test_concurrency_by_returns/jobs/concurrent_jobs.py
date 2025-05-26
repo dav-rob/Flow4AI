@@ -31,7 +31,8 @@ class ConcurrencyTestJob(JobABC):
         received_data = []
         if not self.is_head_job(): 
             for short_job_name in self.test_inputs: # self.test_input is guaranteed to be in the order it is loaded in
-                data = self.get_input_from(task,short_job_name)
+                inputs = self.get_inputs()
+                data = inputs.get(short_job_name)
                 if not data:
                     logging.error(f"Failed to get input from {short_job_name}")
                     raise Exception(f"Job {self.name} failed to get input from {short_job_name}")
