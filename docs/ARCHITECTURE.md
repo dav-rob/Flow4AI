@@ -4,6 +4,35 @@
 
 > **Asynchronous Framework**: Flow4AI is fundamentally an asynchronous framework. All job implementations should leverage async/await patterns and avoid blocking operations. Synchronous code and frameworks should be adapted or avoided when possible to maintain the performance benefits of the asynchronous execution model.
 
+## FlowManager and FlowManagerMP
+FlowManager and FlowManagerMP, use similar semantics for submit_task and wait_for_completion methods, but they differ in implementation:
+
+### FlowManager (Single-Process, Threaded Asyncio):
+
+`submit_task(task, fq_name)`: Schedules the job's _execute coroutine on an internal asyncio event loop running in a background thread.
+Uses a callback (_handle_completion) to track completed/errored tasks and store results.
+`wait_for_completion(timeout=10, check_interval=0.1)`: Polls internal counters (submitted_count, completed_count, error_count).  Returns True if all submitted tasks are accounted for (completed or errored) within the timeout, False otherwise.  Tests for FlowManager often assert this boolean return value.
+
+### FlowManagerMP (Multi-Process Asyncio):
+
+`submit_task(task, fq_name)`: Puts the Task object onto a multiprocessing.Queue.
+A separate worker process (_async_worker) consumes tasks from this queue, runs an asyncio event loop to execute the job graph, and puts results onto another queue.
+An optional result_processing_function (potentially in another process) consumes these results.
+`wait_for_completion()`: Signals the end of input to the worker process(es) by putting None on the task queue.  Calls process.join() on the worker process(es), blocking until they terminate (i.e., have processed all tasks).  Does not take a timeout parameter and does not return a boolean status. Completion is implied by the method returning.
+Tests for FlowManagerMP use this as a blocking call and then verify results, not checking a return value from wait_for_completion itself.
+
+### Differences:
+
+The primary difference in `wait_for_completion` is due to their concurrency models:
+
+- FlowManager polls internal state for task completion within its own process, making a timeout a natural way to limit the waiting period.
+- FlowManagerMP waits for external OS processes to finish their work and terminate, for which process.join() is the standard mechanism.
+Point of Unification:
+
+
+Timeout Semantics: A timeout in FlowManager means "stop polling and check status." A timeout for FlowManagerMP's process.join() would mean a process failed to terminate, a more critical issue potentially requiring forceful termination.
+Completion Definition: FlowManager uses task counters. FlowManagerMP relies on worker processes finishing all queued work and exiting.
+
 ## Domain Specific Language (DSL) for Job Graphs
 
 Flow4AI provides a powerful DSL for defining job graphs using an intuitive, chainable syntax. This allows you to express complex execution patterns with minimal code.
