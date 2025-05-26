@@ -5,7 +5,6 @@ import asyncio
 import multiprocessing as mp
 import pickle
 import queue
-import time # Added for poll_for_updates
 from multiprocessing import freeze_support, set_start_method
 from typing import Any, Callable, Dict, List, Optional, Union
 
@@ -66,6 +65,10 @@ class FlowManagerMP(FlowManagerABC):
         self.result_processor_process = None
         self._result_processing_function = result_processing_function
         self._serial_processing = serial_processing
+        # This holds a map of job name to job, 
+        # when _execute is called on the job, the task must have a job_name
+        # associated with it, if there is more than one job in the job_map
+        #self.job_map: OrderedDict[str, JobABC] = OrderedDict()
         
         # Create a manager for sharing objects between processes
         self._manager = mp.Manager()
@@ -74,12 +77,6 @@ class FlowManagerMP(FlowManagerABC):
         self._fq_name_map = self._manager.dict()
         # Create an event to signal when jobs are loaded
         self._jobs_loaded = mp.Event()
-
-        # Initialize shared counters for task monitoring
-        self.tasks_submitted = mp.Value('i', 0)
-        self.tasks_in_progress = mp.Value('i', 0)
-        self.tasks_completed = mp.Value('i', 0)
-        self.post_processing_tasks = mp.Value('i', 0)
 
         if dsl:
             self.create_job_graph_map(dsl)
@@ -100,7 +97,7 @@ class FlowManagerMP(FlowManagerABC):
 
     # belt and braces, _cleanup is called by _wait_for_completion() via mark_input_completed()
     def __del__(self):
-        self._cleanup() # Fixed: call _cleanup
+        self._cleanup
 
     def _cleanup(self):
         """Clean up resources when the object is destroyed."""
@@ -159,9 +156,7 @@ class FlowManagerMP(FlowManagerABC):
         self.logger.debug("Starting job executor process")
         self.job_executor_process = mp.Process(
             target=self._async_worker,
-            args=(self.job_graph_map, self._task_queue, self._result_queue, 
-                  self._fq_name_map, self._jobs_loaded, ConfigLoader.directories,
-                  self.tasks_in_progress, self.tasks_completed), # Pass counters
+            args=(self.job_graph_map, self._task_queue, self._result_queue, self._fq_name_map, self._jobs_loaded, ConfigLoader.directories),
             name="JobExecutorProcess"
         )
         self.job_executor_process.start()
@@ -171,8 +166,7 @@ class FlowManagerMP(FlowManagerABC):
             self.logger.debug("Starting result processor process")
             self.result_processor_process = mp.Process(
                 target=self._result_processor,
-                args=(self._result_processing_function, self._result_queue, 
-                      self.post_processing_tasks), # Pass counter
+                args=(self._result_processing_function, self._result_queue),
                 name="ResultProcessorProcess"
             )
             self.result_processor_process.start()
@@ -182,21 +176,7 @@ class FlowManagerMP(FlowManagerABC):
     def submit_task(self, task: Union[Dict[str, Any], List[Dict[str, Any]], str], fq_name: Optional[str] = None):
         # Wait for jobs to be loaded and the self._job_name_map to be populated
         if not self._jobs_loaded.wait(timeout=self.JOB_MAP_LOAD_TIME):
-            # Check stderr from JobExecutorProcess for underlying errors
-            stderr_output = ""
-            if self.job_executor_process and hasattr(self.job_executor_process, 'stderr') and self.job_executor_process.stderr:
-                try:
-                    # This might not be available or might block, handle carefully
-                    stderr_output = self.job_executor_process.stderr.read() 
-                except Exception as e:
-                    self.logger.warning(f"Could not read stderr from JobExecutorProcess: {e}")
-            
-            error_message = "Timed out waiting for jobs to be loaded"
-            if stderr_output:
-                error_message += f"\nJobExecutorProcess stderr:\n{stderr_output}"
-            self.logger.error(error_message)
-            raise TimeoutError(error_message)
-
+            raise TimeoutError("Timed out waiting for jobs to be loaded")
 
         if task is None:
             self.logger.warning("Received None task, skipping")
@@ -226,9 +206,7 @@ class FlowManagerMP(FlowManagerABC):
         job_name = self._fq_name_map.get(task_obj.get_fq_name())
         if job_name is None:
             raise ValueError(f"Job not found for fq_name: {task_obj.get_fq_name()}")
-        self._task_queue.put(task_obj)
-        with self.tasks_submitted.get_lock():
-            self.tasks_submitted.value += 1
+        self._task_queue.put(task_obj)  
 
 
     def wait_for_completion(self):
@@ -243,8 +221,7 @@ class FlowManagerMP(FlowManagerABC):
     # TODO: it may be necessary to put a flag to execute this using asyncio event loops
     #          for example, when handing off to an async web service
     @staticmethod
-    def _result_processor(process_fn: Callable[[Any], None], result_queue: 'mp.Queue', 
-                          post_processing_counter: 'mp.Value'):
+    def _result_processor(process_fn: Callable[[Any], None], result_queue: 'mp.Queue'):
         """Process that handles processing results as they arrive."""
         logger = logging.getLogger('ResultProcessor')
         logger.debug("Starting result processor")
@@ -255,10 +232,6 @@ class FlowManagerMP(FlowManagerABC):
                 if result is None:
                     logger.debug("Received completion signal from result queue")
                     break
-                
-                with post_processing_counter.get_lock():
-                    post_processing_counter.value += 1
-                
                 logger.debug(f"ResultProcessor received result: {result}")
                 try:
                     # Handle both dictionary and non-dictionary results
@@ -304,10 +277,6 @@ class FlowManagerMP(FlowManagerABC):
                     self.logger.debug("Received completion signal (None) from result queue")
                     self.logger.info("No more results to process.")
                     break
-                
-                with self.post_processing_tasks.get_lock():
-                    self.post_processing_tasks.value += 1
-
                 if self._result_processing_function:
                     try:
                         # Handle both dictionary and non-dictionary results
@@ -346,9 +315,7 @@ class FlowManagerMP(FlowManagerABC):
     @staticmethod
     def _async_worker(job_graph_map: Dict[str, JobABC], task_queue: 'mp.Queue', result_queue: 'mp.Queue', 
                      job_name_map: 'mp.managers.DictProxy', jobs_loaded: 'mp.Event', 
-                     directories: list[str] = [],
-                     tasks_in_progress_counter: 'mp.Value' = None, 
-                     tasks_completed_counter: 'mp.Value' = None):
+                     directories: list[str] = []):
         """Process that handles making workflow calls using asyncio."""
         # Get logger for AsyncWorker
         logger = logging.getLogger('AsyncWorker')
@@ -356,6 +323,9 @@ class FlowManagerMP(FlowManagerABC):
 
         # If job_map is empty, create it from SimpleJobLoader
         if not job_graph_map:
+            # logger.info("Creating job map from SimpleJobLoader")
+            # job = SimpleJobFactory.load_job({"type": "file", "params": {}})
+            # job_map = {job.name: job}
             logger.info("Creating job map from JobLoader")
             logger.info(f"Using directories from process: {directories}")
             ConfigLoader._set_directories(directories)
@@ -389,11 +359,7 @@ class FlowManagerMP(FlowManagerABC):
                     result = await job._execute(task)
                     processed_result = FlowManagerMP._replace_pydantic_models(result)
                     logger.info(f"[TASK_TRACK] Completed task {task_id}, returned by job {processed_result[JobABC.RETURN_JOB]}")
-                    
-                    if tasks_completed_counter:
-                        with tasks_completed_counter.get_lock():
-                            tasks_completed_counter.value += 1
-                    
+
                     result_queue.put(processed_result)
                     logger.debug(f"[TASK_TRACK] Result queued for task {task_id}")
             except Exception as e:
@@ -407,7 +373,7 @@ class FlowManagerMP(FlowManagerABC):
             tasks = set()
             pending_tasks = []
             tasks_created = 0
-            tasks_completed_local = 0 # Renamed to avoid confusion with shared counter
+            tasks_completed = 0
             end_signal_received = False
 
             while not end_signal_received or tasks:
@@ -419,11 +385,6 @@ class FlowManagerMP(FlowManagerABC):
                             logger.info("Received end signal in task queue")
                             end_signal_received = True
                             break
-                        
-                        if tasks_in_progress_counter:
-                            with tasks_in_progress_counter.get_lock():
-                                tasks_in_progress_counter.value += 1
-                        
                         pending_tasks.append(task)
                     except queue.Empty:
                         break
@@ -449,15 +410,15 @@ class FlowManagerMP(FlowManagerABC):
                                 logger.info("Detailed stack trace:", exc_info=True)
                         except asyncio.InvalidStateError:
                             pass  # Task was cancelled or not done
-                    tasks_completed_local += len(done_tasks)
-                    logger.debug(f"Cleaned up {len(done_tasks)} completed tasks. Total completed locally: {tasks_completed_local}")
+                    tasks_completed += len(done_tasks)
+                    logger.debug(f"Cleaned up {len(done_tasks)} completed tasks. Total completed: {tasks_completed}")
                     logger.debug(f"Active tasks remaining: {len(tasks)}")
                 tasks.difference_update(done_tasks)
 
                 # Log task stats periodically
-                if tasks_completed_local != 0 and tasks_completed_local % 5 == 0:
-                    if should_log_task_stats(queue_monitor, tasks_created, tasks_completed_local):
-                        logger.info(f"Tasks stats - Created: {tasks_created}, Completed Locally: {tasks_completed_local}, Active: {len(tasks)}")
+                if tasks_completed != 0 and tasks_completed % 5 == 0:
+                    if should_log_task_stats(queue_monitor, tasks_created, tasks_completed):
+                        logger.info(f"Tasks stats - Created: {tasks_created}, Completed: {tasks_completed}, Active: {len(tasks)}")
 
                 # A short pause to reduce CPU usage and avoid a busy-wait state.             
                 await asyncio.sleep(0.0001)
@@ -470,7 +431,7 @@ class FlowManagerMP(FlowManagerABC):
 
             # Signal completion
             logger.debug("Sending completion signal to result queue")
-            logger.debug(f"Final stats - Created: {tasks_created}, Completed Locally: {tasks_completed_local}")
+            logger.debug(f"Final stats - Created: {tasks_created}, Completed: {tasks_completed}")
             logger.info("*** result_queue ended ***")
             result_queue.put(None)
 
@@ -504,54 +465,6 @@ class FlowManagerMP(FlowManagerABC):
             raise TimeoutError("Timed out waiting for jobs to be loaded")
         
         return list(self._fq_name_map.keys())
-
-    def poll_for_updates(self, interval: float = 1.0, timeout: Optional[float] = None):
-        """
-        Periodically logs the status of task processing counters.
-
-        Args:
-            interval (float, optional): The polling interval in seconds. Defaults to 1.0.
-            timeout (Optional[float], optional): Maximum time in seconds to poll. 
-                                                 If None, polls indefinitely until completion or KeyboardInterrupt. 
-                                                 Defaults to None.
-        """
-        start_time = time.time()
-        self.logger.info("Starting to poll for task processing updates...")
-        try:
-            while True:
-                submitted = self.tasks_submitted.value
-                in_progress = self.tasks_in_progress.value
-                completed = self.tasks_completed.value
-                post_processing = self.post_processing_tasks.value
-
-                self.logger.info(
-                    f"Task Stats: Submitted={submitted}, In Progress={in_progress}, "
-                    f"Completed={completed}, Post-Processing={post_processing}"
-                )
-
-                # Break if all submitted tasks are completed
-                if submitted > 0 and completed >= submitted: # Using >= for robustness
-                    self.logger.info("All submitted tasks have been processed by workers.")
-                    # Check if post-processing is also complete if it's active
-                    if self._result_processing_function:
-                        if post_processing >= completed:
-                             self.logger.info("All completed tasks have been post-processed.")
-                             break
-                        else:
-                            self.logger.info(f"Waiting for post-processing: {post_processing}/{completed}")
-                    else: # No post-processing function, so completion means worker completion
-                        break 
-                
-                # Break if timeout is reached
-                if timeout is not None and (time.time() - start_time) > timeout:
-                    self.logger.warning(f"Polling timed out after {timeout} seconds.")
-                    break
-                
-                time.sleep(interval)
-        except KeyboardInterrupt:
-            self.logger.info("Polling interrupted by user.")
-        finally:
-            self.logger.info("Finished polling for updates.")
 
 
 class FlowManagerMPFactory:
