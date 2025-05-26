@@ -45,6 +45,8 @@ class FlowManagerMP(FlowManagerABC):
     """
     # Constants
     JOB_MAP_LOAD_TIME = 5  # Timeout in seconds for job map loading
+    EXECUTOR_SHUTDOWN_TIMEOUT = -1  # Timeout in seconds for executor shutdown
+    RESULT_PROCESSOR_SHUTDOWN_TIMEOUT = -1  # Timeout in seconds for result processor shutdown
 
     def __init__(self, dsl: Optional[Any] = None, result_processing_function: Optional[Callable[[Any], None]] = None, 
                  serial_processing: bool = False):
@@ -111,7 +113,10 @@ class FlowManagerMP(FlowManagerABC):
                 self.logger.debug("Terminating job executor process")
                 self.job_executor_process.terminate()
                 self.logger.debug("Joining job executor process")
-                self.job_executor_process.join()
+                if self.EXECUTOR_SHUTDOWN_TIMEOUT != -1:
+                    self.job_executor_process.join(timeout=self.EXECUTOR_SHUTDOWN_TIMEOUT)
+                else:
+                    self.job_executor_process.join()
                 self.logger.debug("Job executor process joined")
         
         if self.result_processor_process:
@@ -119,7 +124,10 @@ class FlowManagerMP(FlowManagerABC):
                 self.logger.debug("Terminating result processor process")
                 self.result_processor_process.terminate()
                 self.logger.debug("Joining result processor process")
-                self.result_processor_process.join()
+                if self.RESULT_PROCESSOR_SHUTDOWN_TIMEOUT != -1:
+                    self.result_processor_process.join(timeout=self.RESULT_PROCESSOR_SHUTDOWN_TIMEOUT)
+                else:
+                    self.result_processor_process.join()
                 self.logger.debug("Result processor process joined")
         
         if hasattr(self, '_task_queue'):
@@ -284,13 +292,19 @@ class FlowManagerMP(FlowManagerABC):
         # Wait for job executor to finish
         if self.job_executor_process and self.job_executor_process.is_alive():
             self.logger.debug("Waiting for job executor process")
-            self.job_executor_process.join()
+            if self.EXECUTOR_SHUTDOWN_TIMEOUT != -1:
+                self.job_executor_process.join(timeout=self.EXECUTOR_SHUTDOWN_TIMEOUT)
+            else:
+                self.job_executor_process.join()
             self.logger.debug("Job executor process completed")
 
         # Wait for result processor to finish
         if self.result_processor_process and self.result_processor_process.is_alive():
             self.logger.debug("Waiting for result processor process")
-            self.result_processor_process.join()
+            if self.RESULT_PROCESSOR_SHUTDOWN_TIMEOUT != -1:
+                self.result_processor_process.join(timeout=self.RESULT_PROCESSOR_SHUTDOWN_TIMEOUT)
+            else:
+                self.result_processor_process.join()
             self.logger.debug("Result processor process completed")
         
         self._cleanup()
