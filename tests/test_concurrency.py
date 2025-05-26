@@ -47,7 +47,7 @@ async def test_concurrency_by_expected_returns():
 
     submit_task(300)
 
-    flowmanagerMP.mark_input_completed() # this waits for all results to be returned
+    flowmanagerMP.wait_for_completion() # this waits for all results to be returned
 
     check_results()
 

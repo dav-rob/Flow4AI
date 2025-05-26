@@ -70,7 +70,7 @@ async def run_parallel_load_test(num_tasks: int) -> float:
     for i in range(num_tasks):
         flowmanagerMP.submit_task(f"Task_{i}")
     # Indicate there is no more input data to process to initiate shutdown
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
 
     execution_time = time.perf_counter() - start_time
     logger.info(f"\nExecution time for {num_tasks} tasks: {execution_time:.2f}s")
@@ -114,7 +114,7 @@ async def run_sustained_load_test(tasks_per_second: int, duration: int) -> tuple
         await asyncio.sleep(sleep_time)
     
     # Mark completion and calculate metrics
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     avg_latency = sum(latencies) / len(latencies)
     max_latency = max(latencies)
     

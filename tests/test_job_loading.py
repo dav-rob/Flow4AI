@@ -362,7 +362,7 @@ async def test_head_jobs_in_flowmanagerMP_serial():
         flowmanagerMP.submit_task({"task": "Test task"}, fq_name=job)
     
     # Mark input as completed and wait for all tasks to finish
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     
     # Convert shared list to regular list for sorting
     results_list = list(results)
@@ -424,7 +424,7 @@ async def test_head_jobs_in_flowmanagerMP_parallel():
         flowmanagerMP.submit_task({"task": "Test task"}, fq_name=job)
     
     # Mark input as completed and wait for all processing to finish
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     
     # Read results file and verify contents
     with open("count_parallel_results", "r") as f:
@@ -489,7 +489,7 @@ async def test_single_job_multiple_prompts():
         flowmanagerMP.submit_task({"prompt": prompt})
     
     # Mark input as completed and wait for all processing to finish
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
 
 @pytest.mark.asyncio
 async def test_malformed_configuration():
@@ -557,7 +557,7 @@ async def test_pydantic_jobs_in_flowmanagerMP_serial():
         flowmanagerMP.submit_task({"prompt": "Create a female user."}, fq_name=job)
     
     # Mark input as completed and wait for all tasks to finish
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     
     # Convert shared list to regular list for sorting
     results_list = list(results)
@@ -614,7 +614,7 @@ async def test_multiple_head_jobs_in_flowmanagerMP_serial(caplog):
     
     # Mark input as completed and wait for all tasks to finish
     logging.info("Marking input as completed")
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     # FlowManagerMP automatically waits for completion when mark_input_completed is called
     logging.info("FlowManagerMP completed")
     
@@ -683,7 +683,7 @@ async def test_multiple_tail_jobs_in_flowmanagerMP_serial(caplog):
     
     # Mark input as completed and wait for all tasks to finish
     logging.info("Marking input as completed")
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     # FlowManagerMP automatically waits for completion when mark_input_completed is called
     logging.info("FlowManagerMP completed")
     
@@ -749,7 +749,7 @@ async def test_multiple_tail_jobs_2_parameters(caplog):
     
     # Mark input as completed and wait for all tasks to finish
     logging.info("Marking input as completed")
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     # FlowManagerMP automatically waits for completion when mark_input_completed is called
     logging.info("FlowManagerMP completed")
     
@@ -821,7 +821,7 @@ async def test_simple_parallel_jobs_in_flowmanagerMP_serial(caplog):
     
     # Mark input as completed and wait for all tasks to finish
     logging.info("Marking input as completed")
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     # FlowManagerMP automatically waits for completion when mark_input_completed is called
     logging.info("FlowManagerMP completed")
     
@@ -872,7 +872,7 @@ async def test_save_result():
         flowmanagerMP.submit_task({"task": "Test task"}, fq_name=job)
     
     # Mark input as completed and wait for all tasks to finish
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     
     # Convert shared list to regular list for sorting
     results_list = list(results)

@@ -54,7 +54,7 @@ async def test_concurrent_task_execution():
     for task in tasks:
         flowmanagerMP.submit_task(task)
     
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     
     # Verify all tasks completed
     assert len(results) == 3
@@ -86,7 +86,7 @@ async def test_event_loop_handling():
     
     # Submit a simple task
     flowmanagerMP.submit_task({'task_id': 1})
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     
     # Verify process cleanup
     assert not flowmanagerMP.job_executor_process.is_alive()
@@ -116,7 +116,7 @@ async def test_async_exception_handling():
     for task in tasks:
         flowmanagerMP.submit_task(task)
     
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     
     # Only successful tasks should have results
     assert len(results) == 2
@@ -142,7 +142,7 @@ async def test_parallel_task_limit():
     for i in range(num_tasks):
         flowmanagerMP.submit_task({'task_id': i, 'delay': 0.01})
     
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     
     # All tasks should complete
     assert len(results) == num_tasks

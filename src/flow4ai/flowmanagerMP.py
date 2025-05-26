@@ -209,7 +209,7 @@ class FlowManagerMP(FlowManagerABC):
         self._task_queue.put(task_obj)  
 
 
-    def mark_input_completed(self):
+    def wait_for_completion(self):
         """Signal completion of input and wait for all processes to finish and shut down."""
         self.logger.debug("Marking input as completed")
         self.logger.info("*** task_queue ended ***")

@@ -128,7 +128,7 @@ def test_empty_initialization():
     
     assert head_jobs == expected_jobs, "FlowManagerMP config not loaded correctly"
 
-    FlowManagerMPFactory.get_instance().mark_input_completed()
+    FlowManagerMPFactory.get_instance().wait_for_completion()
 
 
 @pytest.mark.asyncio
@@ -158,7 +158,7 @@ async def test_concurrent_task_execution():
     for task in tasks:
         flowmanagerMP.submit_task(task)
     
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     
     # Verify all tasks completed
     assert len(results) == 3
@@ -189,7 +189,7 @@ async def test_job_instantiation_and_execution():
     
     # Submit a simple task
     flowmanagerMP.submit_task({})
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     
     # Verify job execution
     assert len(results) == 1
@@ -215,7 +215,7 @@ def test_parallel_execution():
             flowmanagerMP.submit_task(f"Task {i}")
             await asyncio.sleep(0.2)  # Simulate time taken to gather data
             
-        flowmanagerMP.mark_input_completed()
+        flowmanagerMP.wait_for_completion()
         
         execution_time = time.perf_counter() - start_time
         logging.info(f"Execution time for delay {delay}s: {execution_time:.2f}s")
@@ -271,7 +271,7 @@ def test_serial_result_processor_with_unpicklable():
         FlowManagerMPFactory(ResultTimingJob(), unpicklable_processor, serial_processing=False)
         flowmanagerMP = FlowManagerMPFactory.get_instance()
         flowmanagerMP.submit_task("Task 1")
-        flowmanagerMP.mark_input_completed()
+        flowmanagerMP.wait_for_completion()
     assert "pickle" in str(exc_info.value).lower()
     
     # Reset factory for serial mode test
@@ -287,7 +287,7 @@ def test_serial_result_processor_with_unpicklable():
         flowmanagerMP.submit_task({"ResultTimingJob": f"Task {i}"})
         time.sleep(0.1)
     
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     
     # Verify results were logged
     with open('temp.log', 'r') as f:

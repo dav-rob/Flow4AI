@@ -58,7 +58,7 @@ def test_queue_high_volume():
     for i in range(num_tasks):
         flowmanagerMP.submit_task({job.name: {'task_id': i}}, fq_name=job.name)
     
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     
     assert len(results) == num_tasks
     assert len({r['task']['task_id'] for r in results}) == num_tasks
@@ -84,7 +84,7 @@ def test_queue_memory_pressure():
             }
         }, fq_name=job.name)
     
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     
     # Verify all tasks completed
     assert len(results) == num_tasks
@@ -113,7 +113,7 @@ def test_queue_backpressure():
         if i % 10 == 0:
             time.sleep(0.001)  # Small delay to prevent overwhelming
     
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     
     # Verify all tasks eventually complete
     assert len(results) == num_tasks
@@ -138,7 +138,7 @@ def test_queue_cpu_intensive():
             'iterations': 5000000
         })
     
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     
     assert len(results) == num_tasks
     # Verify all tasks produced valid results
@@ -165,7 +165,7 @@ def test_queue_mixed_workload():
     for task in tasks:
         flowmanagerMP.submit_task({job.name: task}, fq_name=job.name)
     
-    flowmanagerMP.mark_input_completed()
+    flowmanagerMP.wait_for_completion()
     
     assert len(results) == len(tasks)
     # Verify each task type completed correctly
