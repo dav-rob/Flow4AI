@@ -14,7 +14,7 @@ Always read the [architecture document](docs/ARCHITECTURE.md) before undertaking
 ## Tests
 - execute unit tests in the root directory using pytest using the command `python -m pytest` as the root of your test commands.
 - use pytest's --full-suite flag to run all tests, including performance tests.
-- when running tests that are logging in order to investigate causes  use `python -m pytest -s` to see the logs. Just using "-v" will not show the logs.
+- when running tests that are logging in order to investigate causes  use `python -m pytest -s` or `python -m pytest my_test_file.py -s` to see the logs. Just using "-v" will not show the logs.
 
 ## JobABC Implementation Rules
 - NEVER override the `_execute` method in custom job classes. This method is responsible for job graph execution and state management.
