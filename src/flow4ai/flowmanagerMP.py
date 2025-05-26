@@ -236,7 +236,7 @@ class FlowManagerMP(FlowManagerABC):
         self.logger.debug("Marking input as completed")
         self.logger.info("*** task_queue ended ***")
         self._task_queue.put(None)
-        self._wait_for_completion()
+        self._close_running_processes()
 
     # Must be static because it's passed as a target to multiprocessing.Process
     # Instance methods can't be pickled properly for multiprocessing
@@ -274,9 +274,9 @@ class FlowManagerMP(FlowManagerABC):
 
         logger.debug("Result processor shutting down")
 
-    def _wait_for_completion(self):
-        """Wait for completion of all processing."""
-        self.logger.debug("Entering wait for completion")
+    def _close_running_processes(self):
+        """Close all running processes."""
+        self.logger.debug("Entering close running processes")
 
         if self._result_processing_function and self._serial_processing:
             self._process_serial_results()
