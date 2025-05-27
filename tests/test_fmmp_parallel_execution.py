@@ -170,7 +170,7 @@ def test_parallel_execution_in_batches():
     )
 
 async def run_flowmanagerMP_without_result_processor() -> bool:
-    """Run FlowManagerMP without a result processing function"""
+    """Run FlowManagerMP without a on_complete function"""
     try:
         job = DelayedJob("Test Job",  0.1)
         flowmanagerMP = FlowManagerMP(job)  # Pass no on_complete

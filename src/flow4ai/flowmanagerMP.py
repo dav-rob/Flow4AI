@@ -25,7 +25,7 @@ class FlowManagerMP(FlowManagerABC):
     FlowManagerMP executes up to thousands of tasks in parallel using one or more Jobs passed into constructor.
     FlowManagerMP is a multiprocessing implementation of FlowManager, so tasks and results are passed between entirely
     different processes, which means that results and tasks must be picklable.
-    Optionally passes results to a pre-existing result processing function after task completion.
+    Optionally passes results to a pre-existing on_complete function after task completion.
 
     Args:
         dsl (Union[Dict[str, Any], DSLComponent, List[DSLComponent]]): If missing, jobs will be loaded from config file.
@@ -39,8 +39,8 @@ class FlowManagerMP(FlowManagerABC):
             This code is not assumed to be asyncio compatible.
 
         serial_processing (bool, optional): Forces on_complete to execute only after all tasks are completed by the Job.
-            Enables an unpicklable on_complete to be used by setting serial_processing=True.
-            However, in most cases changing on_complete to be picklable is straightforward and should be the default.
+            Enables an unpicklable on_complete to callable be used by setting serial_processing=True.  However, in most cases 
+            changing on_complete to be picklable is straightforward and should be the default.
             Defaults to False.
     """
     _lock = mp.RLock()  # Lock for thread-safe initialization

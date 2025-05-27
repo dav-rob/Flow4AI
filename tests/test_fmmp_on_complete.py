@@ -1,6 +1,6 @@
 """
-    Tests parallel and serial functionality with picklable and non-picklable result
-        processing functions.
+    Tests parallel and serial functionality with picklable and non-picklable on_complete
+        callables.
 """
 
 import asyncio

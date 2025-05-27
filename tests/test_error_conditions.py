@@ -6,7 +6,7 @@
         - Tests process termination handling
         - Tests invalid input handling
         - Tests resource cleanup
-        - Tests result processing errors
+        - Tests on_complete errors
         - Tests memory error handling
         - Tests unpicklable result scenarios
 """
@@ -168,8 +168,8 @@ def test_resource_cleanup():
     if flowmanagerMP.result_processor_process:
         assert not flowmanagerMP.result_processor_process.is_alive()
 
-def test_error_in_result_processing():
-    """Test handling of errors in result processing function"""
+def test_error_in_on_complete_callable():
+    """Test handling of errors in on_complete function"""
     def failing_processor(result):
         raise Exception("Result processing error")
     

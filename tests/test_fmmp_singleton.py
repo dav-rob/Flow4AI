@@ -7,9 +7,9 @@ adapting tests from the previous factory pattern implementation.
 
 import asyncio
 import os
+import threading
 import time
 from typing import List
-import threading
 
 import pytest
 
@@ -18,7 +18,7 @@ from flow4ai.flowmanagerMP import FlowManagerMP
 from flow4ai.job import JobABC
 from flow4ai.job_loader import ConfigLoader
 
-# Global results list for picklable result processing
+# Global results list for picklable on_complete
 RESULTS: List[dict] = []
 
 

@@ -134,7 +134,7 @@ def result_collector(results_file: str, result: Dict[str, Any]) -> None:
 
 
 def test_task_passthrough():
-    """Test to verify task parameters are passed through from submit_task to result processing"""
+    """Test to verify task parameters are passed through from submit_task to on_complete"""
     
     # Create a temporary file for storing results
     with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
