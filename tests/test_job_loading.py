@@ -352,7 +352,7 @@ async def test_head_jobs_in_flowmanagerMP_serial():
         logging.info(f"Processed result: {result}")
     
     # Create FlowManagerMP with serial processing to ensure deterministic results
-    flowmanagerMP = FlowManagerMP(dsl=None, result_processing_function=result_processor, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(dsl=None, on_complete=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
     head_jobs = flowmanagerMP.get_fq_names()
@@ -414,7 +414,7 @@ async def test_head_jobs_in_flowmanagerMP_parallel():
     ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_jc_config")])
     
     # Create FlowManagerMP with parallel processing (default)
-    flowmanagerMP = FlowManagerMP(dsl=None, result_processing_function=process_result)
+    flowmanagerMP = FlowManagerMP(dsl=None, on_complete=process_result)
     
     # Get head jobs from config to know their names
     head_jobs = flowmanagerMP.get_fq_names()
@@ -477,7 +477,7 @@ async def test_single_job_multiple_prompts():
     ConfigLoader._set_directories([os.path.join(os.path.dirname(__file__), "test_configs/test_single_job")])
     
     # Create FlowManagerMP with parallel processing (default)
-    flowmanagerMP = FlowManagerMP(result_processing_function=process_prompts)
+    flowmanagerMP = FlowManagerMP(on_complete=process_prompts)
 
     prompts = ["what is the capital of france",
     "what is the capital of germany",
@@ -546,7 +546,7 @@ async def test_pydantic_jobs_in_flowmanagerMP_serial():
         logging.info(f"Processed result: {result}")
     
     # Create FlowManagerMP with serial processing to ensure deterministic results
-    flowmanagerMP = FlowManagerMP(dsl=None, result_processing_function=result_processor, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(dsl=None, on_complete=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
     head_jobs = flowmanagerMP.get_fq_names()
@@ -595,7 +595,7 @@ async def test_multiple_head_jobs_in_flowmanagerMP_serial(caplog):
         logging.info(f"Processed result: {result}")
     
     # Create FlowManagerMP with serial processing to ensure deterministic results
-    flowmanagerMP = FlowManagerMP(dsl=None, result_processing_function=result_processor, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(dsl=None, on_complete=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
     head_jobs = flowmanagerMP.get_fq_names()
@@ -660,7 +660,7 @@ async def test_multiple_tail_jobs_in_flowmanagerMP_serial(caplog):
         logging.info(f"Processed result: {result}")
     
     # Create FlowManagerMP with serial processing to ensure deterministic results
-    flowmanagerMP = FlowManagerMP(dsl=None, result_processing_function=result_processor, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(dsl=None, on_complete=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
     head_jobs = flowmanagerMP.get_fq_names()
@@ -732,7 +732,7 @@ async def test_multiple_tail_jobs_2_parameters(caplog):
         logging.info(f"Processed result: {result}")
     
     # Create FlowManagerMP with serial processing to ensure deterministic results
-    flowmanagerMP = FlowManagerMP(dsl=None, result_processing_function=result_processor, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(dsl=None, on_complete=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
     head_jobs = flowmanagerMP.get_fq_names()
@@ -799,7 +799,7 @@ async def test_simple_parallel_jobs_in_flowmanagerMP_serial(caplog):
         logging.info(f"Processed result: {result}")
     
     # Create FlowManagerMP with serial processing to ensure deterministic results
-    flowmanagerMP = FlowManagerMP(dsl=None, result_processing_function=result_processor, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(dsl=None, on_complete=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
     head_jobs = flowmanagerMP.get_fq_names()
@@ -862,7 +862,7 @@ async def test_save_result():
         logging.info(f"Processed result: {result}")
     
     # Create FlowManagerMP with serial processing to ensure deterministic results
-    flowmanagerMP = FlowManagerMP(dsl=None, result_processing_function=result_processor, serial_processing=True)
+    flowmanagerMP = FlowManagerMP(dsl=None, on_complete=result_processor, serial_processing=True)
     
     # Get head jobs from config to know their names
     head_jobs = flowmanagerMP.get_fq_names()

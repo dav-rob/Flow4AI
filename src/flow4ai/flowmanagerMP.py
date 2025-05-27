@@ -50,14 +50,14 @@ class FlowManagerMP(FlowManagerABC):
     EXECUTOR_SHUTDOWN_TIMEOUT = -1  # Timeout in seconds for executor shutdown
     RESULT_PROCESSOR_SHUTDOWN_TIMEOUT = -1  # Timeout in seconds for result processor shutdown
 
-    def __init__(self, dsl: Optional[Any] = None, result_processing_function: Optional[Callable[[Any], None]] = None, 
+    def __init__(self, dsl: Optional[Any] = None, on_complete: Optional[Callable[[Any], None]] = None, 
                  serial_processing: bool = False):
         super().__init__()
         # Get logger for FlowManagerMP
         self.logger = logging.getLogger('FlowManagerMP')
         self.logger.info("Initializing FlowManagerMP")
-        if not serial_processing and result_processing_function:
-            self._check_picklable(result_processing_function)
+        if not serial_processing and on_complete:
+            self._check_picklable(on_complete)
         # tasks are created by submit_task(), with [fq_name] added to the task dict
         # tasks are then sent to queue for processing
         self._task_queue: mp.Queue[Task] = mp.Queue()  
@@ -68,7 +68,7 @@ class FlowManagerMP(FlowManagerABC):
         self._result_queue = mp.Queue()  # type: mp.Queue
         self.job_executor_process = None
         self.result_processor_process = None
-        self._result_processing_function = result_processing_function
+        self._result_processing_function = on_complete
         self._serial_processing = serial_processing
         
         # Create a manager for sharing objects between processes

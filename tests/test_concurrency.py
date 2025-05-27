@@ -31,7 +31,7 @@ async def test_concurrency_by_expected_returns():
     ConfigLoader._set_directories([config_dir])
     
     # Create FlowManagerMP with parallel processing
-    flowmanagerMP = FlowManagerMP(result_processing_function=collector)
+    flowmanagerMP = FlowManagerMP(on_complete=collector)
 
     def submit_task(range_val:int):
         for i in range(range_val):

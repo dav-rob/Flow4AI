@@ -149,7 +149,7 @@ def test_task_passthrough():
             ConfigLoader._set_directories([config_dir])
             
             # Create FlowManagerMP with parallel processing
-            flowmanagerMP = FlowManagerMP(result_processing_function=collector)
+            flowmanagerMP = FlowManagerMP(on_complete=collector)
             
             # Submit text processing tasks with unique identifiers
             submitted_tasks = []
@@ -238,7 +238,7 @@ def test_multiple_task_submissions():
             ConfigLoader._set_directories([config_dir])
             
             # Create FlowManagerMP with parallel processing
-            flowmanagerMP = FlowManagerMP(result_processing_function=collector)
+            flowmanagerMP = FlowManagerMP(on_complete=collector)
             
             # Get all head jobs
             head_jobs = flowmanagerMP.get_fq_names()
