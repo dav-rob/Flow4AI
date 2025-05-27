@@ -43,6 +43,8 @@ class FlowManagerMP(FlowManagerABC):
             However, in most cases changing result_processing_function to be picklable is straightforward and should be the default.
             Defaults to False.
     """
+    _lock = mp.RLock()  # Lock for thread-safe initialization
+    _instance = None  # Singleton instance
     # Constants
     JOB_MAP_LOAD_TIME = 5  # Timeout in seconds for job map loading
     EXECUTOR_SHUTDOWN_TIMEOUT = -1  # Timeout in seconds for executor shutdown
@@ -553,16 +555,19 @@ class FlowManagerMP(FlowManagerABC):
                     f"Completed={completed}, Post-Processing={post_processing}" # Added Errors to log
                 )
 
-                # Break if all submitted tasks are completed by workers
-                if submitted > 0 and completed >= submitted: # Using >= for robustness
-                    self.logger.info("All submitted tasks have been processed by workers.")
-                    if self._result_processing_function:
-                        # Log current post-processing status but don't wait here.
-                        # wait_for_completion will ensure post-processing finishes.
-                        self.logger.info(
-                            f"Worker processing complete. Current post-processing: {post_processing}/{completed}. "
-                            "Final post-processing will be handled by wait_for_completion."
-                        )
+                # Break if all submitted tasks are completed by workers OR if no tasks were submitted at all
+                if (submitted > 0 and completed >= submitted) or (submitted == 0 and time.time() - start_time > interval): 
+                    if submitted == 0:
+                        self.logger.info("No tasks were submitted. Completing poll early.")
+                    else:
+                        self.logger.info("All submitted tasks have been processed by workers.")
+                        if self._result_processing_function:
+                            # Log current post-processing status but don't wait here.
+                            # wait_for_completion will ensure post-processing finishes.
+                            self.logger.info(
+                                f"Worker processing complete. Current post-processing: {post_processing}/{completed}. "
+                                "Final post-processing will be handled by wait_for_completion."
+                            )
                     break 
                 
                 # Break if timeout is reached
@@ -577,35 +582,45 @@ class FlowManagerMP(FlowManagerABC):
             self.logger.info("Finished polling for updates.")
 
 
-class FlowManagerMPFactory:
-    _instance = None
-    _flowmanagerMP = None
-
-    def __init__(self, *args, **kwargs):
-        if not FlowManagerMPFactory._instance:
-            self._flowmanagerMP = FlowManagerMP(*args, **kwargs)
-            FlowManagerMPFactory._instance = self
-
     @classmethod
-    def init(cls, start_method="spawn", *args, **kwargs):
-      """
-      Initializes the FlowManagerMPFactory using the given start method.
-      args and kwargs are passed down to the FlowManagerMP constructor.
-
-      Args:
-        start_method: The start method of multiprocessing. Defaults to "spawn".
-        args: The parameters to be passed to the FlowManagerMP's constructor
-        kwargs: The keyword parameters to be passed to the FlowManagerMP's constructor
+    def instance(cls, dsl=None, result_processing_function=None, serial_processing=False) -> 'FlowManagerMP':
+        """
+        Get or create the singleton instance of FlowManagerMP.
         
-      """
-      freeze_support()
-      set_start_method(start_method)
-      if not cls._instance:
-        cls._instance = cls(*args, **kwargs)
-      return cls._instance
-
-    @staticmethod
-    def get_instance()->FlowManagerMP:
-        if not FlowManagerMPFactory._instance:
-            raise RuntimeError("FlowManagerMPFactory not initialized")
-        return FlowManagerMPFactory._instance._flowmanagerMP
+        Args:
+            dsl: A dictionary of job DSLs, a job DSL, a JobABC instance, or a collection of JobABC instances.
+            result_processing_function: Code to handle results after the Job executes its task.
+            serial_processing: Forces result_processing_function to execute only after all tasks are completed.
+            
+        Returns:
+            The singleton instance of FlowManagerMP
+        """
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    # Initialize multiprocessing - using 'spawn' as the default for cross-platform compatibility
+                    freeze_support() # Required for Windows support
+                    # Only set start method if it hasn't been set already
+                    try:
+                        set_start_method('spawn')
+                    except RuntimeError:
+                        # If the start method is already set, this will raise a RuntimeError
+                        # We can safely ignore it as the method is already configured
+                        pass
+                    # Create the singleton instance
+                    cls._instance = cls(dsl, result_processing_function, serial_processing)
+        return cls._instance
+    
+    @classmethod
+    def reset_instance(cls) -> None:
+        """
+        Reset the singleton instance.
+        
+        This method clears the stored singleton instance, allowing a new instance to be created
+        the next time instance() is called.
+        """
+        with cls._lock:
+            if cls._instance is not None:
+                # Ensure cleanup before resetting
+                cls._instance._cleanup()
+                cls._instance = None
