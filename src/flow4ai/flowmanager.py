@@ -11,16 +11,8 @@ from flow4ai.job_loader import JobFactory
 
 
 class FlowManager(FlowManagerABC):
-    _instance = None
-    _lock = threading.Lock()  # Class-level lock for singleton creation
-
-    def __new__(cls, *args, **kwargs):  # Accept arbitrary arguments
-        with cls._lock:
-            if cls._instance is None:
-                cls._instance = super().__new__(cls)
-                cls._instance.__initialized = False
-        return cls._instance
-
+    _lock = threading.Lock()  # Lock for thread-safe initialization
+    
     def __init__(self, dsl=None, jobs_dir_mode=False, on_complete: Optional[Callable[[Any], None]] = None):
         """Initialize the FlowManager.
         
@@ -32,11 +24,7 @@ class FlowManager(FlowManagerABC):
         super().__init__()
         self.jobs_dir_mode = jobs_dir_mode
         self.on_complete = on_complete
-        if not hasattr(self, '_TaskManager__initialized') or not self.__initialized:
-            with self._lock:
-                if not hasattr(self, '_TaskManager__initialized') or not self.__initialized:
-                    self._initialize()
-                    self.__initialized = True
+        self._initialize()
         
         # Add DSL dictionary if provided
         if dsl:
