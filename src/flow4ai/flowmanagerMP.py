@@ -247,7 +247,7 @@ class FlowManagerMP(FlowManagerABC):
         self.logger.debug("Marking input as completed")
         self.logger.info("*** task_queue ended ***")
         self._task_queue.put(None)
-        self.poll_for_updates(interval=check_interval, timeout=timeout)
+        self.poll_for_updates(timeout=timeout, check_interval=check_interval)
         self._close_running_processes()
 
     # Must be static because it's passed as a target to multiprocessing.Process
@@ -527,7 +527,7 @@ class FlowManagerMP(FlowManagerABC):
         
         return list(self._fq_name_map.keys())
 
-    def poll_for_updates(self, interval: float = 1.0, timeout: Optional[float] = None):
+    def poll_for_updates(self, timeout=10, check_interval=0.1):
         """
         Periodically logs the status of task processing counters.
         Exits when all submitted tasks have been processed by worker processes.
@@ -556,7 +556,7 @@ class FlowManagerMP(FlowManagerABC):
                 )
 
                 # Break if all submitted tasks are completed by workers OR if no tasks were submitted at all
-                if (submitted > 0 and completed >= submitted) or (submitted == 0 and time.time() - start_time > interval): 
+                if (submitted > 0 and completed >= submitted) or (submitted == 0 and time.time() - start_time > check_interval): 
                     if submitted == 0:
                         self.logger.info("No tasks were submitted. Completing poll early.")
                     else:
@@ -575,7 +575,7 @@ class FlowManagerMP(FlowManagerABC):
                     self.logger.warning(f"Polling timed out after {timeout} seconds.")
                     break
                 
-                time.sleep(interval)
+                time.sleep(check_interval)
         except KeyboardInterrupt:
             self.logger.info("Polling interrupted by user.")
         finally:
