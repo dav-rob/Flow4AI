@@ -598,15 +598,17 @@ class FlowManagerMP(FlowManagerABC):
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
-                    # Initialize multiprocessing - using 'spawn' as the default for cross-platform compatibility
-                    freeze_support() # Required for Windows support
-                    # Only set start method if it hasn't been set already
-                    try:
-                        set_start_method('spawn')
-                    except RuntimeError:
-                        # If the start method is already set, this will raise a RuntimeError
-                        # We can safely ignore it as the method is already configured
-                        pass
+                    # Platform-specific multiprocessing initialization
+                    import platform
+                    if platform.system() == 'Windows':
+                        # Windows-specific multiprocessing setup
+                        freeze_support()  # Required for Windows support
+                        try:
+                            set_start_method('spawn')  # Windows only supports 'spawn'
+                        except RuntimeError:
+                            # If the start method is already set, this will raise a RuntimeError
+                            # We can safely ignore it as the method is already configured
+                            pass
                     # Create the singleton instance
                     cls._instance = cls(dsl, result_processing_function, serial_processing)
         return cls._instance
