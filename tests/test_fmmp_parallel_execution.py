@@ -173,7 +173,7 @@ async def run_flowmanagerMP_without_result_processor() -> bool:
     """Run FlowManagerMP without a result processing function"""
     try:
         job = DelayedJob("Test Job",  0.1)
-        flowmanagerMP = FlowManagerMP(job)  # Pass no result_processing_function
+        flowmanagerMP = FlowManagerMP(job)  # Pass no on_complete
 
         # Submit a few tasks
         for i in range(3):
@@ -186,9 +186,9 @@ async def run_flowmanagerMP_without_result_processor() -> bool:
         return False
 
 def test_no_result_processor():
-    """Test that FlowManagerMP works without setting result_processing_function"""
+    """Test that FlowManagerMP works without setting on_complete"""
     success = asyncio.run(run_flowmanagerMP_without_result_processor())
-    assert success, "FlowManagerMP should execute successfully without result_processing_function"
+    assert success, "FlowManagerMP should execute successfully without on_complete"
 
 async def run_traced_flowmanagerMP(time_delay: float) -> float:
     """Run FlowManagerMP with specified delay and return execution time"""

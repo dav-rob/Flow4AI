@@ -32,15 +32,15 @@ class FlowManagerMP(FlowManagerABC):
             Otherwise either a dictionary containing job configuration,
             a single DSLComponent instance, or a list of DSLComponent instances.
 
-        result_processing_function (Optional[Callable[[Any], None]]): Code to handle results after the Job executes its task.
+        on_complete (Optional[Callable[[Any], None]]): Code to handle results after the Job executes its task.
             By default, this hand-off happens in parallel, immediately after a Job processes a task.
             Typically, this function is from an existing codebase that FlowManagerMP is supplementing.
             This function must be picklable, for parallel execution, see serial_processing parameter below.
             This code is not assumed to be asyncio compatible.
 
-        serial_processing (bool, optional): Forces result_processing_function to execute only after all tasks are completed by the Job.
-            Enables an unpicklable result_processing_function to be used by setting serial_processing=True.
-            However, in most cases changing result_processing_function to be picklable is straightforward and should be the default.
+        serial_processing (bool, optional): Forces on_complete to execute only after all tasks are completed by the Job.
+            Enables an unpicklable on_complete to be used by setting serial_processing=True.
+            However, in most cases changing on_complete to be picklable is straightforward and should be the default.
             Defaults to False.
     """
     _lock = mp.RLock()  # Lock for thread-safe initialization
@@ -63,13 +63,13 @@ class FlowManagerMP(FlowManagerABC):
         self._task_queue: mp.Queue[Task] = mp.Queue()  
         # INTERNAL USE ONLY. DO NOT ACCESS DIRECTLY.
         # This queue is for internal communication between the job executor and result processor.
-        # To process results, use the result_processing_function parameter in the FlowManagerMP constructor.
+        # To process results, use the on_complete parameter in the FlowManagerMP constructor.
         # See test_result_processing.py for examples of proper result handling.
         self._result_queue = mp.Queue()  # type: mp.Queue
         self.job_executor_process = None
         self.result_processor_process = None
-        self._result_processing_function = on_complete
-        self._serial_processing = serial_processing
+        self.on_complete = on_complete
+        self.serial_processing = serial_processing
         
         # Create a manager for sharing objects between processes
         self._manager = mp.Manager()
@@ -149,14 +149,14 @@ class FlowManagerMP(FlowManagerABC):
         
         self.logger.debug("Cleanup completed")
 
-    def _check_picklable(self, result_processing_function):
+    def _check_picklable(self, on_complete):
         try:
             # Try to pickle just the function itself
-            pickle.dumps(result_processing_function)
+            pickle.dumps(on_complete)
             
             # Try to pickle any closure variables
-            if hasattr(result_processing_function, '__closure__') and result_processing_function.__closure__:
-                for cell in result_processing_function.__closure__:
+            if hasattr(on_complete, '__closure__') and on_complete.__closure__:
+                for cell in on_complete.__closure__:
                     pickle.dumps(cell.cell_contents)
                     
         except Exception as e:
@@ -178,11 +178,11 @@ class FlowManagerMP(FlowManagerABC):
         self.job_executor_process.start()
         self.logger.info(f"Job executor process started with PID {self.job_executor_process.pid}")
 
-        if self._result_processing_function and not self._serial_processing:
+        if self.on_complete and not self.serial_processing:
             self.logger.debug("Starting result processor process")
             self.result_processor_process = mp.Process(
                 target=self._result_processor,
-                args=(self._result_processing_function, self._result_queue, 
+                args=(self.on_complete, self._result_queue, 
                       self.post_processing_tasks), # Pass counter
                 name="ResultProcessorProcess"
             )
@@ -255,7 +255,7 @@ class FlowManagerMP(FlowManagerABC):
     # TODO: it may be necessary to put a flag to execute this using asyncio event loops
     #          for example, when handing off to an async web service
     @staticmethod
-    def _result_processor(process_fn: Callable[[Any], None], result_queue: 'mp.Queue', 
+    def _result_processor(on_complete: Callable[[Any], None], result_queue: 'mp.Queue', 
                           post_processing_counter: 'mp.Value'):
         """Process that handles processing results as they arrive."""
         logger = logging.getLogger('ResultProcessor')
@@ -276,7 +276,7 @@ class FlowManagerMP(FlowManagerABC):
                     # Handle both dictionary and non-dictionary results
                     task_id = result.get('task', str(result)) if isinstance(result, dict) else str(result)
                     logger.debug(f"Processing result for task {task_id}")
-                    process_fn(result)
+                    on_complete(result)
                     logger.debug(f"Finished processing result for task {task_id}")
                 except Exception as e:
                     logger.error(f"Error processing result: {e}")
@@ -290,7 +290,7 @@ class FlowManagerMP(FlowManagerABC):
         """Close all running processes."""
         self.logger.debug("Entering close running processes")
 
-        if self._result_processing_function and self._serial_processing:
+        if self.on_complete and self.serial_processing:
             self._process_serial_results()
         
         # Wait for job executor to finish
@@ -326,12 +326,12 @@ class FlowManagerMP(FlowManagerABC):
                 with self.post_processing_tasks.get_lock():
                     self.post_processing_tasks.value += 1
 
-                if self._result_processing_function:
+                if self.on_complete:
                     try:
                         # Handle both dictionary and non-dictionary results
                         task_id = result.get('task', str(result)) if isinstance(result, dict) else str(result)
                         self.logger.debug(f"Processing result for task {task_id}")
-                        self._result_processing_function(result)
+                        self.on_complete(result)
                         self.logger.debug(f"Finished processing result for task {task_id}")
                     except Exception as e:
                         self.logger.error(f"Error processing result: {e}")
@@ -561,7 +561,7 @@ class FlowManagerMP(FlowManagerABC):
                         self.logger.info("No tasks were submitted. Completing poll early.")
                     else:
                         self.logger.info("All submitted tasks have been processed by workers.")
-                        if self._result_processing_function:
+                        if self.on_complete:
                             # Log current post-processing status but don't wait here.
                             # wait_for_completion will ensure post-processing finishes.
                             self.logger.info(
@@ -583,14 +583,14 @@ class FlowManagerMP(FlowManagerABC):
 
 
     @classmethod
-    def instance(cls, dsl=None, result_processing_function=None, serial_processing=False) -> 'FlowManagerMP':
+    def instance(cls, dsl=None, on_complete=None, serial_processing=False) -> 'FlowManagerMP':
         """
         Get or create the singleton instance of FlowManagerMP.
         
         Args:
             dsl: A dictionary of job DSLs, a job DSL, a JobABC instance, or a collection of JobABC instances.
-            result_processing_function: Code to handle results after the Job executes its task.
-            serial_processing: Forces result_processing_function to execute only after all tasks are completed.
+            on_complete: Code to handle results after the Job executes its task.
+            serial_processing: Forces on_complete to execute only after all tasks are completed.
             
         Returns:
             The singleton instance of FlowManagerMP
@@ -610,7 +610,7 @@ class FlowManagerMP(FlowManagerABC):
                             # We can safely ignore it as the method is already configured
                             pass
                     # Create the singleton instance
-                    cls._instance = cls(dsl, result_processing_function, serial_processing)
+                    cls._instance = cls(dsl, on_complete, serial_processing)
         return cls._instance
     
     @classmethod
