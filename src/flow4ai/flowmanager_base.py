@@ -25,6 +25,9 @@ class FlowManagerABC(ABC):
     method signatures.
     """
     
+    # Class variable for controlling error handling behavior
+    RAISE_ON_ERROR = False
+    
     @abstractmethod
     def __init__(self, *args, **kwargs):
         """
@@ -118,6 +121,24 @@ class FlowManagerABC(ABC):
             # Fallback to the first job in the graph if no clear head job
             return next(iter(sorted(graph.keys())))
 
+    def get_raise_on_error(self) -> bool:
+        """
+        Get the current raise_on_error setting.
+        
+        Returns:
+            bool: True if errors should be raised during execution, False if errors should be captured
+        """
+        return self.__class__.RAISE_ON_ERROR
+        
+    def set_raise_on_error(self, value: bool) -> None:
+        """
+        Set the raise_on_error setting.
+        
+        Args:
+            value: True to raise errors during execution, False to capture errors
+        """
+        self.__class__.RAISE_ON_ERROR = value
+        
     def add_dsl(self, dsl: DSLComponent, graph_name: str = "", variant: str = "") -> str:
         """
         Adds a DSL component to the FlowManager. Each DSL component should only be added once

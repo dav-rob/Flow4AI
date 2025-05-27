@@ -556,7 +556,7 @@ class FlowManagerMP(FlowManagerABC):
                 )
 
                 # Break if all submitted tasks are completed by workers OR if no tasks were submitted at all
-                if (submitted > 0 and completed >= submitted) or (submitted == 0 and time.time() - start_time > check_interval): 
+                if (submitted > 0 and (completed + errors) >= submitted) or (submitted == 0 and time.time() - start_time > check_interval): 
                     if submitted == 0:
                         self.logger.info("No tasks were submitted. Completing poll early.")
                     else:
@@ -579,7 +579,12 @@ class FlowManagerMP(FlowManagerABC):
         except KeyboardInterrupt:
             self.logger.info("Polling interrupted by user.")
         finally:
+            errors = self.job_errors.value
             self.logger.info("Finished polling for updates.")
+            
+            # If raise_on_error is True and there are errors, raise an exception
+            if self.get_raise_on_error() and errors > 0:
+                raise RuntimeError(f"Flow execution completed with {errors} error(s). Check logs for details.")
 
 
     @classmethod

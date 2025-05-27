@@ -249,7 +249,13 @@ class FlowManager(FlowManagerABC):
             
         # Check one last time before returning
         counts = self.get_counts()
-        return counts['submitted'] == (counts['completed'] + counts['errors'])
+        completion_status = counts['submitted'] == (counts['completed'] + counts['errors'])
+        
+        # If raise_on_error is True and there are errors, raise an exception
+        if self.get_raise_on_error() and counts['errors'] > 0:
+            raise RuntimeError(f"Flow execution completed with {counts['errors']} error(s). Check logs for details.")
+            
+        return completion_status
         
     def execute(self, task, dsl=None, graph_name=None, fq_name=None, timeout=10):
         """
