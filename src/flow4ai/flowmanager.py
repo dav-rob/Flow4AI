@@ -1,5 +1,6 @@
 import asyncio
 import threading
+import time
 from collections import defaultdict
 from typing import Any, Callable, Dict, List, Optional, Union
 
@@ -256,7 +257,7 @@ class FlowManager(FlowManagerABC):
                 'errors': errors
             }
             
-    def wait_for_completion(self, timeout=10, check_interval=1):
+    def wait_for_completion(self, timeout=10, check_interval=0.1):
         """
         Wait for all submitted tasks to complete or error out.
         
@@ -267,7 +268,7 @@ class FlowManager(FlowManagerABC):
         Returns:
             bool: True if all tasks completed or errored, False if timed out
         """
-        import time
+        
         start_time = time.time()
         
         while (time.time() - start_time) < timeout:

@@ -129,51 +129,51 @@ def create_tm(graph_name:str):
     return fm, fq_name
 
 def execute_tm_with_delay(delay, task_count=10):
-    tm, fq_name = create_tm("test_parallel_execution" + str(delay))
+    fm, fq_name = create_tm("test_parallel_execution" + str(delay))
     task = {"delayed": delay}
     start_time = time.perf_counter()
     for i in range(task_count):
-        tm.submit_task(task, fq_name)
-    tm.wait_for_completion()
+        fm.submit_task(task, fq_name)
+    fm.wait_for_completion(10, 0.1)
     end_time = time.perf_counter()
     execution_time = end_time - start_time
     logger.info(f"*** Execution time for {task_count} tasks = {execution_time}")
-    return execution_time, tm
+    return execution_time, fm
 
 def test_parallel_execution():
-    execution_time, tm = execute_tm_with_delay(1.0)
-    result_count = tm.get_counts()
+    execution_time, fm = execute_tm_with_delay(1.0)
+    result_count = fm.get_counts()
     assert result_count["errors"] == 0, f"{result_count['errors']} errors occurred during job execution"
     assert execution_time < 1.5
 
-    execution_time, tm = execute_tm_with_delay(2.0)
-    result_count = tm.get_counts()
+    execution_time, fm = execute_tm_with_delay(2.0)
+    result_count = fm.get_counts()
     assert result_count["errors"] == 0, f"{result_count['errors']} errors occurred during job execution"
     assert execution_time < 2.5
 
 
 def test_parallel_load():
     logger.info("Executing parallel load tasks = 500")
-    execution_time, tm = execute_tm_with_delay(1.0, 500)
-    result_count = tm.get_counts()
+    execution_time, fm = execute_tm_with_delay(1.0, 500)
+    result_count = fm.get_counts()
     assert result_count["errors"] == 0, f"{result_count['errors']} errors occurred during job execution"
     assert execution_time < 1.4
 
     logger.info("Executing parallel load tasks = 1000")
-    execution_time, tm = execute_tm_with_delay(1.0, 1000)
-    result_count = tm.get_counts()
+    execution_time, fm = execute_tm_with_delay(1.0, 1000)
+    result_count = fm.get_counts()
     assert result_count["errors"] == 0, f"{result_count['errors']} errors occurred during job execution"
     assert execution_time < 1.8
 
     logger.info("Executing parallel load tasks = 2000")
-    execution_time, tm = execute_tm_with_delay(1.0, 2000)
-    result_count = tm.get_counts()
+    execution_time, fm = execute_tm_with_delay(1.0, 2000)
+    result_count = fm.get_counts()
     assert result_count["errors"] == 0, f"{result_count['errors']} errors occurred during job execution"
     assert execution_time < 2.5
 
     logger.info("Executing parallel load tasks = 5000")
-    execution_time, tm = execute_tm_with_delay(1.0, 5000)
-    result_count = tm.get_counts()
+    execution_time, fm = execute_tm_with_delay(1.0, 5000)
+    result_count = fm.get_counts()
     assert result_count["errors"] == 0, f"{result_count['errors']} errors occurred during job execution"
     assert execution_time < 4.0
 
