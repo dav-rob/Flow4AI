@@ -43,6 +43,7 @@ class FlowManager(FlowManagerABC):
         self.submitted_count = 0
         self.completed_count = 0
         self.error_count = 0
+        self.post_processing_count = 0
         self.completed_results = defaultdict(list)
         self.error_results = defaultdict(list)
 
@@ -115,6 +116,8 @@ class FlowManager(FlowManagerABC):
                 self.completed_results[job.name].append(result)
                 
             if self.on_complete:
+                with self._data_lock:
+                    self.post_processing_count += 1
                 #try: don't catch the exception let it bubble up
                 self.on_complete(result)
        
@@ -207,7 +210,8 @@ class FlowManager(FlowManagerABC):
             return {
                 'submitted': self.submitted_count,
                 'completed': self.completed_count,
-                'errors': self.error_count
+                'errors': self.error_count,
+                'post_processing': self.post_processing_count
             }
 
     def pop_results(self):
@@ -237,7 +241,7 @@ class FlowManager(FlowManagerABC):
         
         while (time.time() - start_time) < timeout:
             counts = self.get_counts()
-            self.logger.info(f"Task Stats:\nErrors: {counts['errors']}, Submitted: {counts['submitted']}, Completed: {counts['completed']}")
+            self.logger.info(f"Task Stats:\nErrors: {counts['errors']}, Submitted: {counts['submitted']}, Completed: {counts['completed']}, Post-processing: {counts['post_processing']}")
             # Return immediately if all tasks are complete or if there are no tasks at all
             if counts['submitted'] == 0 or counts['submitted'] == (counts['completed'] + counts['errors']):
                 return True
