@@ -226,5 +226,43 @@ def test_singleton_parameters():
     assert not different_callback_called[0], "New callback should not have been called"
 
 
+def test_wait_for_completion_no_tasks():
+    """Test that FlowManager.wait_for_completion() doesn't hang when no tasks are submitted."""
+    # Rule Applied: Test code for correctness and Base decisions on evidence
+    
+    # Reset the instance to ensure clean test state
+    FlowManager.reset_instance()
+    
+    # Create instance
+    fm = FlowManager.instance()
+    
+    # Create a simple job
+    def simple_job(j_ctx):
+        data = j_ctx.get('task', {})
+        return data.get('x', 'default_value')
+    
+    # Add DSL but don't submit any tasks
+    dsl = wrap({"simple_job": simple_job})
+    fm.add_dsl(dsl, "no_tasks_test")
+    
+    # Log that we're calling wait_for_completion with no tasks
+    logger.info("Calling wait_for_completion with no tasks submitted")
+    
+    # Wait for completion - this should return immediately since there are no tasks
+    start_time = time.time()
+    success = fm.wait_for_completion()
+    end_time = time.time()
+    
+    # Log the elapsed time
+    elapsed_time = end_time - start_time
+    logger.info(f"wait_for_completion completed in {elapsed_time:.6f} seconds")
+    
+    # Verify success status
+    assert success, "wait_for_completion should return True even when no tasks are submitted"
+    
+    # Verify that wait_for_completion returned quickly (didn't hang until timeout)
+    assert elapsed_time < 1.0, f"wait_for_completion took {elapsed_time:.6f} seconds, which suggests it may be hanging"
+
+
 if __name__ == "__main__":
     pytest.main(["-xvs", __file__])
