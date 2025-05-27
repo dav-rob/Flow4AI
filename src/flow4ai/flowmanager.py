@@ -12,6 +12,35 @@ from flow4ai.job_loader import JobFactory
 
 class FlowManager(FlowManagerABC):
     _lock = threading.Lock()  # Lock for thread-safe initialization
+    _instance = None  # Singleton instance
+    
+    @classmethod
+    def instance(cls, dsl=None, jobs_dir_mode=False, on_complete: Optional[Callable[[Any], None]] = None) -> 'FlowManager':
+        """Get or create the singleton instance of FlowManager.
+        
+        Args:
+            dsl: A dictionary of job DSLs, a job DSL, a JobABC instance, or a collection of JobABC instances.
+            jobs_dir_mode: If True, the FlowManager will load jobs from a directory.
+            on_complete: A callback function to be called when a job is completed.
+            
+        Returns:
+            The singleton instance of FlowManager
+        """
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = cls(dsl, jobs_dir_mode, on_complete)
+        return cls._instance
+    
+    @classmethod
+    def reset_instance(cls) -> None:
+        """Reset the singleton instance.
+        
+        This method clears the stored singleton instance, allowing a new instance to be created
+        the next time instance() is called.
+        """
+        with cls._lock:
+            cls._instance = None
     
     def __init__(self, dsl=None, jobs_dir_mode=False, on_complete: Optional[Callable[[Any], None]] = None):
         """Initialize the FlowManager.

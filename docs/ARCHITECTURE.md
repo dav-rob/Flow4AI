@@ -164,32 +164,63 @@ Both formats are supported and can be used interchangeably based on your prefere
 
 ## FlowManager: Singleton Pattern
 
-The `FlowManager` class operates as a singleton for managing job graphs and tasks:
+The FlowManager is implemented with a singleton pattern to enable all components can access the same FlowManager instance and its state
 
-- **Single Instance**: Only one instance of `FlowManager` is created per application, you can call the constructor multiple times in different files and it will return the same instance with all state remembered
-- **State Management**: The FlowManager maintains internal state about job graphs, tasks, and results
-- **Multiple Submissions**: A single FlowManager instance can handle multiple DSLs and task submissions
-- **Stateful Counters**: Task counts (completed, errors) are cumulative across all submit operations
 
-```python
-fm = FlowManager()
+### Implementation Details
 
-# Add multiple DSLs to the same manager
-fq_name1 = fm.add_dsl(dsl1, "graph_one")
-fq_name2 = fm.add_dsl(dsl2, "graph_two")
+The singleton pattern is implemented using the
+`instance` class method with a reset capability using `reset_instance` class method.
 
-# Submit tasks to different DSLs
-fm.submit(task1, fq_name1)
-fm.submit(task2, fq_name2)
 
-# Wait for all tasks to complete
-fm.wait_for_completion()
-```
+### Usage Examples
+
+#### Simple Initialization
 
 ```python
-fm1 = FlowManager()  # First instance
-fm2 = FlowManager()  # Second instance - the same object as the first instance.  So this can be used in different parts of the code to access the same FlowManager instance.
+# Get or create the FlowManager instance
+fm = FlowManager.instance()
+
+# Add a DSL
+fq_name = fm.add_dsl(my_dsl)
+
+# Use the same instance elsewhere in the code
+fm2 = FlowManager.instance()  # Returns the same instance
 ```
+
+#### Initialization with DSL Parameter
+
+```python
+# Initialize with a DSL dictionary
+dsl_dict = {
+    "workflow": {
+        "variant1": create_pipeline("var1"),
+        "variant2": create_pipeline("var2")
+    }
+}
+
+# Get or create the FlowManager instance with DSL
+fm = FlowManager.instance(dsl=dsl_dict)
+
+# Submit tasks directly to the loaded DSL
+fm.submit_by_graph(task, "workflow", "variant1")
+```
+
+#### Testing
+
+For testing purposes, you can reset the singleton instance:
+
+```python
+# Reset before each test
+FlowManager.reset_instance()
+
+# Create a fresh instance
+fm = FlowManager.instance()
+```
+
+The thread-safe implementation ensures that the singleton pattern works correctly in multi-threaded environments, using a lock for thread safety during initialization.
+
+
 
 ## DSL Handling, Graph Validation, and FQNs
 
