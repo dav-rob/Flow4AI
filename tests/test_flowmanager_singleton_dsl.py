@@ -1,5 +1,6 @@
+from typing import Any, Dict
+
 import pytest
-from typing import Dict, Any
 
 from flow4ai import f4a_logging as logging
 from flow4ai.dsl import DSLComponent, wrap
@@ -137,13 +138,13 @@ def test_singleton_with_dsl_parameter():
     
     # Submit tasks to different graph variants
     logger.info("Submitting task to calculator-square graph")
-    fm.submit_by_graph(Task(tasks[0]), "calculator", "square")
+    fm.submit_short(Task(tasks[0]), "calculator", "square")
     
     logger.info("Submitting task to calculator-double graph")
-    fm.submit_by_graph(Task(tasks[1]), "calculator", "double")
+    fm.submit_short(Task(tasks[1]), "calculator", "double")
     
     logger.info("Submitting task to calculator-sum graph")
-    fm.submit_by_graph(Task(tasks[2]), "calculator", "sum")
+    fm.submit_short(Task(tasks[2]), "calculator", "sum")
     
     # Wait for all tasks to complete
     success = fm.wait_for_completion()
@@ -197,7 +198,7 @@ def test_singleton_with_dsl_parameter():
     
     # Submit to an existing graph without reinitializing
     logger.info("Submitting new task to calculator-double graph from second reference")
-    fm2.submit_by_graph(Task(new_task), "calculator", "double")
+    fm2.submit_short(Task(new_task), "calculator", "double")
     
     success = fm2.wait_for_completion()
     assert success, "Timed out waiting for tasks to complete"

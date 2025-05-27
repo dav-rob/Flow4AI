@@ -218,7 +218,7 @@ def test_submit_by_graph():
     
     # Test submit_by_graph with square variant
     logger.info("Submitting task to calculator-square graph")
-    fm.submit_by_graph(Task(task_data), "calculator", "square")
+    fm.submit_short(Task(task_data), "calculator", "square")
     
     # Wait for completion
     success = fm.wait_for_completion()
@@ -277,7 +277,7 @@ def test_submit_by_graph_with_collision():
     
     # Test that submit_by_graph raises an error for ambiguous graph/variant
     with pytest.raises(ValueError) as excinfo:
-        fm.submit_by_graph(Task({"start": 1, "count": 3}), "calc", "test")
+        fm.submit_short(Task({"start": 1, "count": 3}), "calc", "test")
     
     # Check that error message contains the FQ names
     error_message = str(excinfo.value)
@@ -307,7 +307,7 @@ def test_combined_workflow():
     task_data = {"start": 2, "count": 3}  # Will generate [2, 3, 4]
     
     # Submit task using graph and variant
-    fm.submit_by_graph(Task(task_data), "workflow", "simple")
+    fm.submit_short(Task(task_data), "workflow", "simple")
     
     # Wait for completion
     success = fm.wait_for_completion()

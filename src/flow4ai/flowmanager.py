@@ -14,34 +14,6 @@ class FlowManager(FlowManagerABC):
     _lock = threading.Lock()  # Lock for thread-safe initialization
     _instance = None  # Singleton instance
     
-    @classmethod
-    def instance(cls, dsl=None, jobs_dir_mode=False, on_complete: Optional[Callable[[Any], None]] = None) -> 'FlowManager':
-        """Get or create the singleton instance of FlowManager.
-        
-        Args:
-            dsl: A dictionary of job DSLs, a job DSL, a JobABC instance, or a collection of JobABC instances.
-            jobs_dir_mode: If True, the FlowManager will load jobs from a directory.
-            on_complete: A callback function to be called when a job is completed.
-            
-        Returns:
-            The singleton instance of FlowManager
-        """
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = cls(dsl, jobs_dir_mode, on_complete)
-        return cls._instance
-    
-    @classmethod
-    def reset_instance(cls) -> None:
-        """Reset the singleton instance.
-        
-        This method clears the stored singleton instance, allowing a new instance to be created
-        the next time instance() is called.
-        """
-        with cls._lock:
-            cls._instance = None
-    
     def __init__(self, dsl=None, jobs_dir_mode=False, on_complete: Optional[Callable[[Any], None]] = None):
         """Initialize the FlowManager.
         
@@ -100,32 +72,6 @@ class FlowManager(FlowManagerABC):
         async with job_graph_context_manager(job_set):
             return await job._execute(task)
     
-    def _record_error(self, task: Union[Task, List[Task]], job_key: str, error_msg: str):
-        """Helper method to record errors for both single tasks and lists of tasks.
-        
-        Args:
-            task: A Task or list of Tasks that encountered an error
-            job_key: The job key for tracking errors
-            error_msg: The error message
-            
-        Returns:
-            None
-        """
-        with self._data_lock:
-            if isinstance(task, list):
-                self.error_count += len(task)
-                for single_task in task:
-                    self.error_results[job_key].append({
-                        "error": ValueError(error_msg),
-                        "task": single_task
-                    })
-            else:
-                self.error_count += 1
-                self.error_results[job_key].append({
-                    "error": ValueError(error_msg),
-                    "task": task
-                })
-
 
     def submit_task(self, task: Union[Dict[str, Any], List[Dict[str, Any]], str], fq_name: str = None):
         fq_name = self.check_fq_name_and_job_graph_map(fq_name)
@@ -222,14 +168,15 @@ class FlowManager(FlowManagerABC):
                     
         return matching_names
     
-    def submit_by_graph(self, task, graph_name, variant=""):
+    def submit_short(self, task: Union[Dict[str, Any], List[Dict[str, Any]], str], graph_name, variant=""):
         """
-        Submit task(s) to a specific graph and variant.
+        Submit task(s) using just the short graph name (e.g. RAG), plus the variant name (e.g. pinecone or chromaDB) if needed, 
+        rather than the fully qualified job name.
         
         Args:
-            task: The task or list of tasks to submit
-            graph_name: The name of the graph
-            variant: The variant name, defaults to empty string
+            task: The task or list of tasks to submit 
+            graph_name: The name of the graph (e.g. RAG)
+            variant: The variant name, defaults to empty string (e.g. pinecone or chromaDB) 
             
         Returns:
             None
@@ -290,7 +237,7 @@ class FlowManager(FlowManagerABC):
         
         while (time.time() - start_time) < timeout:
             counts = self.get_counts()
-            self.logger.info(f"Errors: {counts['errors']}, Submitted: {counts['submitted']}, Completed: {counts['completed']}")
+            self.logger.info(f"Task Stats:\nErrors: {counts['errors']}, Submitted: {counts['submitted']}, Completed: {counts['completed']}")
             # Return immediately if all tasks are complete or if there are no tasks at all
             if counts['submitted'] == 0 or counts['submitted'] == (counts['completed'] + counts['errors']):
                 return True
@@ -502,3 +449,30 @@ class FlowManager(FlowManagerABC):
                         print(f"- {job_name}: {error_data['error']}")
         
         return results
+    @classmethod
+    def instance(cls, dsl=None, jobs_dir_mode=False, on_complete: Optional[Callable[[Any], None]] = None) -> 'FlowManager':
+        """Get or create the singleton instance of FlowManager.
+        
+        Args:
+            dsl: A dictionary of job DSLs, a job DSL, a JobABC instance, or a collection of JobABC instances.
+            jobs_dir_mode: If True, the FlowManager will load jobs from a directory.
+            on_complete: A callback function to be called when a job is completed.
+            
+        Returns:
+            The singleton instance of FlowManager
+        """
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = cls(dsl, jobs_dir_mode, on_complete)
+        return cls._instance
+    
+    @classmethod
+    def reset_instance(cls) -> None:
+        """Reset the singleton instance.
+        
+        This method clears the stored singleton instance, allowing a new instance to be created
+        the next time instance() is called.
+        """
+        with cls._lock:
+            cls._instance = None

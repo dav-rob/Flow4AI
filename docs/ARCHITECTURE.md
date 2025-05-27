@@ -15,10 +15,8 @@ Uses a callback (_handle_completion) to track completed/errored tasks and store 
 
 ### FlowManagerMP (Multi-Process Asyncio):
 
-`submit_task(task, fq_name)`: Puts the Task object onto a multiprocessing.Queue.
-A separate worker process (_async_worker) consumes tasks from this queue, runs an asyncio event loop to execute the job graph, and puts results onto another queue.
-An optional result_processing_function (potentially in another process) consumes these results.
-`wait_for_completion()`: Signals the end of input to the worker process(es) by putting None on the task queue.  Calls process.join() on the worker process(es), blocking until they terminate (i.e., have processed all tasks).  Does not take a timeout parameter and does not return a boolean status. Completion is implied by the method returning.
+`submit_task(task, fq_name)`: Puts the Task object onto a multiprocessing.Queue, a separate worker process (_async_worker) consumes tasks from this queue, runs an asyncio event loop to execute the job graph, and puts results onto another queue, an optional result_processing_function (potentially in another process) consumes these results.
+`wait_for_completion(timeout=10, check_interval=0.1)`: Signals the end of input to the worker process(es) by putting None on the task queue.  Calls process.join() on the worker process(es), blocking until they terminate (i.e., have processed all tasks).  Does not take a timeout parameter and does not return a boolean status. Completion is implied by the method returning.
 Tests for FlowManagerMP use this as a blocking call and then verify results, not checking a return value from wait_for_completion itself.
 
 ### Differences:
