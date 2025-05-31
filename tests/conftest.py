@@ -1,10 +1,13 @@
 import pytest
 
+from flow4ai.flowmanager_base import FlowManagerABC
 from flow4ai.utils.otel_wrapper import TracerFactory
 
 # set the TracerFactory up with the TestTracerProvider so the TracerProvider
 #  can be overridden by code which normally isn't possible.
 TracerFactory.set_test_mode(True)
+FlowManagerABC.RAISE_ON_ERROR = True
+
 
 def pytest_configure(config):
     config.addinivalue_line(

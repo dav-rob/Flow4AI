@@ -539,6 +539,9 @@ class FlowManagerMP(FlowManagerABC):
             timeout (Optional[float], optional): Maximum time in seconds to poll. 
                                                  If None, polls indefinitely until completion or KeyboardInterrupt. 
                                                  Defaults to None.
+
+        Raises:
+            RuntimeError: If raise_on_error is True and there are errors, raises an exception
         """
         start_time = time.time()
         self.logger.info("Starting to poll for task processing updates...")
