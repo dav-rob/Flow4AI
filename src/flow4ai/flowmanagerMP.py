@@ -107,8 +107,17 @@ class FlowManagerMP(FlowManagerABC):
     def __del__(self):
         self._cleanup() # Fixed: call _cleanup
 
-    def _cleanup(self):
-        """Clean up resources when the object is destroyed."""
+    def _cleanup(self, exception=None):
+        """Clean up resources when the object is destroyed.
+        
+        This method ensures proper cleanup of all resources, regardless of exceptions.
+        It performs all cleanup actions before re-raising any exception that occurred
+        during execution. This ensures resources are released even in error scenarios.
+        
+        Args:
+            exception (Exception, optional): An exception that occurred during execution
+                that should be re-raised after cleanup is complete. Defaults to None.
+        """
         self.logger.info("Cleaning up FlowManagerMP resources")
         
         if self.job_executor_process:
@@ -147,7 +156,12 @@ class FlowManagerMP(FlowManagerABC):
             self._result_queue.join_thread()
             self.logger.debug("Result queue thread joined")
         
+        
         self.logger.debug("Cleanup completed")
+        
+        # Re-raise the exception after cleanup is complete
+        if exception:
+            raise exception
 
     def _check_picklable(self, on_complete):
         try:
@@ -243,12 +257,36 @@ class FlowManagerMP(FlowManagerABC):
 
 
     def close_processes(self, timeout=10, check_interval=0.1):
-        """Signal completion of input and wait for all processes to finish and shut down."""
+        """Signal completion of input and wait for all processes to finish and shut down.
+        
+        If an exception occurs during wait_for_completion, this method ensures all processes 
+        are properly closed before re-raising the exception. This guarantees clean resource
+        management even in error scenarios.
+        
+        If any job errors occurred during execution, an exception will be raised after cleanup.
+        """
         self.logger.debug("Marking input as completed")
         self.logger.info("*** task_queue ended ***")
         self._task_queue.put(None)
-        self.wait_for_completion(timeout=timeout, check_interval=check_interval)
-        self._close_running_processes()
+        
+        caught_exception = None
+        try:
+            self.wait_for_completion(timeout=timeout, check_interval=check_interval)
+        except Exception as e:
+            self.logger.error(f"Exception caught during wait_for_completion: {str(e)}")
+            caught_exception = e
+        
+        # Send completion signal to result queue
+        self.logger.debug("Sending completion signal to result queue")
+        self._result_queue.put(None)
+        
+        # Check for job errors that might not have been converted to exceptions yet
+        if caught_exception is None and self.job_errors.value > 0:
+            error_msg = f"Flow execution completed with {self.job_errors.value} error(s). Check logs for details."
+            self.logger.error(error_msg)
+            caught_exception = RuntimeError(error_msg)
+        
+        self._close_running_processes(caught_exception)
 
     # Must be static because it's passed as a target to multiprocessing.Process
     # Instance methods can't be pickled properly for multiprocessing
@@ -286,8 +324,17 @@ class FlowManagerMP(FlowManagerABC):
 
         logger.debug("Result processor shutting down")
 
-    def _close_running_processes(self):
-        """Close all running processes."""
+    def _close_running_processes(self, exception=None):
+        """Close all running processes.
+        
+        This method ensures orderly shutdown of processes before propagating any exception.
+        By accepting an exception parameter, it allows exceptions to be passed through the
+        cleanup chain while ensuring all resources are properly released first.
+        
+        Args:
+            exception (Exception, optional): An exception that occurred during execution
+                that should be propagated after cleanup is complete. Defaults to None.
+        """
         self.logger.debug("Entering close running processes")
 
         if self.on_complete and self.serial_processing:
@@ -311,7 +358,7 @@ class FlowManagerMP(FlowManagerABC):
                 self.result_processor_process.join()
             self.logger.debug("Result processor process completed")
         
-        self._cleanup()
+        self._cleanup(exception)
 
     def _process_serial_results(self):
         while True:
@@ -421,6 +468,9 @@ class FlowManagerMP(FlowManagerABC):
                 if job_errors_counter: # Increment job_errors_counter
                     with job_errors_counter.get_lock():
                         job_errors_counter.value += 1
+                # Put the exception in the result queue to propagate error details
+                result_queue.put(e)
+                logger.debug(f"[TASK_TRACK] Exception put in result queue for task {task_id}")
                 raise
 
         async def queue_monitor():
