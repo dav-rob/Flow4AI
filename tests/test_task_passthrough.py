@@ -164,7 +164,7 @@ def test_task_passthrough():
                 flowmanagerMP.submit_task(task, fq_name=f'text_processing_graph{graph_num}$$$$text_capitalize$$')
             
             # Mark completion and wait for processing
-            flowmanagerMP.wait_for_completion()
+            flowmanagerMP.close_processes()
             
             # Read results from file
             with open(results_file, 'r') as f:
@@ -259,7 +259,7 @@ def test_multiple_task_submissions():
                         flowmanagerMP.submit_task(task_copy, fq_name=head_job)
             
             # Mark completion and wait for processing
-            flowmanagerMP.wait_for_completion()
+            flowmanagerMP.close_processes()
             
             # Read results from file
             with open(results_file, 'r') as f:

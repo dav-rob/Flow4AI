@@ -68,7 +68,7 @@ def test_basic_error_handling():
     for task in tasks:
         flowmanagerMP.submit_task(task)
     
-    flowmanagerMP.wait_for_completion()
+    flowmanagerMP.close_processes()
     
     # Verify successful tasks completed
     assert len(results) == 2
@@ -100,7 +100,7 @@ def test_timeout_handling():
     for task in tasks:
         flowmanagerMP.submit_task(task)
     
-    flowmanagerMP.wait_for_completion()
+    flowmanagerMP.close_processes()
     
     # Verify all tasks eventually completed
     assert len(results) == 3
@@ -141,7 +141,7 @@ def test_invalid_input():
     for invalid_input in invalid_inputs:
         flowmanagerMP.submit_task(invalid_input)
     
-    flowmanagerMP.wait_for_completion()
+    flowmanagerMP.close_processes()
     # Should complete without raising exceptions
 
 def test_resource_cleanup():
@@ -179,7 +179,7 @@ def test_error_in_on_complete_callable():
     for i in range(3):
         flowmanagerMP.submit_task({'task_id': i})
     
-    flowmanagerMP.wait_for_completion()
+    flowmanagerMP.close_processes()
     # Should complete without hanging or crashing
 
 def test_memory_error_handling():
@@ -193,7 +193,7 @@ def test_memory_error_handling():
     # Submit task that will cause memory error
     flowmanagerMP.submit_task({'task_id': 1, 'memory_error': True})
     
-    flowmanagerMP.wait_for_completion()
+    flowmanagerMP.close_processes()
     
     # Process should handle the memory error gracefully
     assert len(results) == 0  # No results should be processed
@@ -209,7 +209,7 @@ def test_unpicklable_result():
     # Submit task that returns unpicklable result
     flowmanagerMP.submit_task({'task_id': 1, 'invalid_result': True})
     
-    flowmanagerMP.wait_for_completion()
+    flowmanagerMP.close_processes()
     
     # Process should handle the pickling error gracefully
     assert len(results) == 0  # No results should be processed

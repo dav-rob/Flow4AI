@@ -242,12 +242,12 @@ class FlowManagerMP(FlowManagerABC):
             self.tasks_submitted.value += 1
 
 
-    def wait_for_completion(self, timeout=10, check_interval=0.1):
+    def close_processes(self, timeout=10, check_interval=0.1):
         """Signal completion of input and wait for all processes to finish and shut down."""
         self.logger.debug("Marking input as completed")
         self.logger.info("*** task_queue ended ***")
         self._task_queue.put(None)
-        self.poll_for_updates(timeout=timeout, check_interval=check_interval)
+        self.wait_for_completion(timeout=timeout, check_interval=check_interval)
         self._close_running_processes()
 
     # Must be static because it's passed as a target to multiprocessing.Process
@@ -527,7 +527,7 @@ class FlowManagerMP(FlowManagerABC):
         
         return list(self._fq_name_map.keys())
 
-    def poll_for_updates(self, timeout=10, check_interval=0.1):
+    def wait_for_completion(self, timeout=10, check_interval=0.1):
         """
         Periodically logs the status of task processing counters.
         Exits when all submitted tasks have been processed by worker processes.

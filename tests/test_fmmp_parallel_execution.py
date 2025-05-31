@@ -77,7 +77,7 @@ async def run_flowmanagerMP(time_delay: float, use_direct_job: bool = False) -> 
         flowmanagerMP.submit_task(f"Task {i}")
         await asyncio.sleep(0.2)  # Simulate time taken to gather data
     # Indicate there is no more input data to process to initiate shutdown
-    flowmanagerMP.wait_for_completion()
+    flowmanagerMP.close_processes()
 
     execution_time = time.perf_counter() - start_time
     logger.info(f"Execution time for delay {time_delay}s: {execution_time:.2f}s")
@@ -149,7 +149,7 @@ async def run_batch_flowmanagerMP() -> float:
             flowmanagerMP.submit_task(f"Batch{batch}_Link{link}")
             await asyncio.sleep(0.10)  # Simulate time to scrape each link
     # Indicate there is no more input data to process to initiate shutdown
-    flowmanagerMP.wait_for_completion()
+    flowmanagerMP.close_processes()
 
     execution_time = time.perf_counter() - start_time
     logger.info(f"\nTotal execution time: {execution_time:.2f}s")
@@ -179,7 +179,7 @@ async def run_flowmanagerMP_without_result_processor() -> bool:
         for i in range(3):
             flowmanagerMP.submit_task(f"Task {i}")
         # Indicate there is no more input data to process to initiate shutdown
-        flowmanagerMP.wait_for_completion()
+        flowmanagerMP.close_processes()
         return True
     except Exception as e:
         logger.error(f"Error occurred: {e}")
@@ -208,7 +208,7 @@ async def run_traced_flowmanagerMP(time_delay: float) -> float:
         flowmanagerMP.submit_task(f"Task {i}")
         await asyncio.sleep(0.2)  # Simulate time taken to gather data
     # Indicate there is no more input data to process to initiate shutdown
-    flowmanagerMP.wait_for_completion()
+    flowmanagerMP.close_processes()
 
     execution_time = time.perf_counter() - start_time
     logger.info(f"Execution time for delay {time_delay}s: {execution_time:.2f}s")
@@ -339,7 +339,7 @@ def test_parallel_execution_multiple_jobs():
                 tasks.append({'task': f'task_{i}_{j}', 'fq_name': fq_name})
         for task in tasks:
             flowmanagerMP.submit_task(task)
-        flowmanagerMP.wait_for_completion()
+        flowmanagerMP.close_processes()
         
         end_time = time.time()
         execution_time = end_time - start_time

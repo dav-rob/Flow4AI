@@ -120,7 +120,7 @@ def test_debug_logging_in_flowmanagerMP(clear_log_file):
     # Submit tasks
     for i in range(3):
         flowmanagerMP.submit_task({'task': f'Task {i}'})  # Changed to use dict format
-    flowmanagerMP.wait_for_completion()
+    flowmanagerMP.close_processes()
 
     # Check log file contents
     with open('flow4ai.log', 'r') as f:
@@ -165,7 +165,7 @@ def test_info_logging_in_flowmanagerMP(clear_log_file):
     # Submit tasks
     for i in range(3):
         flowmanagerMP.submit_task({'task': f'Task {i}'})  # Changed to use dict format
-    flowmanagerMP.wait_for_completion()
+    flowmanagerMP.close_processes()
 
     # Check log file contents
     with open('flow4ai.log', 'r') as f:

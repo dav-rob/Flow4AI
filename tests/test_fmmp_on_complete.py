@@ -69,7 +69,7 @@ def parallel_mode():
             flowmanagerMP.submit_task(f"Task {i}")
             time.sleep(0.1)
         
-        flowmanagerMP.wait_for_completion()
+        flowmanagerMP.close_processes()
         assert False, "Expected parallel mode to fail with unpicklable processor"
     except Exception as e:
         print(f"Parallel mode failed as expected: {e}")
@@ -102,7 +102,7 @@ def serial_mode():
             time.sleep(0.1)
         
         # Process tasks and wait for completion
-        flowmanagerMP.wait_for_completion()  # Not awaited since it's synchronous
+        flowmanagerMP.close_processes()  # Not awaited since it's synchronous
         
         # Give a small delay to ensure all results are processed
         time.sleep(0.5)

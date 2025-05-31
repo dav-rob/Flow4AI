@@ -110,7 +110,7 @@ def test_empty_initialization():
     
     assert head_jobs == expected_jobs, "FlowManagerMP config not loaded correctly"
 
-    fm.wait_for_completion()
+    fm.close_processes()
 
 
 @pytest.mark.asyncio
@@ -139,7 +139,7 @@ async def test_concurrent_task_execution():
     for task in tasks:
         fm.submit_task(task)
     
-    fm.wait_for_completion()
+    fm.close_processes()
     
     # Verify all tasks completed
     assert len(results) == 3
@@ -169,7 +169,7 @@ async def test_job_instantiation_and_execution():
     
     # Submit a simple task
     fm.submit_task({})
-    fm.wait_for_completion()
+    fm.close_processes()
     
     # Verify job execution
     assert len(results) == 1
@@ -197,7 +197,7 @@ def test_singleton_pattern():
     assert fm1 is not fm3, "Failed to create new instance after reset"
     
     # Clean up
-    fm3.wait_for_completion()
+    fm3.close_processes()
 
 
 def test_thread_safety():
@@ -250,7 +250,7 @@ def test_reset_instance_cleanup():
     
     # Verify the new instance is ready to use
     new_fm.submit_task({})
-    new_fm.wait_for_completion()
+    new_fm.close_processes()
 
 
 def test_multiprocessing_initialization():
@@ -271,7 +271,7 @@ def test_multiprocessing_initialization():
     fm.submit_task({"test": "multiprocessing"})
     
     # Wait for completion
-    fm.wait_for_completion()
+    fm.close_processes()
     
     # Verify the task was processed
     assert len(results) == 1
