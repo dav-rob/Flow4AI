@@ -42,3 +42,5 @@ dev_resources/requirements_extracted.txt
 digest.txt
 dev_resources/temp.json
 temp.txt
+.env
+test_results.txt
