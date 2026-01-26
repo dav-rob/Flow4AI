@@ -97,9 +97,12 @@ async def test_async_exception_handling():
     results = []
     
     def collect_result(result):
-        results.append(result)
+        if not isinstance(result, Exception):
+            results.append(result)
     
     flowmanagerMP = FlowManagerMP(AsyncTestJob(), collect_result, serial_processing=True)
+    # This test expects to handle errors manually by checking results, so disable auto-raise
+    flowmanagerMP.set_raise_on_error(False)
     
     # Get the head job's name to use in task submissions
     head_jobs = flowmanagerMP.get_head_jobs()

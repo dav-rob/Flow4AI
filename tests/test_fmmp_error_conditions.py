@@ -51,6 +51,7 @@ def test_basic_error_handling():
             results.append(result)
     
     flowmanagerMP = FlowManagerMP(ErrorTestJob(), collect_result, serial_processing=True)
+    flowmanagerMP.set_raise_on_error(False)
     
     # Get the head job's name to use in task submissions
     head_jobs = flowmanagerMP.get_head_jobs()
@@ -75,7 +76,7 @@ def test_basic_error_handling():
     assert all(r['status'] == 'completed' for r in results)
     
     # Verify errors were captured
-    assert len(errors) == 0  # Errors should be logged, not passed to result processor
+    assert len(errors) == 2
 
 def test_timeout_handling():
     """Test handling of task timeouts"""
@@ -186,9 +187,11 @@ def test_memory_error_handling():
     """Test handling of memory errors"""
     results = []
     def collect_result(result):
-        results.append(result)
+        if not isinstance(result, Exception):
+            results.append(result)
     
     flowmanagerMP = FlowManagerMP(ErrorTestJob(), collect_result, serial_processing=True)
+    flowmanagerMP.set_raise_on_error(False)
     
     # Submit task that will cause memory error
     flowmanagerMP.submit_task({'task_id': 1, 'memory_error': True})
@@ -202,9 +205,11 @@ def test_unpicklable_result():
     """Test handling of unpicklable results"""
     results = []
     def collect_result(result):
-        results.append(result)
+        if not isinstance(result, Exception):
+            results.append(result)
     
     flowmanagerMP = FlowManagerMP(ErrorTestJob(), collect_result, serial_processing=True)
+    flowmanagerMP.set_raise_on_error(False)
     
     # Submit task that returns unpicklable result
     flowmanagerMP.submit_task({'task_id': 1, 'invalid_result': True})

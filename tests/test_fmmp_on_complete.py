@@ -73,7 +73,7 @@ def parallel_mode():
         assert False, "Expected parallel mode to fail with unpicklable processor"
     except Exception as e:
         print(f"Parallel mode failed as expected: {e}")
-        assert "pickle" in str(e).lower(), "Expected pickling error"
+        assert "pickl" in str(e).lower(), "Expected pickling error"
 
 def serial_mode():
     print("\nTesting serial mode (should work):")

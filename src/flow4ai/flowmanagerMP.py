@@ -281,7 +281,7 @@ class FlowManagerMP(FlowManagerABC):
         self._result_queue.put(None)
         
         # Check for job errors that might not have been converted to exceptions yet
-        if caught_exception is None and self.job_errors.value > 0:
+        if caught_exception is None and self.job_errors.value > 0 and self.get_raise_on_error():
             error_msg = f"Flow execution completed with {self.job_errors.value} error(s). Check logs for details."
             self.logger.error(error_msg)
             caught_exception = RuntimeError(error_msg)
