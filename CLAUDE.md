@@ -22,4 +22,4 @@
 - Always call super().__init__ with name and properties parameters
 
 ## Architecture
-Always read ARCHITECTURE.md before major changes
+Always read docs/ARCHITECTURE.md before anything other than simple command execution.
