@@ -30,11 +30,11 @@ def get_api_key(params: Optional[Dict[str, Any]] = None,
     Raises:
         ValueError: If required is True and the API key is not found
     """
-    # Initialize params if None
     params = params or {}
     
-    # Load environment variables from env file
-    load_dotenv(env_file)
+    # Load environment variables from .env file (prioritized) or fallback to api.env
+    load_dotenv(".env")  # Common convention
+    load_dotenv(env_file)  # Backward compatibility with api.env
     
     # Extract key name from params or use default
     env_var = params.pop("api_key", None) if params else key_name

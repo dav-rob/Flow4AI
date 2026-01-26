@@ -108,8 +108,9 @@ class OpenAIJob(JobABC):
         """
         super().__init__(name, properties)
         
-        # Initialize OpenAI client with properties
-        self.client = OpenAIClient.get_client(self.properties.get("client", {}))
+        # Defer client initialization until first use
+        self.client = None
+        self._client_params = self.properties.get("client", {})
         
         # Rate limiter configuration
         rate_limit_config = self.properties.get("rate_limit", self.default_rate_limit)
@@ -117,6 +118,12 @@ class OpenAIJob(JobABC):
 
         # Extract other relevant properties for OpenAI client
         self.api_properties = self.properties.get("api", {})
+    
+    def _ensure_client(self):
+        """Lazily initialize the OpenAI client on first use."""
+        if self.client is None:
+            self.client = OpenAIClient.get_client(self._client_params)
+        return self.client
 
     async def run(self, task: Union[Dict[str, Any], Any]) -> Dict[str, Any]:
         """
@@ -154,14 +161,17 @@ class OpenAIJob(JobABC):
 
         self.create_prompt(request_properties, task)
 
+        # Ensure client is initialized before use
+        client = self._ensure_client()
+        
         # Acquire the rate limiter before making the request
         async with self.limiter:
             try:
                 logger.info(f"{self.name} is making an OpenAI API call.")
                 if "response_format" in request_properties:
-                    response = await self.client.beta.chat.completions.parse(**request_properties)
+                    response = await client.beta.chat.completions.parse(**request_properties)
                 else:
-                    response = await self.client.chat.completions.create(**request_properties)
+                    response = await client.chat.completions.create(**request_properties)
                 logger.info(f"{self.name} received a response.")
                 
                 # Handle the response
