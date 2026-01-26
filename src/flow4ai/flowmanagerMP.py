@@ -276,9 +276,6 @@ class FlowManagerMP(FlowManagerABC):
             self.logger.error(f"Exception caught during wait_for_completion: {str(e)}")
             caught_exception = e
         
-        # Send completion signal to result queue
-        self.logger.debug("Sending completion signal to result queue")
-        self._result_queue.put(None)
         
         # Check for job errors that might not have been converted to exceptions yet
         if caught_exception is None and self.job_errors.value > 0 and self.get_raise_on_error():
@@ -381,8 +378,10 @@ class FlowManagerMP(FlowManagerABC):
                         self.on_complete(result)
                         self.logger.debug(f"Finished processing result for task {task_id}")
                     except Exception as e:
-                        self.logger.error(f"Error processing result: {e}")
-                        self.logger.info("Detailed stack trace:", exc_info=True)
+                        self.logger.error(f"ERROR in on_complete callback: {e}")
+                        import traceback
+                        self.logger.error(f"Traceback:\n{traceback.format_exc()}")
+                        # Don't break - continue processing other results
             except queue.Empty:
                 job_executor_is_alive = self.job_executor_process and self.job_executor_process.is_alive()
                 self.logger.debug(f"Queue empty, job executor process alive status = {job_executor_is_alive}")

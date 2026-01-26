@@ -17,6 +17,8 @@ from flow4ai import f4a_logging as logging
 from flow4ai.flowmanagerMP import FlowManagerMP
 from flow4ai.job import JobABC
 
+# Configure logging
+logger = logging.getLogger(__name__)
 
 class StressTestJob(JobABC):
     """Job implementation for stress testing queues"""
@@ -46,19 +48,21 @@ def get_process_memory(pid):
 
 def test_queue_high_volume():
     """Test queue with high volume of tasks"""
+    logger.info("Starting test_queue_high_volume")
     results = []
     def collect_result(result):
         results.append(result)
     
     job = StressTestJob()
     flowmanagerMP = FlowManagerMP(job, collect_result, serial_processing=True)
-    
+    logger.info("Submitting tasks...")
     # Submit a high volume of tasks
     num_tasks = 10000
     for i in range(num_tasks):
         flowmanagerMP.submit_task({job.name: {'task_id': i}}, fq_name=job.name)
-    
+    logger.info("Tasks submitted.")    
     flowmanagerMP.close_processes()
+    logger.info("Processes closed.")
     
     assert len(results) == num_tasks
     assert len({r['task']['task_id'] for r in results}) == num_tasks
