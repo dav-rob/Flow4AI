@@ -33,10 +33,15 @@ except ImportError:
 
 async def technical_analysis(document):
     """Analyze document from technical perspective."""
+    import time
+    start = time.time()
+    
     if not LANGCHAIN_AVAILABLE:
         return {"error": "LangChain not installed"}
     
+    llm_start = time.time()
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    print(f"   ⏱️  Technical: LLM init took {time.time() - llm_start:.3f}s")
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a technical analyst. Analyze the following document from a technical perspective."),
@@ -44,7 +49,12 @@ async def technical_analysis(document):
     ])
     
     chain = prompt | llm
+    
+    api_start = time.time()
     result = await chain.ainvoke({"document": document})
+    print(f"   ⏱️  Technical: API call took {time.time() - api_start:.3f}s")
+    
+    print(f"   ⏱️  Technical: Total took {time.time() - start:.3f}s")
     
     return {
         "perspective": "technical",
@@ -54,10 +64,15 @@ async def technical_analysis(document):
 
 async def business_analysis(document):
     """Analyze document from business perspective."""
+    import time
+    start = time.time()
+    
     if not LANGCHAIN_AVAILABLE:
         return {"error": "LangChain not installed"}
     
+    llm_start = time.time()
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    print(f"   ⏱️  Business: LLM init took {time.time() - llm_start:.3f}s")
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a business analyst. Analyze the following document from a business perspective focusing on value and ROI."),
@@ -65,7 +80,12 @@ async def business_analysis(document):
     ])
     
     chain = prompt | llm
+    
+    api_start = time.time()
     result = await chain.ainvoke({"document": document})
+    print(f"   ⏱️  Business: API call took {time.time() - api_start:.3f}s")
+    
+    print(f"   ⏱️  Business: Total took {time.time() - start:.3f}s")
     
     return {
         "perspective": "business",
@@ -75,10 +95,15 @@ async def business_analysis(document):
 
 async def user_experience_analysis(document):
     """Analyze document from UX perspective."""
+    import time
+    start = time.time()
+    
     if not LANGCHAIN_AVAILABLE:
         return {"error": "LangChain not installed"}
     
+    llm_start = time.time()
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    print(f"   ⏱️  UX: LLM init took {time.time() - llm_start:.3f}s")
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a UX researcher. Analyze the following document from a user experience perspective."),
@@ -86,7 +111,12 @@ async def user_experience_analysis(document):
     ])
     
     chain = prompt | llm
+    
+    api_start = time.time()
     result = await chain.ainvoke({"document": document})
+    print(f"   ⏱️  UX: API call took {time.time() - api_start:.3f}s")
+    
+    print(f"   ⏱️  UX: Total took {time.time() - start:.3f}s")
     
     return {
         "perspective": "user_experience",
@@ -96,6 +126,9 @@ async def user_experience_analysis(document):
 
 async def synthesize_analysis(j_ctx):
     """Synthesize all analyses into a comprehensive summary."""
+    import time
+    start = time.time()
+    
     if not LANGCHAIN_AVAILABLE:
         return {"error": "LangChain not installed"}
     
@@ -105,7 +138,9 @@ async def synthesize_analysis(j_ctx):
     business = inputs.get("business", {}).get("analysis", "N/A")
     ux = inputs.get("user_experience", {}).get("analysis", "N/A")
     
+    llm_start = time.time()
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    print(f"   ⏱️  Synthesis: LLM init took {time.time() - llm_start:.3f}s")
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a strategic advisor. Synthesize the following analyses into a cohesive executive summary."),
@@ -113,11 +148,16 @@ async def synthesize_analysis(j_ctx):
     ])
     
     chain = prompt | llm
+    
+    api_start = time.time()
     result = await chain.ainvoke({
         "technical": technical,
         "business": business,
         "ux": ux
     })
+    print(f"   ⏱️  Synthesis: API call took {time.time() - api_start:.3f}s")
+    
+    print(f"   ⏱️  Synthesis: Total took {time.time() - start:.3f}s")
     
     return {
         "executive_summary": result.content
@@ -166,7 +206,7 @@ def main():
     making it easy to scale LLM operations and manage concurrent API calls efficiently.
     """
     
-    print(f"Document to analyze:\n{document[:150]}...\n")
+    print(f"Text to analyze:\n{document[:100]}...\n")
     print("Running multi-perspective analysis in parallel...\n")
     
     # Execute workflow
@@ -176,7 +216,14 @@ def main():
         "user_experience.document": document
     }
     
+    import time
+    workflow_start = time.time()
+    print(f"⏱️  Starting workflow execution at {time.strftime('%H:%M:%S')}\n")
+    
     errors, results = FlowManager.run(dsl, task, "multi_perspective_analysis", timeout=60)
+    
+    workflow_time = time.time() - workflow_start
+    print(f"\n⏱️  Total workflow execution time: {workflow_time:.3f}s\n")
     
     if errors:
         print(f"❌ Errors occurred: {errors}")
