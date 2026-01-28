@@ -2,6 +2,35 @@
 
 This directory contains working examples demonstrating Flow4AI's core features and capabilities.
 
+## Setup
+
+### 1. Install Dependencies
+
+For basic examples (01-05):
+```bash
+pip install -e .
+```
+
+For LangChain examples (06-07):
+```bash
+pip install -e ".[test]"
+```
+
+### 2. Configure API Keys
+
+Some examples require API keys (especially LangChain examples). Set up your environment:
+
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Edit .env and add your API keys
+# At minimum, you'll need:
+# OPENAI_API_KEY=your_key_here
+```
+
+**Important**: The `.env` file is in `.gitignore` and will never be committed.
+
 ## Running the Examples
 
 Each example can be run independently:
@@ -13,6 +42,10 @@ python examples/02_task_passthrough.py
 python examples/03_parallel_execution.py
 python examples/04_multiprocessing.py
 python examples/05_complex_workflow.py
+
+# LangChain examples (requires OPENAI_API_KEY in .env)
+python examples/06_langchain_simple.py
+python examples/07_langchain_chains.py
 ```
 
 ## Example Descriptions

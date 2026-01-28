@@ -12,8 +12,14 @@ Prerequisites:
 """
 
 import asyncio
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 from flow4ai.flowmanager import FlowManager
 from flow4ai.dsl import wrap
+
+# Load environment variables from .env file
+load_dotenv()
 
 try:
     from langchain_openai import ChatOpenAI
