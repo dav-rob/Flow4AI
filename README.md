@@ -11,10 +11,9 @@ Whether you're processing thousands of documents, chaining complex LLM calls, or
 - [Quick Start](#quick-start)
 - [Core Concepts](#core-concepts)
 - [The Core Pattern: Divide and Aggregate](#the-core-pattern-divide-and-aggregate)
-- [Task Passthrough](#task-passthrough)
-- [Intermediate Results](#accessing-intermediate-results)
 - [Massive Parallelism](#massive-parallel-execution)
 - [Complex Workflows](#complex-workflow-example)
+- [Task Passthrough and Intermediate Results](#task-passthrough-and-intermediate-results)
 - [Working Examples](#working-examples)
 - [Deep Dive: Job Syntax & Parameters](#deep-dive-job-syntax-parameters)
 
@@ -112,70 +111,14 @@ print(result["result"])
 # {'keywords': ['Hello', 'world', 'example'], 'sentiment': 'positive', 'word_count': 3}
 ```
 
-## Task Passthrough
-
-> **Example Script**: [`examples/02_task_passthrough.py`](examples/02_task_passthrough.py)
-
-When processing multiple tasks with different data, results need access to the **original task data**. Flow4AI automatically includes `task_pass_through` in every result, preserving the complete original task.
-
-**Why it matters:** Each task carries independent data (customer orders, documents, API requests). Your result processing functions need to correlate results back to specific inputs.
-
-```python
-from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap
-
-def process_order(order_id, amount):
-    tax = amount * 0.08
-    return {"tax": tax, "total": amount + tax}
-
-jobs = wrap({"process": process_order})
-fm = FlowManager()
-fq_name = fm.add_dsl(jobs["process"], "orders")
-
-# Submit multiple orders with different data
-orders = [
-    {"process.order_id": "ORD-001", "process.amount": 100.00},
-    {"process.order_id": "ORD-002", "process.amount": 250.50},
-]
-
-for order in orders:
-    fm.submit_task(order, fq_name)
-
-fm.wait_for_completion()
-results = fm.pop_results()
-
-# Access original task data via task_pass_through
-for result in results["completed"][fq_name]:
-    original_order_id = result["task_pass_through"]["process.order_id"]
-    total = result["result"]["total"]
-    print(f"Order {original_order_id}: ${total:.2f}")
-```
-
-## Accessing Intermediate Results
-
-Use `save_result = True` to capture outputs from any job in your workflow. These are available in the final result's `SAVED_RESULTS` dictionary.
-
-```python
-jobs = wrap({"step1": func1, "step2": func2, "step3": func3})
-jobs["step1"].save_result = True
-jobs["step2"].save_result = True
-
-dsl = jobs["step1"] >> jobs["step2"] >> jobs["step3"]
-errors, result = FlowManager.run(dsl, task, "pipeline")
-
-# Access intermediate results
-print(result["SAVED_RESULTS"]["step1"])  # Output from step1
-print(result["SAVED_RESULTS"]["step2"])  # Output from step2
-print(result["result"])                   # Final output from step3
-```
 
 ## Massive Parallel Execution
-
-> **Example Script**: [`examples/03_parallel_execution.py`](examples/03_parallel_execution.py)
 
 Flow4AI excels at running **thousands of tasks in parallel**. Choose the right manager for your workload:
 
 ### FlowManager: Multi-threaded (I/O-Bound)
+
+ **Example Script**: [`examples/03_parallel_execution.py`](examples/03_parallel_execution.py)
 
 Perfect for API calls, database queries, file I/O, and network operations.
 
@@ -197,26 +140,30 @@ import time
 start = time.perf_counter()
 
 for i in range(1000):
-## Massive Parallel Execution
+    fm.submit_task({"fetch.task_id": f"task_{i}"}, fq_name)
 
-### FlowManager: IO-Bound (Async)
-FlowManager uses Python's `asyncio` to handle thousands of concurrent I/O-bound tasks (API calls, DB queries) in a single process.
+fm.wait_for_completion()
+elapsed = time.perf_counter() - start
 
-> **Example Script**: [`examples/03_parallel_execution.py`](examples/03_parallel_execution.py)
+print(f"1000 tasks completed in {elapsed:.2f}s")
+print(f"Sequential would take: {1000 * 0.5:.0f}s")
+print(f"Speedup: {(1000 * 0.5) / elapsed:.0f}x")
+# Typical output: ~1-2 seconds (100-500x speedup!)
+```
 
-### FlowManagerMP: CPU-Bound (Multiprocessing)
-For CPU-intensive workloads requiring true parallelism across cores (e.g., heavy math, local model inference).
-Note: Tasks and results must be picklable.
+### FlowManagerMP: Multi-process (CPU-Bound)
 
-> **Example Script**: [`examples/04_multiprocessing.py`](examples/04_multiprocessing.py)
+ **Example Script**: [`examples/04_multiprocessing.py`](examples/04_multiprocessing.py)
+
+For CPU-intensive workloads requiring true parallelism across cores.
 
 ```python
 from flow4ai.flowmanagerMP import FlowManagerMP
 from flow4ai.dsl import wrap
 
 def cpu_intensive(n):
-    # CPU-bound computation
-    return {"result": sum(i * i for i in range(n))}
+    # CPU-bound computation (e.g., prime calculations)
+    return {"result": sum(i for i in range(n) if all(i % j != 0 for j in range(2, int(i**0.5) + 1)))}
 
 jobs = wrap({"compute": cpu_intensive})
 fm = FlowManagerMP(jobs["compute"])
@@ -229,7 +176,7 @@ for size in [1000, 5000, 10000]:
 fm.close_processes()  # Waits for completion and cleans up
 ```
 
-**Key Difference**: `FlowManager` uses async/await (single process, many concurrent tasks), while `FlowManagerMP` uses multiprocessing (multiple processes, true CPU parallelism).
+**Key Difference:** `FlowManager` uses async/await (single process, many concurrent tasks), while `FlowManagerMP` uses multiprocessing (multiple processes, true CPU parallelism).
 
 ## Complex Workflow Example
 
@@ -277,6 +224,68 @@ print(result["SAVED_RESULTS"])     # Intermediate results
 print(result["task_pass_through"])  # Original task data
 ```
 
+
+## Task Passthrough and Intermediate Results
+
+### Task Passthrough
+
+> **Example Script**: [`examples/02_task_passthrough.py`](examples/02_task_passthrough.py)
+
+When processing multiple tasks with different data, results need access to the **original task data**. Flow4AI automatically includes `task_pass_through` in every result, preserving the complete original task.
+
+**Why it matters:** Each task carries independent data (customer orders, documents, API requests). Your result processing functions need to correlate results back to specific inputs.
+
+```python
+from flow4ai.flowmanager import FlowManager
+from flow4ai.dsl import wrap
+
+def process_order(order_id, amount):
+    tax = amount * 0.08
+    return {"tax": tax, "total": amount + tax}
+
+jobs = wrap({"process": process_order})
+fm = FlowManager()
+fq_name = fm.add_dsl(jobs["process"], "orders")
+
+# Submit multiple orders with different data
+orders = [
+    {"process.order_id": "ORD-001", "process.amount": 100.00},
+    {"process.order_id": "ORD-002", "process.amount": 250.50},
+]
+
+for order in orders:
+    fm.submit_task(order, fq_name)
+
+fm.wait_for_completion()
+results = fm.pop_results()
+
+# Access original task data via task_pass_through
+for result in results["completed"][fq_name]:
+    original_order_id = result["task_pass_through"]["process.order_id"]
+    total = result["result"]["total"]
+    print(f"Order {original_order_id}: ${total:.2f}")
+```
+
+### Accessing Intermediate Results
+
+Use `save_result = True` to capture outputs from any job in your workflow. These are available in the final result's `SAVED_RESULTS` dictionary.
+
+```python
+jobs = wrap({"step1": func1, "step2": func2, "step3": func3})
+jobs["step1"].save_result = True
+jobs["step2"].save_result = True
+
+dsl = jobs["step1"] >> jobs["step2"] >> jobs["step3"]
+errors, result = FlowManager.run(dsl, task, "pipeline")
+
+# Access intermediate results
+print(result["SAVED_RESULTS"]["step1"])  # Output from step1
+print(result["SAVED_RESULTS"]["step2"])  # Output from step2
+print(result["result"])                   # Final output from step3
+```
+
+
+
 ## Working Examples
 
 Complete, runnable examples are available in the [`examples/`](./examples/) directory:
@@ -296,7 +305,7 @@ python examples/01_basic_workflow.py
 ```
 
 
-## Deep Dive: Job Syntax & Parameters
+### Deep Dive: Job Syntax & Parameters
 
 > **Example Script**: [`examples/09_syntax_details.py`](examples/09_syntax_details.py)
 
@@ -314,50 +323,6 @@ Check out [`examples/09_syntax_details.py`](examples/09_syntax_details.py) for a
 -   Accessing intermediate results.
 -   Using `on_complete` callbacks.
 
-### Saving Intermediate Results
-
-Flow4AI offers two ways to define jobs, each with different syntax for accessing data:
-
-1.  **Wrapped Functions** (Functional, Simple): Best for straightforward transformations.
-    -   Parameters passed as **arguments** (e.g., `def func(x, y):`).
-    -   Access context via `j_ctx` argument (e.g., `def func(j_ctx, **kwargs):`).
-2.  **JobABC Subclasses** (Object-Oriented, Powerful): Best for complex logic and state.
-    -   Access inputs via `self.get_inputs()`.
-    -   Access full task dictionary via `task` argument in `run()`.
-
-Check out [`examples/09_syntax_details.py`](examples/09_syntax_details.py) for a comprehensive guide on these differences and how to handle nested task parameters correctly.
-
-### Saving Intermediate Results
-
-Use `save_result = True` to capture outputs from any job:
-
-```python
-jobs = wrap({"step1": func1, "step2": func2, "step3": func3})
-jobs["step1"].save_result = True
-jobs["step2"].save_result = True
-
-dsl = jobs["step1"] >> jobs["step2"] >> jobs["step3"]
-
-errors, result = FlowManager.run(dsl, task, "pipeline")
-
-# Access saved results
-print(result["SAVED_RESULTS"]["step1"])
-print(result["SAVED_RESULTS"]["step2"])
-```
-
-
-
-## Task Parameter Formats
-
-Two equivalent formats for passing parameters:
-
-```python
-# Short form (dot notation)
-task = {"job_name.param": value}
-
-# Long form (nested dict)
-task = {"job_name": {"param": value}}
-```
 
 ## Further Documentation
 
