@@ -16,7 +16,7 @@ Whether you're processing thousands of documents, chaining complex LLM calls, or
 - [Massive Parallelism](#massive-parallel-execution)
 - [Complex Workflows](#complex-workflow-example)
 - [Working Examples](#working-examples)
-- [Deep Dive: Job Syntax & Parameters](#deep-dive-job-syntax--parameters)
+- [Deep Dive: Job Syntax & Parameters](#deep-dive-job-syntax-parameters)
 
 ## Quick Start
 
@@ -197,28 +197,26 @@ import time
 start = time.perf_counter()
 
 for i in range(1000):
-    fm.submit_task({"fetch.task_id": f"task_{i}"}, fq_name)
+## Massive Parallel Execution
 
-fm.wait_for_completion()
-elapsed = time.perf_counter() - start
+### FlowManager: IO-Bound (Async)
+FlowManager uses Python's `asyncio` to handle thousands of concurrent I/O-bound tasks (API calls, DB queries) in a single process.
 
-print(f"1000 tasks completed in {elapsed:.2f}s")
-print(f"Sequential would take: {1000 * 0.5:.0f}s")
-print(f"Speedup: {(1000 * 0.5) / elapsed:.0f}x")
-# Typical output: ~1-2 seconds (100-500x speedup!)
-```
+> **Example Script**: [`examples/03_parallel_execution.py`](examples/03_parallel_execution.py)
 
-### FlowManagerMP: Multi-process (CPU-Bound)
+### FlowManagerMP: CPU-Bound (Multiprocessing)
+For CPU-intensive workloads requiring true parallelism across cores (e.g., heavy math, local model inference).
+Note: Tasks and results must be picklable.
 
-For CPU-intensive workloads requiring true parallelism across cores.
+> **Example Script**: [`examples/04_multiprocessing.py`](examples/04_multiprocessing.py)
 
 ```python
 from flow4ai.flowmanagerMP import FlowManagerMP
 from flow4ai.dsl import wrap
 
 def cpu_intensive(n):
-    # CPU-bound computation (e.g., prime calculations)
-    return {"result": sum(i for i in range(n) if all(i % j != 0 for j in range(2, int(i**0.5) + 1)))}
+    # CPU-bound computation
+    return {"result": sum(i * i for i in range(n))}
 
 jobs = wrap({"compute": cpu_intensive})
 fm = FlowManagerMP(jobs["compute"])
@@ -231,7 +229,7 @@ for size in [1000, 5000, 10000]:
 fm.close_processes()  # Waits for completion and cleans up
 ```
 
-**Key Difference:** `FlowManager` uses async/await (single process, many concurrent tasks), while `FlowManagerMP` uses multiprocessing (multiple processes, true CPU parallelism).
+**Key Difference**: `FlowManager` uses async/await (single process, many concurrent tasks), while `FlowManagerMP` uses multiprocessing (multiple processes, true CPU parallelism).
 
 ## Complex Workflow Example
 
@@ -311,6 +309,22 @@ Flow4AI offers two ways to define jobs, each with different syntax for accessing
     -   Access inputs via `self.get_inputs()`.
     -   Access full task dictionary via `task` argument in `run()`.
 
+Check out [`examples/09_syntax_details.py`](examples/09_syntax_details.py) for a comprehensive guide on these differences and how to handle nested task parameters correctly. It also covers advanced topics like:
+-   Handling multiple tail jobs.
+-   Accessing intermediate results.
+-   Using `on_complete` callbacks.
+
+### Saving Intermediate Results
+
+Flow4AI offers two ways to define jobs, each with different syntax for accessing data:
+
+1.  **Wrapped Functions** (Functional, Simple): Best for straightforward transformations.
+    -   Parameters passed as **arguments** (e.g., `def func(x, y):`).
+    -   Access context via `j_ctx` argument (e.g., `def func(j_ctx, **kwargs):`).
+2.  **JobABC Subclasses** (Object-Oriented, Powerful): Best for complex logic and state.
+    -   Access inputs via `self.get_inputs()`.
+    -   Access full task dictionary via `task` argument in `run()`.
+
 Check out [`examples/09_syntax_details.py`](examples/09_syntax_details.py) for a comprehensive guide on these differences and how to handle nested task parameters correctly.
 
 ### Saving Intermediate Results
@@ -331,26 +345,7 @@ print(result["SAVED_RESULTS"]["step1"])
 print(result["SAVED_RESULTS"]["step2"])
 ```
 
-## FlowManagerMP (Multiprocessing)
 
-For CPU-bound tasks requiring true parallelism across cores, use `FlowManagerMP`. Note that tasks and results must be picklable.
-
-```python
-from flow4ai.flowmanagerMP import FlowManagerMP
-from flow4ai.dsl import wrap
-
-def heavy_computation(x):
-    return x ** 2
-
-jobs = wrap({"compute": heavy_computation})
-dsl = jobs["compute"]
-
-fm = FlowManagerMP(dsl)
-fq_name = fm.get_fq_names()[0]
-
-fm.submit_task({"compute.x": 10}, fq_name)
-fm.close_processes()  # Waits for completion and cleans up
-```
 
 ## Task Parameter Formats
 
