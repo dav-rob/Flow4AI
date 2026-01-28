@@ -1,8 +1,12 @@
 # Flow4AI
 
-**Break complex tasks into parallel subtasks, then aggregate results.**
+**Process thousands of tasks in parallel through complex, multi-stage workflows.**
 
-Flow4AI provides a simple DSL (Domain Specific Language) to define task graphs where work can be split into parallel branches and then combined. This is ideal for AI workflows where you want to analyze data from multiple angles and synthesize the results.
+Flow4AI delivers dual parallelism for AI workloads:
+- **Parallel workflows**: Split work into concurrent branches (analyze from multiple angles, then aggregate)
+- **Massively parallel execution**: Process 1,000+ independent tasks simultaneously through the same workflow
+
+Build complex task graphs with a simple DSL (Domain Specific Language), then execute them at scale. Perfect for AI applications that need to process large datasets, batch API calls, or analyze data from multiple perspectives concurrently.
 
 ## Quick Start
 
