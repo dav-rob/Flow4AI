@@ -24,10 +24,12 @@ setup(
             'pytest>=8.3.4',
             'psutil>=6.1.1',
             'pytest-asyncio>=0.25.1',
-        "aiofiles>=24.1.0",
-        "aiohttp>=3.11.12",
-        "networkx>=3.4.2",
-        "matplotlib==3.10.1"
+            "aiofiles>=24.1.0",
+            "aiohttp>=3.11.12",
+            "networkx>=3.4.2",
+            "matplotlib==3.10.1",
+            'langchain-core>=0.3.0',
+            'langchain-openai>=0.2.0',
         ],
         'dev': [
           "gitingest>=0.1.3"

@@ -65,6 +65,21 @@ Demonstrates:
 - `task_pass_through` for original task data
 - Context functions with `j_ctx` parameter
 
+### 06_langchain_simple.py
+**LangChain Integration - Simple**
+
+Demonstrates:
+- Integrating LangChain with Flow4AI workflows
+- Wrapping LangChain LLM calls as Flow4AI jobs
+- Parallel execution of multiple LangChain operations
+- Async compatibility between frameworks
+
+Prerequisites:
+```bash
+pip install -e ".[test]"  # Installs langchain dependencies
+export OPENAI_API_KEY=your_key_here
+```
+
 ## Testing
 
 All examples are tested automatically:
