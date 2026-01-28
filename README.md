@@ -1,14 +1,26 @@
 # Flow4AI
 
-**Process thousands of tasks in parallel through complex, multi-stage workflows.**
+**Mix, Match, and Scale: The Universal AI Workflow Orchestrator**
 
-Flow4AI delivers dual parallelism for AI workloads:
-- **Parallel workflows**: Split work into concurrent branches (analyze from multiple angles, then aggregate)
-- **Massively parallel execution**: Process 1,000+ independent tasks simultaneously through the same workflow
+Flow4AI is the glue that binds your AI ecosystem. **Combine the best features of LangChain, LlamaIndex, and your own custom Python logic** into unified, massively parallel pipelines. 
 
-Build complex task graphs with a simple DSL (Domain Specific Language), then execute them at scale. Perfect for AI applications that need to process large datasets, batch API calls, or analyze data from multiple perspectives concurrently.
+Whether you're processing thousands of documents, chaining complex LLM calls, or vectorizing datasets, Flow4AI handles the concurrency, dependency management, and error handling so you can focus on the logic.
+
+
+## Table of Contents
+- [Quick Start](#quick-start)
+- [Core Concepts](#core-concepts)
+- [The Core Pattern: Divide and Aggregate](#the-core-pattern-divide-and-aggregate)
+- [Task Passthrough](#task-passthrough)
+- [Intermediate Results](#accessing-intermediate-results)
+- [Massive Parallelism](#massive-parallel-execution)
+- [Complex Workflows](#complex-workflow-example)
+- [Working Examples](#working-examples)
+- [Deep Dive: Job Syntax & Parameters](#deep-dive-job-syntax--parameters)
 
 ## Quick Start
+
+> **Example Script**: [`examples/01_basic_workflow.py`](examples/01_basic_workflow.py)
 
 ```python
 from flow4ai.flowmanager import FlowManager
@@ -39,7 +51,7 @@ print(result["result"])  # "Summary: Analysis of: Hello World"
 ### Workflow
 A **workflow** is your complete processing pipeline - a collection of jobs connected in parallel and serial configurations. Think of it as the blueprint that defines how your data flows through different processing steps.
 
-### Job  
+### Job
 A **job** is an individual unit of work within your workflow. Each job can run independently and in parallel with other jobs when the workflow structure allows it. Jobs process data and pass their results to downstream jobs.
 
 ### Task
@@ -102,6 +114,8 @@ print(result["result"])
 
 ## Task Passthrough
 
+> **Example Script**: [`examples/02_task_passthrough.py`](examples/02_task_passthrough.py)
+
 When processing multiple tasks with different data, results need access to the **original task data**. Flow4AI automatically includes `task_pass_through` in every result, preserving the complete original task.
 
 **Why it matters:** Each task carries independent data (customer orders, documents, API requests). Your result processing functions need to correlate results back to specific inputs.
@@ -156,6 +170,8 @@ print(result["result"])                   # Final output from step3
 ```
 
 ## Massive Parallel Execution
+
+> **Example Script**: [`examples/03_parallel_execution.py`](examples/03_parallel_execution.py)
 
 Flow4AI excels at running **thousands of tasks in parallel**. Choose the right manager for your workload:
 
@@ -271,70 +287,31 @@ Complete, runnable examples are available in the [`examples/`](./examples/) dire
 - **02_task_passthrough.py** - Task data preservation and batch processing  
 - **03_parallel_execution.py** - 1000 concurrent tasks with FlowManager
 - **04_multiprocessing.py** - CPU-bound processing with FlowManagerMP
-- **05_complex_workflow.py** - Advanced features (mixed jobs, SAVED_RESULTS)
+- **05_complex_workflow.py** - Interdependent jobs exchanging data.
+- **07_langchain_chains.py** - Integrating LangChain chains
+- **08_openai_job_chains.py** - Native OpenAI job chains (Performance benchmark)
+- **09_syntax_details.py** - Syntax guide for JobABC vs ordinary python Functions
 
 Run any example:
 ```bash
 python examples/01_basic_workflow.py
 ```
 
-### Using FlowManager Instance
 
-For more control over task submission and result handling:
+## Deep Dive: Job Syntax & Parameters
 
-```python
-from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap
+> **Example Script**: [`examples/09_syntax_details.py`](examples/09_syntax_details.py)
 
-def process(value):
-    return value * 2
+Flow4AI offers two ways to define jobs, each with different syntax for accessing data:
 
-jobs = wrap({"process": process})
-dsl = jobs["process"]
+1.  **Wrapped Functions** (Functional, Simple): Best for straightforward transformations.
+    -   Parameters passed as **arguments** (e.g., `def func(x, y):`).
+    -   Access context via `j_ctx` argument (e.g., `def func(j_ctx, **kwargs):`).
+2.  **JobABC Subclasses** (Object-Oriented, Powerful): Best for complex logic and state.
+    -   Access inputs via `self.get_inputs()`.
+    -   Access full task dictionary via `task` argument in `run()`.
 
-fm = FlowManager()
-fq_name = fm.add_dsl(dsl, "my_graph")
-
-fm.submit_task({"process.value": 10}, fq_name)
-fm.wait_for_completion()
-
-results = fm.pop_results()
-print(results["completed"][fq_name][0]["result"])  # 20
-```
-
-### Custom Job Classes
-
-For complex jobs, extend `JobABC`:
-
-```python
-from flow4ai.job import JobABC
-from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap
-
-class DataProcessor(JobABC):
-    async def run(self, task):
-        # Access inputs from predecessor jobs
-        inputs = self.get_inputs()
-        
-        # Your processing logic
-        data = inputs.get("generator", {}).get("data", [])
-        return {"processed": [x * 2 for x in data]}
-
-class DataGenerator(JobABC):
-    async def run(self, task):
-        count = task.get("count", 5)
-        return {"data": list(range(count))}
-
-# Use in a pipeline
-generator = DataGenerator("generator")
-processor = DataProcessor("processor")
-
-jobs = wrap({"generator": generator, "processor": processor})
-dsl = jobs["generator"] >> jobs["processor"]
-
-errors, result = FlowManager.run(dsl, {"count": 3}, "custom_jobs")
-print(result["result"])  # {'processed': [0, 2, 4]}
-```
+Check out [`examples/09_syntax_details.py`](examples/09_syntax_details.py) for a comprehensive guide on these differences and how to handle nested task parameters correctly.
 
 ### Saving Intermediate Results
 
