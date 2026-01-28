@@ -144,7 +144,7 @@ class UXAnalysisJob(OpenAIJob):
 class SynthesisJob(OpenAIJob):
     """Synthesize all analyses into a comprehensive summary."""
     
-    async def run(self, j_ctx):
+    async def run(self, task):
         import time
         start = time.time()
         
@@ -152,8 +152,8 @@ class SynthesisJob(OpenAIJob):
         # Current FlowManager implementation passes inputs in the task dict if direct
         # But for synthesis we need inputs from multiple parents
         
-        # When using DSL, j_ctx contains inputs from previous jobs
-        inputs = j_ctx.get("inputs", {})
+        # When using DSL, we use self.get_inputs() for JobABC subclasses
+        inputs = self.get_inputs()
         
         technical = inputs.get("technical", {}).get("analysis", "N/A")
         business = inputs.get("business", {}).get("analysis", "N/A")
@@ -196,7 +196,6 @@ def run_parallel_chains_openai():
     
     synthesize = SynthesisJob("synthesis")
     
-
     
     # Define the DSL graph by providing the head nodes
     # When multiple head nodes exist, we use parallel() to group them
@@ -244,7 +243,7 @@ def run_parallel_chains_openai():
     print("============================================================")
     
     # Extract results
-    summary = results.get("synthesis", {}).get("executive_summary", "No summary generated")
+    summary = results.get("executive_summary", "No summary generated")
     
     print("\nExecutive Summary:")
     print("============================================================")
