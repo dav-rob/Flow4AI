@@ -63,11 +63,14 @@ def test_task_passthrough():
     
     # Verify expected output
     assert "Example 2: Task Passthrough" in stdout
-    assert "✅ All orders processed!" in stdout
-    assert "Order ID: ORD-001" in stdout
-    assert "Order ID: ORD-002" in stdout
-    assert "Order ID: ORD-003" in stdout
-    assert "Customer:" in stdout
+    assert "callback" in stdout.lower()
+    assert "disconnected" in stdout.lower()
+    assert "Order ORD-001" in stdout
+    assert "Order ORD-002" in stdout
+    assert "Order ORD-003" in stdout
+    assert "Alice" in stdout
+    assert "Bob" in stdout
+    assert "Charlie" in stdout
     assert "task_pass_through matters" in stdout
 
 
