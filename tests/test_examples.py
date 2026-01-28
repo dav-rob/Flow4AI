@@ -104,9 +104,13 @@ def test_multiprocessing():
     
     # Verify expected output
     assert "Example 4: Multiprocessing" in stdout
-    assert "✅ All tasks completed" in stdout
+    assert "on_complete" in stdout.lower()
+    assert "FIRST submission" in stdout
+    assert "FINAL submission" in stdout  
+    assert "FIRST completion" in stdout
+    assert "FINAL completion" in stdout
+    assert "primes" in stdout.lower()
     assert "FlowManagerMP" in stdout
-    assert "multiprocessing" in stdout.lower()
 
 
 def test_complex_workflow():
