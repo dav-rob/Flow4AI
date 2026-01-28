@@ -148,26 +148,8 @@ def scenario_3_intermediate_and_lifecycle():
     
     # We will demonstrate (A) here.
     
-    def my_callback(result):
-        # The 'result' dict contains:
-        # 1. The output of the tail job (here, 'step3')
-        # 2. Metadata: 'task_pass_through' (original task), 'SAVED_RESULTS' (intermediate data)
-        
-        pass_through = result.get("task_pass_through", {})
-        user_id = pass_through.get("user_id", "unknown")
-        
-        # Accessing the Tail Result (directly in the dict)
-        step_val = result.get("step", "unknown")
-        
-        # Accessing Intermediate Results (in SAVED_RESULTS sub-dict)
-        saved_step2 = result.get("SAVED_RESULTS", {}).get("step2", {})
-        
-        print(f"   [Callback] Workflow finished for user={user_id}")
-        print(f"   [Callback] Tail Result (Step 3): {step_val}")
-        print(f"   [Callback] Intermediate (Step 2): {saved_step2.get('msg', 'N/A')}")
-        
     # Instantiate FlowManager with the callback
-    fm = FlowManager(on_complete=my_callback)
+    fm = FlowManager(on_complete=scenario3_callback)
     
     # Define DSL
     dsl = jobs["step1"] >> jobs["step2"] >> jobs["step3"]
@@ -188,6 +170,24 @@ def scenario_3_intermediate_and_lifecycle():
     # However, FlowManager stores them until popped, so it's good practice to clear them 
     # if the manager instance is long-lived.
     fm.pop_results() 
+
+def scenario3_callback(result):
+    # The 'result' dict contains:
+    # 1. The output of the tail job (here, 'step3')
+    # 2. Metadata: 'task_pass_through' (original task), 'SAVED_RESULTS' (intermediate data)
+    
+    pass_through = result.get("task_pass_through", {})
+    user_id = pass_through.get("user_id", "unknown")
+    
+    # Accessing the Tail Result (directly in the dict)
+    step_val = result.get("step", "unknown")
+    
+    # Accessing Intermediate Results (in SAVED_RESULTS sub-dict)
+    saved_step2 = result.get("SAVED_RESULTS", {}).get("step2", {})
+    
+    print(f"   [Callback] Workflow finished for user={user_id}")
+    print(f"   [Callback] Tail Result (Step 3): {step_val}")
+    print(f"   [Callback] Intermediate (Step 2): {saved_step2.get('msg', 'N/A')}")
 
 if __name__ == "__main__":
     scenario_1_syntax_differences()
