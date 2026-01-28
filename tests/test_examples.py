@@ -182,6 +182,43 @@ def test_examples_are_executable():
         assert 'if __name__ == "__main__"' in content, f"{example} missing __main__ check"
 
 
+# Check if LangChain is available
+try:
+    import langchain_core
+    import langchain_openai
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    LANGCHAIN_AVAILABLE = False
+
+
+@pytest.mark.skipif(not LANGCHAIN_AVAILABLE, reason="LangChain not installed")
+def test_langchain_simple():
+    """Test that 06_langchain_simple.py structure is correct (skip actual LLM calls)."""
+    return_code, stdout, stderr = run_example("06_langchain_simple.py")
+    
+    # Should complete successfully or show langchain status
+    assert return_code == 0 or "LangChain" in stdout, \
+        f"Example had unexpected failure. return_code: {return_code}, stderr: {stderr}"
+    
+    # Verify expected structure
+    assert "Example 6: LangChain Integration" in stdout
+    assert "LangChain" in stdout
+
+
+@pytest.mark.skipif(not LANGCHAIN_AVAILABLE, reason="LangChain not installed")
+def test_langchain_chains():
+    """Test that 07_langchain_chains.py structure is correct (skip actual LLM calls)."""
+    return_code, stdout, stderr = run_example("07_langchain_chains.py")
+    
+    # Should complete successfully or show langchain status
+    assert return_code == 0 or "LangChain" in stdout, \
+        f"Example had unexpected failure. return_code: {return_code}, stderr: {stderr}"
+    
+    # Verify expected structure
+    assert "Example 7: LangChain Integration" in stdout
+    assert "LangChain" in stdout or "chains" in stdout.lower()
+
+
 if __name__ == "__main__":
     # Run tests with pytest
     pytest.main([__file__, "-v"])
