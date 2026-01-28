@@ -80,6 +80,22 @@ pip install -e ".[test]"  # Installs langchain dependencies
 export OPENAI_API_KEY=your_key_here
 ```
 
+### 07_langchain_chains.py
+**LangChain Integration - Chains**
+
+Demonstrates:
+- Using LangChain chains in parallel workflows
+- Multi-perspective document analysis (technical, business, UX)
+- Parallel execution of multiple LangChain operations
+- Result synthesis using j_ctx
+- Real-world multi-agent analysis pattern
+
+Prerequisites:
+```bash
+pip install -e ".[test]"
+export OPENAI_API_KEY=your_key_here
+```
+
 ## Testing
 
 All examples are tested automatically:
