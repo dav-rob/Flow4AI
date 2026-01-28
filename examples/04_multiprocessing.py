@@ -42,8 +42,7 @@ def main():
     print("Processing CPU-intensive tasks across multiple processes...\n")
     
     # Wrap the CPU-intensive function
-    jobs = wrap({"compute": cpu_intensive_task})
-    dsl = jobs["compute"]
+    dsl = wrap(compute=cpu_intensive_task)
     
     # Create FlowManagerMP instance
     fm = FlowManagerMP(dsl)

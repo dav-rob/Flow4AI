@@ -34,8 +34,7 @@ def main():
     print("Processing multiple orders with different customer data...\n")
     
     # Wrap the function as a job
-    jobs = wrap({"process": process_order})
-    dsl = jobs["process"]
+    dsl = wrap(process=process_order)
     
     # Create FlowManager instance
     fm = FlowManager()
@@ -76,7 +75,7 @@ def main():
         task_data = result["task_pass_through"]
         
         # The result itself contains the processing output
-        processing_result = result["result"]
+        processing_result = result
         
         print(f"Order ID: {task_data.get('process.order_id', 'N/A')}")
         print(f"  Customer: {task_data.get('process.customer_name', 'N/A')}")

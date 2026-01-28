@@ -26,8 +26,7 @@ def main():
     print("="*60 + "\n")
     
     # Wrap the async function as a job
-    jobs = wrap({"worker": simulate_work})
-    dsl = jobs["worker"]
+    dsl = wrap(worker=simulate_work)
     
     # Create FlowManager instance
     fm = FlowManager()
@@ -47,7 +46,7 @@ def main():
             fm.submit_task(task, fq_name)
         
         # Wait for completion
-        success = fm.wait_for_completion(timeout=10, poll_interval=0.1)
+        success = fm.wait_for_completion(timeout=10, check_interval=0.1)
         
         end_time = time.perf_counter()
         execution_time = end_time - start_time

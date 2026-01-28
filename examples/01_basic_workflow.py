@@ -107,14 +107,12 @@ def main():
     
     print("✅ Analysis complete!\n")
     print("Results:")
-    print(f"  - Word Count: {result['result']['summary']['word_count']}")
-    print(f"  - Sentiment: {result['result']['summary']['sentiment']}")
-    print(f"  - Top Keywords: {', '.join(result['result']['summary']['top_keywords'])}")
+    print(f"  - Word Count: {result['summary']['word_count']}")
+    print(f"  - Sentiment: {result['summary']['sentiment']}")
+    print(f"  - Top Keywords: {', '.join(result['summary']['top_keywords'])}")
     
-    print("\nIntermediate results (SAVED_RESULTS):")
-    print(f"  - analyze: {result['SAVED_RESULTS']['analyze']}")
-    print(f"  - sentiment: {result['SAVED_RESULTS']['sentiment']}")
-    print(f"  - keywords: {result['SAVED_RESULTS']['keywords']}")
+    print("\nNote: This example uses FlowManager.run() which returns errors and the final result.")
+    print("For batch processing, use FlowManager() instance with submit_task() and pop_results().")
     
     print("\n" + "="*60 + "\n")
     return True
