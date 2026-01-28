@@ -51,7 +51,7 @@ def test_basic_workflow():
     assert "Word Count:" in stdout
     assert "Sentiment:" in stdout
     assert "Top Keywords:" in stdout
-    assert "SAVED_RESULTS" in stdout
+    assert "FlowManager.run()" in stdout
 
 
 def test_task_passthrough():
