@@ -114,7 +114,7 @@ def main():
         "summarize.text": text
     }
     
-    errors, results = FlowManager.run(dsl, task, "langchain_analysis")
+    errors, results = FlowManager.run(dsl, task, "langchain_analysis", timeout=60)
     
     if errors:
         print(f"❌ Errors occurred: {errors}")

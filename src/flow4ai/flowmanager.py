@@ -225,23 +225,31 @@ class FlowManager(FlowManagerABC):
                 'errors': errors
             }
             
-    def wait_for_completion(self, timeout=10, check_interval=0.1):
+    def wait_for_completion(self, timeout=10, check_interval=0.1, log_interval=1.0):
         """
         Wait for all submitted tasks to complete or error out.
         
         Args:
             timeout: Maximum time to wait in seconds. Defaults to 10 seconds.
             check_interval: How often to check for completion in seconds. Defaults to 0.1 seconds.
+            log_interval: How often to log status updates in seconds. Defaults to 1.0 seconds.
             
         Returns:
             bool: True if all tasks completed or errored, False if timed out
         """
         
         start_time = time.time()
+        last_log_time = start_time
         
         while (time.time() - start_time) < timeout:
             counts = self.get_counts()
-            self.logger.info(f"Task Stats:\nErrors: {counts['errors']}, Submitted: {counts['submitted']}, Completed: {counts['completed']}, Post-processing: {counts['post_processing']}")
+            
+            # Throttle logging - only log every log_interval seconds
+            current_time = time.time()
+            if current_time - last_log_time >= log_interval:
+                self.logger.info(f"Task Stats:\nErrors: {counts['errors']}, Submitted: {counts['submitted']}, Completed: {counts['completed']}, Post-processing: {counts['post_processing']}")
+                last_log_time = current_time
+            
             # Return immediately if all tasks are complete or if there are no tasks at all
             if counts['submitted'] == 0 or counts['submitted'] == (counts['completed'] + counts['errors']):
                 return True

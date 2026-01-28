@@ -176,7 +176,7 @@ def main():
         "user_experience.document": document
     }
     
-    errors, results = FlowManager.run(dsl, task, "multi_perspective_analysis")
+    errors, results = FlowManager.run(dsl, task, "multi_perspective_analysis", timeout=60)
     
     if errors:
         print(f"❌ Errors occurred: {errors}")
