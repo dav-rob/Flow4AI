@@ -83,9 +83,13 @@ def test_parallel_execution():
     
     # Verify expected output
     assert "Example 3: Parallel Execution" in stdout
-    assert "✅ Completed" in stdout
+    assert "interlacing" in stdout.lower() or "interleave" in stdout.lower()
+    assert "FIRST submission" in stdout
+    assert "FINAL submission" in stdout
+    assert "FIRST completion" in stdout
+    assert "FINAL completion" in stdout
     assert "Speedup:" in stdout
-    assert "parallel execution" in stdout.lower()
+    assert "CONFIRMED" in stdout
     
     # Verify that at least one of the task counts was tested
     assert any(count in stdout for count in ["100 tasks", "500 tasks", "1000 tasks"])
