@@ -15,8 +15,10 @@ class NumberGenerator(JobABC):
         super().__init__(name)
     
     async def run(self, task):
-        start = task.get("start", 0)
-        count = task.get("count", 5)
+        # Use get_params() for clean parameter access
+        params = self.get_params()
+        start = params.get("start", 0)
+        count = params.get("count", 5)
         numbers = list(range(start, start + count))
         logger.info(f"[{self.name}] Generated numbers: {numbers}")
         return {"numbers": numbers}
@@ -37,8 +39,9 @@ class MathOperation(JobABC):
         input_job_name = list(inputs.keys())[0] if inputs else None
         numbers = inputs.get(input_job_name, {}).get("numbers", [])
         
-        # Override operation if specified in task
-        operation = task.get("operation", self.operation)
+        # Override operation if specified in task (using get_params)
+        params = self.get_params()
+        operation = params.get("operation", self.operation)
         
         if not numbers:
             logger.warning(f"[{self.name}] No numbers found in inputs")
@@ -351,11 +354,10 @@ def test_add_dsl_dict_single_graph_no_variants():
     # Verify the head job exists in the job map
     assert fq_name in fm.job_graph_map, f"FQ name {fq_name} should be in job_map"
     
-    # Submit a task with numbers 1-5 to be squared
+    # Submit a task with numbers 1-5 to be squared (nested format for get_params())
     task = Task({
-        "start": 1,
-        "count": 5,
-        "operation": "square"
+        "generator": {"start": 1, "count": 5},
+        "squarer": {"operation": "square"}
     })
     logger.info("Submitting task to the graph")
     fm.submit_task(task)  # No need to specify fq_name when only one graph exists
@@ -470,10 +472,9 @@ def test_add_dsl_dict_single_graph_with_variants():
     dev_fq_name = [name for name in fq_names if "dev" in name][0]
     logger.info(f"Testing dev variant: {dev_fq_name}")
     
-    # Submit a task with numbers 1-5 to be squared
+    # Submit a task with numbers 1-5 to be squared (nested format for get_params())
     dev_task = Task({
-        "start": 1,
-        "count": 5
+        "generator": {"start": 1, "count": 5}
     })
     
     # Submit to the dev variant
@@ -511,10 +512,9 @@ def test_add_dsl_dict_single_graph_with_variants():
     prod_fq_name = [name for name in fq_names if "prod" in name][0]
     logger.info(f"Testing prod variant: {prod_fq_name}")
     
-    # Submit a task with numbers 1-5 to be doubled
+    # Submit a task with numbers 1-5 to be doubled (nested format for get_params())
     prod_task = Task({
-        "start": 1,
-        "count": 5
+        "generator": {"start": 1, "count": 5}
     })
     
     # Submit to the prod variant
@@ -612,10 +612,9 @@ def test_add_dsl_dict_multiple_graphs_no_variants():
     for fq_name in fq_names:
         assert fq_name in fm.job_graph_map, f"FQ name {fq_name} should be in job_map"
     
-    # Test data for both graphs - numbers 1 through 5
+    # Test data for both graphs - numbers 1 through 5 (nested format for get_params())
     task_data = {
-        "start": 1,
-        "count": 5
+        "generator": {"start": 1, "count": 5}
     }
     
     # Find each graph's FQ name
@@ -741,10 +740,9 @@ def test_add_dsl_dict_multiple_graphs_with_variants():
     def find_fq_name(graph, variant):
         return [name for name in fq_names if graph in name and variant in name][0]
     
-    # Define test data - numbers 1 through 5
+    # Define test data - numbers 1 through 5 (nested format for get_params())
     task_data = {
-        "start": 1,
-        "count": 5
+        "generator": {"start": 1, "count": 5}
     }
     
     # Test all four graph-variant combinations with the same input data

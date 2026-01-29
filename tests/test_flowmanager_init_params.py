@@ -21,8 +21,10 @@ class NumberGenerator(JobABC):
         super().__init__(name)
         
     async def run(self, task):
-        start = task.get("start", 1)
-        count = task.get("count", 5)
+        # Use get_params() for clean parameter access
+        params = self.get_params()
+        start = params.get("start", 1)
+        count = params.get("count", 5)
         numbers = list(range(start, start + count))
         logger.info(f"Generator {self.name} producing numbers: {numbers}")
         return {"numbers": numbers}
@@ -210,10 +212,9 @@ def test_submit_by_graph():
     # Initialize FlowManager with DSL dict
     fm = FlowManager(dsl=dsl_dict)
     
-    # Create test task - numbers 1 through 5
+    # Create test task - numbers 1 through 5 (nested format for get_params())
     task_data = {
-        "start": 1,
-        "count": 5
+        "generator": {"start": 1, "count": 5}
     }
     
     # Test submit_by_graph with square variant
@@ -277,7 +278,7 @@ def test_submit_by_graph_with_collision():
     
     # Test that submit_by_graph raises an error for ambiguous graph/variant
     with pytest.raises(ValueError) as excinfo:
-        fm.submit_short(Task({"start": 1, "count": 3}), "calc", "test")
+        fm.submit_short(Task({"generator": {"start": 1, "count": 3}}), "calc", "test")
     
     # Check that error message contains the FQ names
     error_message = str(excinfo.value)
@@ -303,8 +304,8 @@ def test_combined_workflow():
     assert len(simple_fq_names) == 1, "Expected one FQ name for workflow-simple"
     simple_fq_name = simple_fq_names[0]
     
-    # Task data
-    task_data = {"start": 2, "count": 3}  # Will generate [2, 3, 4]
+    # Task data (nested format for get_params())
+    task_data = {"generator": {"start": 2, "count": 3}}  # Will generate [2, 3, 4]
     
     # Submit task using graph and variant
     fm.submit_short(Task(task_data), "workflow", "simple")
