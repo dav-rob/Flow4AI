@@ -30,20 +30,21 @@ except ImportError:
     print("⚠️  LangChain not installed. Install with: pip install -e \".[test]\"")
 
 
+# =============================================================================
+# LangChain Jobs - Async functions that wrap LangChain LLM calls
+# =============================================================================
+
 async def analyze_sentiment_langchain(text):
     """Use LangChain's ChatOpenAI to analyze sentiment."""
     if not LANGCHAIN_AVAILABLE:
         return {"error": "LangChain not installed"}
     
-    # Create LangChain LLM
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, max_tokens=100)
     
-    # Create prompt
     messages = [
         HumanMessage(content=f"Analyze the sentiment of this text and respond with only one word (positive, negative, or neutral): {text}")
     ]
     
-    # Invoke LLM
     response = await llm.ainvoke(messages)
     
     return {
@@ -73,6 +74,10 @@ async def summarize_langchain(text):
     }
 
 
+# =============================================================================
+# Main - Core Flow4AI + LangChain integration
+# =============================================================================
+
 def main():
     """Run the LangChain integration example."""
     if not LANGCHAIN_AVAILABLE:
@@ -80,47 +85,58 @@ def main():
         print("Install with: pip install -e \".[test]\"\n")
         return False
     
-    print("\n" + "="*60)
-    print("Example 6: LangChain Integration - Simple")
-    print("="*60 + "\n")
+    _print_header()
     
-    print("This example demonstrates Flow4AI + LangChain integration:")
-    print("- LangChain ChatOpenAI wrapped as Flow4AI jobs")
-    print("- Async compatibility between frameworks")
-    print("- Parallel LLM calls managed by Flow4AI\n")
-    
-    # Wrap LangChain functions as Flow4AI jobs
-    jobs = job({
-        "sentiment": analyze_sentiment_langchain,
-        "summarize": summarize_langchain
-    })
-    
-    # Create parallel workflow: analyze sentiment AND summarize
-    workflow = jobs["sentiment"] | jobs["summarize"]
-    
-    # Sample text
+    # Sample text to analyze
     text = """
     Flow4AI is an amazing framework that makes building AI workflows incredibly simple.
     The combination with LangChain opens up powerful possibilities for orchestrating
     complex LLM operations in parallel.
     """
     
-    print(f"Text to analyze:\n{text[:100]}...\n")
-    print("Running parallel LangChain operations...\n")
+    # Wrap LangChain async functions as Flow4AI jobs
+    jobs = job({
+        "sentiment": analyze_sentiment_langchain,
+        "summarize": summarize_langchain
+    })
     
-    # Execute workflow
+    # Create parallel workflow: both jobs run concurrently
+    workflow = jobs["sentiment"] | jobs["summarize"]
+    
+    # Task routes input to each job by name
     task = {
         "sentiment.text": text,
         "summarize.text": text
     }
     
+    # Execute the workflow
     errors, results = FlowManager.run(workflow, task, "langchain_analysis", timeout=60)
     
     if errors:
         print(f"❌ Errors occurred: {errors}")
         return False
     
-    # Extract results
+    _print_results(results)
+    return True
+
+
+# =============================================================================
+# Output Helpers - Terminal display formatting
+# =============================================================================
+
+def _print_header():
+    """Print example header and description."""
+    print("\n" + "="*60)
+    print("LangChain Integration - Simple")
+    print("="*60 + "\n")
+    print("This example demonstrates Flow4AI + LangChain integration:")
+    print("- LangChain ChatOpenAI wrapped as Flow4AI jobs")
+    print("- Async compatibility between frameworks")
+    print("- Parallel LLM calls managed by Flow4AI\n")
+
+
+def _print_results(results):
+    """Print results and observations."""
     sentiment_result = results.get("sentiment", {})
     summary_result = results.get("summarize", {})
     
@@ -140,8 +156,6 @@ def main():
     print("✓ Flow4AI handles async coordination automatically")
     print("✓ Easy to integrate any LangChain component")
     print("="*60 + "\n")
-    
-    return True
 
 
 if __name__ == "__main__":
