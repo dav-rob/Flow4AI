@@ -236,6 +236,7 @@ Complete, runnable examples are available in the [`examples/`](./examples/) dire
 - **07_langchain_chains.py** - Integrating LangChain chains
 - **08_openai_job_chains.py** - Native OpenAI job chains (Performance benchmark)
 - **09_syntax_details.py** - Syntax guide for JobABC vs ordinary python Functions
+- **10_tasks_and_parameters.py** - All task formats and parameter patterns
 
 Run any example:
 ```bash
@@ -261,6 +262,8 @@ The table below shows how to access different types of data from within your job
 | **Parameters for *this* job** | `self.get_params()` | `**kwargs` | Function arguments |
 | **Predecessor outputs** | `self.get_inputs()` | `j_ctx["inputs"]` | ❌ Not available |
 | **Full task dictionary** | `self.get_task()` | `j_ctx["task"]` | ❌ Not available |
+
+**How parameters get to jobs:** Parameters are passed via the task dictionary. Use nested format `{"job_name": {"param": value}}` or shorthand `{"job_name.param": value}`. For functions, parameters matching the signature are auto-injected; use `**kwargs` to receive all parameters. See [`examples/10_tasks_and_parameters.py`](examples/10_tasks_and_parameters.py) for comprehensive examples.
 
 **Examples:**
 
