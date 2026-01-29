@@ -35,9 +35,9 @@ def test_singleton_basic():
     
     # Verify both instances share the same state by modifying one
     test_job_instance = TestJob("test_job")
-    dsl = job({"test_job": test_job_instance})
+    workflow = job({"test_job": test_job_instance})
     
-    fq_name = fm1.add_workflow(dsl, "test_graph")
+    fq_name = fm1.add_workflow(workflow, "test_graph")
     
     # Verify the DSL is accessible from both instances
     assert fq_name in fm1.job_graph_map
@@ -53,8 +53,8 @@ def test_singleton_reset():
     
     # Add a job to the instance
     test_job_instance = TestJob("reset_test_job")
-    dsl = job({"reset_test_job": test_job_instance})
-    fq_name = fm1.add_workflow(dsl, "reset_test_graph")
+    workflow = job({"reset_test_job": test_job_instance})
+    fq_name = fm1.add_workflow(workflow, "reset_test_graph")
     
     # Reset the instance
     FlowManager.reset_instance()
@@ -196,8 +196,8 @@ def test_singleton_parameters():
         return data.get('x', 'default_value')
     
     # Add DSL and submit task
-    dsl = job({"simple_job": simple_job})
-    fq_name = fm.add_workflow(dsl, "param_test")
+    workflow = job({"simple_job": simple_job})
+    fq_name = fm.add_workflow(workflow, "param_test")
     fm.submit_task({"x": "test_value"}, fq_name)
     
     # Wait for completion
@@ -242,8 +242,8 @@ def test_wait_for_completion_no_tasks():
         return data.get('x', 'default_value')
     
     # Add DSL but don't submit any tasks
-    dsl = job({"simple_job": simple_job})
-    fm.add_workflow(dsl, "no_tasks_test")
+    workflow = job({"simple_job": simple_job})
+    fm.add_workflow(workflow, "no_tasks_test")
     
     # Log that we're calling wait_for_completion with no tasks
     logger.info("Calling wait_for_completion with no tasks submitted")

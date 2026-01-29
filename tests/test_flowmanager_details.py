@@ -137,28 +137,28 @@ def test_add_dsl_resubmission():
     })
     
     # Create a simple pipeline: job1 >> job2
-    dsl = jobs["job1"] >> jobs["job2"]
+    workflow = jobs["job1"] >> jobs["job2"]
     
     # Initialize FlowManager
     fm = FlowManager()
     
     # First submission - should process normally
     logger.info("First DSL submission")
-    fq_name1 = fm.add_workflow(dsl, "test_graph", "test")
+    fq_name1 = fm.add_workflow(workflow, "test_graph", "test")
     logger.info(f"Received FQ name: {fq_name1}")
     
     # Verify DSL is marked as already added
-    assert hasattr(dsl, "_f4a_already_added")
-    assert dsl._f4a_already_added is True
+    assert hasattr(workflow, "_f4a_already_added")
+    assert workflow._f4a_already_added is True
     
     # Verify head job has reference to source DSL
     head_job = fm.job_graph_map[fq_name1]
     assert hasattr(head_job, "_f4a_source_dsl")
-    assert head_job._f4a_source_dsl is dsl
+    assert head_job._f4a_source_dsl is workflow
     
     # Second submission with same DSL - should return original FQ name
     logger.info("Second DSL submission (same object)")
-    fq_name2 = fm.add_workflow(dsl, "test_graph", "test")
+    fq_name2 = fm.add_workflow(workflow, "test_graph", "test")
     logger.info(f"Received FQ name: {fq_name2}")
     
     # Should be the same FQ name
@@ -167,7 +167,7 @@ def test_add_dsl_resubmission():
     # Third submission with different graph name and variant
     # Since it's the same DSL object, should still return original FQ name
     logger.info("Third DSL submission (same object, different graph name)")
-    fq_name3 = fm.add_workflow(dsl, "different_graph", "different")
+    fq_name3 = fm.add_workflow(workflow, "different_graph", "different")
     logger.info(f"Received FQ name: {fq_name3}")
     
     # Still should be the same FQ name
@@ -191,13 +191,13 @@ def test_dsl_submission_with_tasks():
     jobs["processor2"].save_result = True
     
     # Create pipeline
-    dsl = jobs["processor1"] >> jobs["processor2"]
+    workflow = jobs["processor1"] >> jobs["processor2"]
     
     # Initialize FlowManager
     fm = FlowManager()
     
     # First submission
-    fq_name = fm.add_workflow(dsl, "test_pipeline")
+    fq_name = fm.add_workflow(workflow, "test_pipeline")
     
     # Create and submit a task
     task = Task({"input": "test data"})
@@ -213,7 +213,7 @@ def test_dsl_submission_with_tasks():
     assert len(results["completed"]) > 0, "No completed results found"
     
     # Submit the same DSL again - should get same FQ name
-    same_fq_name = fm.add_workflow(dsl, "different_name")
+    same_fq_name = fm.add_workflow(workflow, "different_name")
     assert fq_name == same_fq_name, "Did not get the same FQ name for resubmitted DSL"
     
     # Submit another task using the returned FQ name
@@ -328,7 +328,7 @@ def test_add_dsl_dict_single_graph_no_variants():
     })
     
     # Create a math pipeline: generator -> squarer -> aggregator
-    dsl = jobs["generator"] >> jobs["squarer"] >> jobs["aggregator"]
+    workflow = jobs["generator"] >> jobs["squarer"] >> jobs["aggregator"]
     
     # Save results for context between pipeline steps
     jobs["generator"].save_result = True
@@ -336,7 +336,7 @@ def test_add_dsl_dict_single_graph_no_variants():
     
     # Create DSL dict with a single graph, no variants
     dsl_dict = {
-        "math_graph": dsl
+        "math_graph": workflow
     }
     
     # Initialize FlowManager
@@ -442,14 +442,14 @@ def test_add_dsl_dict_single_graph_with_variants():
         return jobs["generator"] >> jobs["operation"] >> jobs["aggregator"]
     
     # Create pipelines for each variant with different operations
-    dev_dsl = create_math_pipeline("dev", "square")   # Square operation for dev
-    prod_dsl = create_math_pipeline("prod", "double")  # Double operation for prod
+    dev_workflow = create_math_pipeline("dev", "square")   # Square operation for dev
+    prod_workflow = create_math_pipeline("prod", "double")  # Double operation for prod
     
     # Create DSL dict with a single graph with variants
     dsl_dict = {
         "math_graph": {
-            "dev": dev_dsl,
-            "prod": prod_dsl
+            "dev": dev_workflow,
+            "prod": prod_workflow
         }
     }
     
@@ -588,13 +588,13 @@ def test_add_dsl_dict_multiple_graphs_no_variants():
     multiply_jobs["operation"].save_result = True
     
     # Create pipelines
-    sum_dsl = sum_jobs["generator"] >> sum_jobs["operation"] >> sum_jobs["aggregator"]
-    multiply_dsl = multiply_jobs["generator"] >> multiply_jobs["operation"] >> multiply_jobs["aggregator"]
+    sum_workflow = sum_jobs["generator"] >> sum_jobs["operation"] >> sum_jobs["aggregator"]
+    multiply_workflow = multiply_jobs["generator"] >> multiply_jobs["operation"] >> multiply_jobs["aggregator"]
     
     # Create DSL dict with multiple graphs, no variants
     dsl_dict = {
-        "sum_graph": sum_dsl,
-        "multiply_graph": multiply_dsl
+        "sum_graph": sum_workflow,
+        "multiply_graph": multiply_workflow
     }
     
     # Initialize FlowManager

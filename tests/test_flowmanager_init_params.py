@@ -362,10 +362,10 @@ def test_completion_callback():
         "collate": collate
     })
 
-    dsl =(jobs["once"] | jobs["ina"] ) >> jobs["collate"]
+    workflow =(jobs["once"] | jobs["ina"] ) >> jobs["collate"]
         
     fm = FlowManager(on_complete=post_processor)
-    fq_name =fm.add_workflow(dsl, "test_completion_callback")
+    fq_name =fm.add_workflow(workflow, "test_completion_callback")
     print(fq_name)
     task = {"once.x": "once ", "ina.x": "in a "}
     fm.submit_task(task,fq_name)

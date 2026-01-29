@@ -58,7 +58,7 @@ def test_execute_job_graph_from_dsl():
     jobs["add"].save_result = True
     jobs["square"].save_result = True
 
-    dsl:DSLComponent = (
+    workflow:DSLComponent = (
         p(jobs["analyzer2"], jobs["cache_manager"], jobs["times"]) 
         >> jobs["transformer"] 
         >> jobs["formatter"] 
@@ -69,7 +69,7 @@ def test_execute_job_graph_from_dsl():
         
     fm = FlowManager()
     # Using add_dsl without a graph_name - it should generate one based on head jobs
-    fq_name = fm.add_workflow(dsl)
+    fq_name = fm.add_workflow(workflow)
     print(f"Auto-generated FQ name: {fq_name}")
     
     # Extract the auto-generated graph name from the FQ name
@@ -123,9 +123,9 @@ class DelayedJob(JobABC):
         return {"status": f"{self.name} complete"}
 
 def create_tm(graph_name:str):
-    dsl = DelayedJob("delayed")
+    workflow = DelayedJob("delayed")
     fm = FlowManager(on_complete=lambda x: logger.debug(f"received {x}"))
-    fq_name = fm.add_workflow(dsl, graph_name)
+    fq_name = fm.add_workflow(workflow, graph_name)
     return fm, fq_name
 
 def execute_tm_with_delay(delay, task_count=10):
@@ -203,17 +203,17 @@ def test_flowmanager_execute_method():
         return jobs["square"] >> jobs["multiply"]
     
     # Create the initial DSL
-    dsl = create_square_multiply_dsl()
+    workflow = create_square_multiply_dsl()
 
     logger.debug("DSL structure1:")
-    logger.debug(dsl)
+    logger.debug(workflow)
     
     # Use execute method directly
     fm = FlowManager()
     task = {"square.x": 4}
     
     # Test with dsl and graph_name
-    errors, result_dict = fm.execute(task, dsl=dsl, graph_name="test_execute1")
+    errors, result_dict = fm.execute(task, dsl=workflow, graph_name="test_execute1")
     
     assert errors == {}, "Errors occurred"
     assert result_dict is not None, "No result returned"
@@ -225,16 +225,16 @@ def test_flowmanager_execute_method():
     assert result_dict["SAVED_RESULTS"]["square"] == 16
     
     logger.debug("DSL structure2:")
-    logger.debug(dsl)
+    logger.debug(workflow)
 
     # Create a fresh DSL for the second test to avoid DSL mutation issues
-    fresh_dsl = create_square_multiply_dsl()
+    fresh_workflow = create_square_multiply_dsl()
     logger.debug("Fresh DSL structure:")
-    logger.debug(fresh_dsl)
+    logger.debug(fresh_workflow)
 
     # Test with fresh DSL
     task = {"square.x": 5}
-    errors, result_dict = fm.execute(task, dsl=fresh_dsl, graph_name="test_execute2")
+    errors, result_dict = fm.execute(task, dsl=fresh_workflow, graph_name="test_execute2")
     
     assert errors == {}, "Errors occurred"
     assert result_dict is not None, "No result returned"
@@ -264,11 +264,11 @@ def test_flowmanager_run_static_method():
     # Save result for the context
     jobs["double"].save_result = True
     
-    dsl = jobs["double"] >> jobs["increment"]
+    workflow = jobs["double"] >> jobs["increment"]
     task = {"double.x": 3}
     
     # Use the static run method
-    errors, result_dict = FlowManager.run(dsl, task, "test_run_method")
+    errors, result_dict = FlowManager.run(workflow, task, "test_run_method")
     
     assert errors == {}, "Errors occurred"
     assert result_dict is not None, "No result returned"
@@ -298,11 +298,11 @@ def test_display_results(capsys):
     # Save result for context
     jobs["add"].save_result = True
     
-    dsl = jobs["add"] >> jobs["subtract"]
+    workflow = jobs["add"] >> jobs["subtract"]
     task = {"add.x": 10}
     
     fm = FlowManager()
-    errors, result_dict = fm.execute(task, dsl=dsl, graph_name="test_display")
+    errors, result_dict = fm.execute(task, dsl=workflow, graph_name="test_display")
     
     assert errors == {}, "Errors occurred"
     assert result_dict is not None, "No result returned"
@@ -354,14 +354,14 @@ def test_error_handling_in_execute():
     single_job = job({"failing": failing_job})
     
     # Create a DSL with just this single job
-    dsl = single_job
+    workflow = single_job
     task = {"failing.x": 1}
     
     fm = FlowManager()
     
     # The execute method should raise an exception when a job fails
     try:
-        fm.execute(task, dsl=dsl, graph_name="test_error_handling")
+        fm.execute(task, dsl=workflow, graph_name="test_error_handling")
         assert False, "execute() did not raise an exception when a job failed"
     except Exception as e:
         assert "This job intentionally fails" in str(e), "Unexpected error message"
@@ -377,7 +377,7 @@ def test_timeout_handling_in_execute():
     single_job = job({"slow": slow_job})
     
     # For a single job, just use the job itself as the DSL
-    dsl = single_job
+    workflow = single_job
     task = {"slow.x": 1}
     
     fm = FlowManager()
@@ -391,11 +391,11 @@ def test_submit_multiple_tasks():
     processor = ProcessorJob("Processor", "process")
     
     # Create DSL directly with the processor job
-    dsl = processor
+    workflow = processor
     
     # Initialize FlowManager and add the DSL
     fm = FlowManager()
-    fq_name = fm.add_workflow(dsl, "test_multiple_tasks")
+    fq_name = fm.add_workflow(workflow, "test_multiple_tasks")
     
     # Create a list of tasks to submit
     tasks = [
@@ -445,11 +445,11 @@ def test_submit_tasks_with_different_data():
     
     # Create DSL with the data processor job
     processor = DataProcessor("DataProcessor")
-    dsl = processor
+    workflow = processor
     
     # Initialize FlowManager and add the DSL
     fm = FlowManager()
-    fq_name = fm.add_workflow(dsl, "test_different_data")
+    fq_name = fm.add_workflow(workflow, "test_different_data")
     
     # Create tasks with different types of data
     tasks = [
@@ -505,11 +505,11 @@ def test_submit_without_fqname():
     processor = ProcessorJob("Processor", "process")
     
     # Create DSL directly with the processor job
-    dsl = processor
+    workflow = processor
     
     # Initialize FlowManager and add the DSL
     fm = FlowManager()
-    fq_name = fm.add_workflow(dsl, "test_without_fqname")
+    fq_name = fm.add_workflow(workflow, "test_without_fqname")
     
     # Create a task
     task = Task({"value": 42})
@@ -639,13 +639,13 @@ def test_submit_multiple_tasks_pipeline():
     jobs["transformer"].save_result = True
     
     # Build the pipeline: generator -> transformer -> aggregator
-    dsl = jobs["generator"] >> jobs["transformer"] >> jobs["aggregator"]
+    workflow = jobs["generator"] >> jobs["transformer"] >> jobs["aggregator"]
     
     # Initialize a SINGLE FlowManager instance (FlowManager is effectively a singleton)
     fm = FlowManager()
     
     # Add the DSL ONCE to get a fully qualified name
-    fq_name = fm.add_workflow(dsl, "test_pipeline")
+    fq_name = fm.add_workflow(workflow, "test_pipeline")
     
     # Demo approach 1: Submit multiple tasks one-by-one, with wait_for_completion after each
     logger.info("Approach 1: Multiple individual submit() calls with wait_for_completion after each")
