@@ -18,7 +18,7 @@ import pytest
 
 from flow4ai import f4a_logging as logging
 from flow4ai.dsl import (DSLComponent, JobsDict, Parallel, Serial, p, parallel,
-                         s, serial, w, job)
+                         s, serial, job)
 from flow4ai.job import JobABC
 from flow4ai.jobs.wrapping_job import WrappingJob
 from tests.test_utils.graph_evaluation import evaluate
@@ -76,14 +76,6 @@ class TestWrapping:
         llm_job = LLMSummarizer("test_summarizer")
         wrapped = job(llm_job)
         assert wrapped is llm_job  # Should return the same object
-    
-    def test_w_alias(self):
-        """Test that w is an alias for wrap."""
-        wrapped1 = job(mock_data_extraction)
-        wrapped2 = w(mock_data_extraction)
-        assert isinstance(wrapped1, WrappingJob)
-        assert isinstance(wrapped2, WrappingJob)
-        assert wrapped1.callable == wrapped2.callable
         
     def test_wrap_named_callable_kwargs(self):
         """Test wrapping a callable with a name using kwargs syntax."""

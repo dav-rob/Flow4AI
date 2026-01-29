@@ -119,9 +119,9 @@ def job(obj=None, **kwargs):
         return obj  # Already has the operations we need
     return WrappingJob(obj)
 
-# Aliases for backward compatibility
-wrap = job  # Deprecated: use job() instead
-w = job     # Deprecated: use job() instead
+# Legacy aliases - commented out to enforce job() usage
+# wrap = job  # Deprecated: use job() instead
+# w = job     # Deprecated: use job() instead
 
 def parallel(*objects, **kwargs):
     """
@@ -131,7 +131,7 @@ def parallel(*objects, **kwargs):
     instances and regular objects) and creates a parallel composition of all of them.
     
     Example:
-        graph = parallel(obj1, obj2, obj3)  # Equivalent to wrap(obj1) | wrap(obj2) | wrap(obj3)
+        graph = parallel(obj1, obj2, obj3)  # Equivalent to job(obj1) | job(obj2) | job(obj3)
         
         # Also supports list argument for backward compatibility
         objects = [obj1, obj2, obj3]
@@ -146,7 +146,7 @@ def parallel(*objects, **kwargs):
     # Case 1: Only keyword arguments provided (no positional arguments)
     if not objects and kwargs:
         # Wrap each item with its name and then combine them with the | operator
-        wrapped_items = wrap(**kwargs)
+        wrapped_items = job(**kwargs)
         if not isinstance(wrapped_items, dict):
             # If wrap returned a single item (not a dict), return it
             return wrapped_items
@@ -165,7 +165,7 @@ def parallel(*objects, **kwargs):
     # Case 2: Dictionary passed as the first argument
     if len(objects) == 1 and isinstance(objects[0], dict) and not kwargs:
         # Wrap each item with its name and then combine them with the | operator
-        wrapped_items = wrap(objects[0])
+        wrapped_items = job(objects[0])
         if not isinstance(wrapped_items, dict):
             # If wrap returned a single item (not a dict), return it
             return wrapped_items
@@ -189,8 +189,8 @@ def parallel(*objects, **kwargs):
     if not objects:
         raise ValueError("Cannot create a parallel composition from empty arguments")
     if len(objects) == 1:
-        return wrap(objects[0])
-    return reduce(lambda acc, obj: acc | wrap(obj), objects[1:], wrap(objects[0]))
+        return job(objects[0])
+    return reduce(lambda acc, obj: acc | job(obj), objects[1:], job(objects[0]))
 
 # Synonym for parallel
 p = parallel
@@ -203,7 +203,7 @@ def serial(*objects, **kwargs):
     instances and regular objects) and creates a serial composition of all of them.
     
     Example:
-        graph = serial(obj1, obj2, obj3)  # Equivalent to wrap(obj1) >> wrap(obj2) >> wrap(obj3)
+        graph = serial(obj1, obj2, obj3)  # Equivalent to job(obj1) >> job(obj2) >> job(obj3)
         
         # Also supports list argument for backward compatibility
         objects = [obj1, obj2, obj3]
@@ -217,7 +217,7 @@ def serial(*objects, **kwargs):
     """
     # Case 1: Dictionary argument
     if len(objects) == 1 and isinstance(objects[0], dict) and not kwargs:
-        wrapped_items = {name: wrap({name: obj}) for name, obj in objects[0].items()}
+        wrapped_items = {name: job({name: obj}) for name, obj in objects[0].items()}
         if not wrapped_items:
             raise ValueError("Cannot create a serial composition from empty arguments")
         if len(wrapped_items) == 1:
@@ -227,7 +227,7 @@ def serial(*objects, **kwargs):
         
     # Case 2: Kwargs provided (object_name=object syntax)
     if kwargs:
-        wrapped_items = {name: wrap({name: obj}) for name, obj in kwargs.items()}
+        wrapped_items = {name: job({name: obj}) for name, obj in kwargs.items()}
         if not wrapped_items:
             raise ValueError("Cannot create a serial composition from empty arguments")
         if len(wrapped_items) == 1:
@@ -243,8 +243,8 @@ def serial(*objects, **kwargs):
     if not objects:
         raise ValueError("Cannot create a serial composition from empty arguments")
     if len(objects) == 1:
-        return wrap(objects[0])
-    return reduce(lambda acc, obj: acc >> wrap(obj), objects[1:], wrap(objects[0]))
+        return job(objects[0])
+    return reduce(lambda acc, obj: acc >> job(obj), objects[1:], job(objects[0]))
 
 # Synonym for serial
 s = serial
