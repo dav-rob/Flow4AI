@@ -22,7 +22,10 @@ class DataProcessor(JobABC):
     
     async def run(self, task):
         """Process data based on processor type."""
-        return f"Processed by {self.name} ({self.processor_type})"
+        # Use get_params() to access task parameters for this job (if provided)
+        params = self.get_params()
+        priority = params.get("priority", "normal")
+        return f"Processed by {self.name} ({self.processor_type}, priority={priority})"
 
 
 def context_aggregator(j_ctx):
