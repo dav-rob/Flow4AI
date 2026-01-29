@@ -30,4 +30,4 @@
 - Always call super().__init__ with name and properties parameters
 
 ## Framework Documentation
-Always read README.md and before any serious work, it contains the usability core of the framework, how it is meant to feel to use to developers, /examples folder contains many examples of how to use the framework.  Read docs/ARCHITECTURE.md for architectural overview about how the code internals are put together.
+Always read README.md and before any serious work, it contains the usability core of the framework, how it is meant to feel to use by developers, and must be bourne in mind when making code changes, additionally /examples folder contains many examples of how the frameword is used canonically.  Read docs/ARCHITECTURE.md for architectural overview about how the code internals are put together.
