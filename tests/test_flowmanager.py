@@ -69,7 +69,7 @@ def test_execute_job_graph_from_dsl():
         
     fm = FlowManager()
     # Using add_dsl without a graph_name - it should generate one based on head jobs
-    fq_name = fm.add_dsl(dsl)
+    fq_name = fm.add_workflow(dsl)
     print(f"Auto-generated FQ name: {fq_name}")
     
     # Extract the auto-generated graph name from the FQ name
@@ -125,7 +125,7 @@ class DelayedJob(JobABC):
 def create_tm(graph_name:str):
     dsl = DelayedJob("delayed")
     fm = FlowManager(on_complete=lambda x: logger.debug(f"received {x}"))
-    fq_name = fm.add_dsl(dsl, graph_name)
+    fq_name = fm.add_workflow(dsl, graph_name)
     return fm, fq_name
 
 def execute_tm_with_delay(delay, task_count=10):
@@ -395,7 +395,7 @@ def test_submit_multiple_tasks():
     
     # Initialize FlowManager and add the DSL
     fm = FlowManager()
-    fq_name = fm.add_dsl(dsl, "test_multiple_tasks")
+    fq_name = fm.add_workflow(dsl, "test_multiple_tasks")
     
     # Create a list of tasks to submit
     tasks = [
@@ -449,7 +449,7 @@ def test_submit_tasks_with_different_data():
     
     # Initialize FlowManager and add the DSL
     fm = FlowManager()
-    fq_name = fm.add_dsl(dsl, "test_different_data")
+    fq_name = fm.add_workflow(dsl, "test_different_data")
     
     # Create tasks with different types of data
     tasks = [
@@ -509,7 +509,7 @@ def test_submit_without_fqname():
     
     # Initialize FlowManager and add the DSL
     fm = FlowManager()
-    fq_name = fm.add_dsl(dsl, "test_without_fqname")
+    fq_name = fm.add_workflow(dsl, "test_without_fqname")
     
     # Create a task
     task = Task({"value": 42})
@@ -645,7 +645,7 @@ def test_submit_multiple_tasks_pipeline():
     fm = FlowManager()
     
     # Add the DSL ONCE to get a fully qualified name
-    fq_name = fm.add_dsl(dsl, "test_pipeline")
+    fq_name = fm.add_workflow(dsl, "test_pipeline")
     
     # Demo approach 1: Submit multiple tasks one-by-one, with wait_for_completion after each
     logger.info("Approach 1: Multiple individual submit() calls with wait_for_completion after each")

@@ -212,8 +212,8 @@ class FlowManagerABC(ABC):
 
         return fq_name
 
-    # Backward-compatible alias
-    add_dsl = add_workflow
+    # Deprecated alias - commented out to enforce use of add_workflow
+    # add_dsl = add_workflow
 
     def add_workflows(self, workflows_dict: Dict) -> List[str]:
         """
@@ -287,8 +287,8 @@ class FlowManagerABC(ABC):
 
         return fq_names
 
-    # Backward-compatible alias
-    add_dsl_dict = add_workflows
+    # Deprecated alias - commented out to enforce use of add_workflows
+    # add_dsl_dict = add_workflows
 
     def add_to_job_graph_map(self, precedence_graph: PrecedenceGraph, jobs: JobsDict, graph_name: str, variant: str = "") -> str:
         """

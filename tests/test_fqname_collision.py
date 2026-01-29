@@ -65,7 +65,7 @@ def test_fq_name_collision_resolution():
     
     # Add first DSL - should get standard FQ name
     logger.info("Adding first DSL (A)")
-    fq_name_a = fm.add_dsl(dsl_a, "test_pipeline")
+    fq_name_a = fm.add_workflow(dsl_a, "test_pipeline")
     logger.info(f"First DSL FQ name: {fq_name_a}")
     
     # --- Second DSL with producer="B" but same structure ---
@@ -82,7 +82,7 @@ def test_fq_name_collision_resolution():
     
     # Add second DSL - should get a unique variant suffix
     logger.info("Adding second DSL (B)")
-    fq_name_b = fm.add_dsl(dsl_b, "test_pipeline")
+    fq_name_b = fm.add_workflow(dsl_b, "test_pipeline")
     logger.info(f"Second DSL FQ name: {fq_name_b}")
     
     # Verify two different FQ names were generated
@@ -149,7 +149,7 @@ def test_fq_name_collision_resolution():
     
     # Add third DSL - should get a different unique variant suffix
     logger.info("Adding third DSL (C)")
-    fq_name_c = fm.add_dsl(dsl_c, "test_pipeline")
+    fq_name_c = fm.add_workflow(dsl_c, "test_pipeline")
     logger.info(f"Third DSL FQ name: {fq_name_c}")
     
     # Verify third FQ name is different from the first two

@@ -37,7 +37,7 @@ def test_singleton_basic():
     test_job_instance = TestJob("test_job")
     dsl = job({"test_job": test_job_instance})
     
-    fq_name = fm1.add_dsl(dsl, "test_graph")
+    fq_name = fm1.add_workflow(dsl, "test_graph")
     
     # Verify the DSL is accessible from both instances
     assert fq_name in fm1.job_graph_map
@@ -54,7 +54,7 @@ def test_singleton_reset():
     # Add a job to the instance
     test_job_instance = TestJob("reset_test_job")
     dsl = job({"reset_test_job": test_job_instance})
-    fq_name = fm1.add_dsl(dsl, "reset_test_graph")
+    fq_name = fm1.add_workflow(dsl, "reset_test_graph")
     
     # Reset the instance
     FlowManager.reset_instance()
@@ -124,7 +124,7 @@ def test_singleton_in_different_contexts():
     # Get the instance and configure it
     fm = FlowManager.instance()
     dsl1 = job({"simple_func": simple_function})
-    fq_name1 = fm.add_dsl(dsl1, "context1")
+    fq_name1 = fm.add_workflow(dsl1, "context1")
     
     # Submit a task and verify results
     fm.submit_task({"x": 5}, fq_name1)
@@ -150,11 +150,11 @@ def test_singleton_in_different_contexts():
     
     # Add a new DSL with both functions separately
     dsl2 = job({"async_func": async_func})
-    fq_name2 = fm2.add_dsl(dsl2, "context2")
+    fq_name2 = fm2.add_workflow(dsl2, "context2")
     
     # Add the job separately
     dsl3 = job({"async_job": async_job})
-    fq_name3 = fm2.add_dsl(dsl3, "context3")
+    fq_name3 = fm2.add_workflow(dsl3, "context3")
     
     # Submit a task to the new DSL
     fm2.submit_task({"data": "test_data"}, fq_name2)
@@ -197,7 +197,7 @@ def test_singleton_parameters():
     
     # Add DSL and submit task
     dsl = job({"simple_job": simple_job})
-    fq_name = fm.add_dsl(dsl, "param_test")
+    fq_name = fm.add_workflow(dsl, "param_test")
     fm.submit_task({"x": "test_value"}, fq_name)
     
     # Wait for completion
@@ -243,7 +243,7 @@ def test_wait_for_completion_no_tasks():
     
     # Add DSL but don't submit any tasks
     dsl = job({"simple_job": simple_job})
-    fm.add_dsl(dsl, "no_tasks_test")
+    fm.add_workflow(dsl, "no_tasks_test")
     
     # Log that we're calling wait_for_completion with no tasks
     logger.info("Calling wait_for_completion with no tasks submitted")

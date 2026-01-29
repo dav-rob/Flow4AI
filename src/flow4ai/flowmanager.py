@@ -286,7 +286,7 @@ class FlowManager(FlowManagerABC):
             Exception: If any errors occurred during execution
         """
         if dsl and graph_name:
-            fq_name = self.add_dsl(dsl, graph_name)
+            fq_name = self.add_workflow(dsl, graph_name)
             
         if not fq_name:
             raise ValueError("Either provide both dsl and graph_name or an fq_name")

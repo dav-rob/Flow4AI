@@ -185,7 +185,7 @@ def test_execute_job_graph_from_dsl():
         
     fm = FlowManager()
     # Using add_dsl without a graph_name - it should generate one based on head jobs
-    fq_name = fm.add_dsl(dsl)
+    fq_name = fm.add_workflow(dsl)
     print(f"Auto-generated FQ name: {fq_name}")
     
     # Extract the auto-generated graph name from the FQ name
@@ -262,7 +262,7 @@ def test_execute_with_task_params():
     )
 
     fm = FlowManager()
-    fq_name = fm.add_dsl(dsl, "test_shorthand_params")
+    fq_name = fm.add_workflow(dsl, "test_shorthand_params")
 
     task = {
         "times": {"x": 5},                   # times(x=5) -> 10
@@ -317,7 +317,7 @@ def test_execute_with_shorthand_task_params():
     )
 
     fm = FlowManager()
-    fq_name = fm.add_dsl(dsl, "test_shorthand_params")
+    fq_name = fm.add_workflow(dsl, "test_shorthand_params")
     task = {"times.x": 5,"add.args": [100], "add.y": 5, "square.x": 3, "join.kwargs": {"a": 1, "b": 2, "c": 3}} 
     fm.submit_task(task, fq_name)
     success = fm.wait_for_completion()

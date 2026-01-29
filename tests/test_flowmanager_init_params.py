@@ -176,7 +176,7 @@ def test_get_fq_names_by_graph():
     }
     
     # Add the DSL dict
-    fm.add_dsl_dict(dsl_dict)
+    fm.add_workflows(dsl_dict)
     
     # Test getting FQ names by graph and variant
     basic_fq_names = fm.get_fq_names_by_graph("math", "basic")
@@ -191,7 +191,7 @@ def test_get_fq_names_by_graph():
     
     # Add another DSL with same structure (should get different FQ name with suffix)
     dsl_basic2 = create_math_pipeline("math_basic2", "sum")
-    fm.add_dsl(dsl_basic2, "math", "basic")
+    fm.add_workflow(dsl_basic2, "math", "basic")
     
     # Now we should have two "math-basic" FQ names
     basic_fq_names_updated = fm.get_fq_names_by_graph("math", "basic")
@@ -266,8 +266,8 @@ def test_submit_by_graph_with_collision():
     dsl2 = create_math_pipeline("collision_test2", "double")
     
     # Add both with same graph name and variant
-    fq_name1 = fm.add_dsl(dsl1, "calc", "test")
-    fq_name2 = fm.add_dsl(dsl2, "calc", "test")
+    fq_name1 = fm.add_workflow(dsl1, "calc", "test")
+    fq_name2 = fm.add_workflow(dsl2, "calc", "test")
     
     # Verify we got different FQ names
     assert fq_name1 != fq_name2, "Expected different FQ names for different DSLs"
@@ -365,7 +365,7 @@ def test_completion_callback():
     dsl =(jobs["once"] | jobs["ina"] ) >> jobs["collate"]
         
     fm = FlowManager(on_complete=post_processor)
-    fq_name =fm.add_dsl(dsl, "test_completion_callback")
+    fq_name =fm.add_workflow(dsl, "test_completion_callback")
     print(fq_name)
     task = {"once.x": "once ", "ina.x": "in a "}
     fm.submit_task(task,fq_name)

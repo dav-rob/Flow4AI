@@ -1,11 +1,19 @@
 # Flow4AI Development Guide
 
 ## Commands
-- Test: `python -m pytest`
+- Test suite ( ~2.5 mins): `python -m pytest`
+- **Core tests (~11s)**: `./run_core_tests.sh` - use for quick smoke testing during refactoring
 - Single test: `python -m pytest tests/path_to_test.py::test_name -v`
 - Full test suite: `python -m pytest --full-suite` (includes performance tests)
 - Debug logs: `python -m pytest -s` or `FLOW4AI_LOG_LEVEL=DEBUG python -m pytest -v -s`
 - Type checking: `mypy src/flow4ai`
+
+## ⚠️ CRITICAL: No Complex sed Scripts
+**DO NOT create "god-like" sed one-liners for bulk code changes.** They break silently and waste hours debugging. Instead:
+1. Use proper file editing tools (replace_file_content, multi_replace_file_content)
+2. Update files **one by one**
+3. Run `./run_core_tests.sh` after each batch of changes
+4. If you can't explain the sed command in one sentence, don't use it
 
 ## Code Style
 - **Naming**: Classes=CamelCase, Methods/functions/variables=snake_case, Constants=UPPERCASE

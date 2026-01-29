@@ -144,7 +144,7 @@ def test_add_dsl_resubmission():
     
     # First submission - should process normally
     logger.info("First DSL submission")
-    fq_name1 = fm.add_dsl(dsl, "test_graph", "test")
+    fq_name1 = fm.add_workflow(dsl, "test_graph", "test")
     logger.info(f"Received FQ name: {fq_name1}")
     
     # Verify DSL is marked as already added
@@ -158,7 +158,7 @@ def test_add_dsl_resubmission():
     
     # Second submission with same DSL - should return original FQ name
     logger.info("Second DSL submission (same object)")
-    fq_name2 = fm.add_dsl(dsl, "test_graph", "test")
+    fq_name2 = fm.add_workflow(dsl, "test_graph", "test")
     logger.info(f"Received FQ name: {fq_name2}")
     
     # Should be the same FQ name
@@ -167,7 +167,7 @@ def test_add_dsl_resubmission():
     # Third submission with different graph name and variant
     # Since it's the same DSL object, should still return original FQ name
     logger.info("Third DSL submission (same object, different graph name)")
-    fq_name3 = fm.add_dsl(dsl, "different_graph", "different")
+    fq_name3 = fm.add_workflow(dsl, "different_graph", "different")
     logger.info(f"Received FQ name: {fq_name3}")
     
     # Still should be the same FQ name
@@ -197,7 +197,7 @@ def test_dsl_submission_with_tasks():
     fm = FlowManager()
     
     # First submission
-    fq_name = fm.add_dsl(dsl, "test_pipeline")
+    fq_name = fm.add_workflow(dsl, "test_pipeline")
     
     # Create and submit a task
     task = Task({"input": "test data"})
@@ -213,7 +213,7 @@ def test_dsl_submission_with_tasks():
     assert len(results["completed"]) > 0, "No completed results found"
     
     # Submit the same DSL again - should get same FQ name
-    same_fq_name = fm.add_dsl(dsl, "different_name")
+    same_fq_name = fm.add_workflow(dsl, "different_name")
     assert fq_name == same_fq_name, "Did not get the same FQ name for resubmitted DSL"
     
     # Submit another task using the returned FQ name
@@ -250,7 +250,7 @@ def test_new_dsl_with_same_structure():
     
     # Add first DSL
     logger.info("Adding first DSL")
-    fq_name1 = fm.add_dsl(dsl1)
+    fq_name1 = fm.add_workflow(dsl1)
     logger.info(f"First DSL FQ name: {fq_name1}")
     
     # Extract the auto-generated graph name
@@ -267,7 +267,7 @@ def test_new_dsl_with_same_structure():
     
     # Add second DSL
     logger.info("Adding second DSL with same structure but different objects")
-    fq_name2 = fm.add_dsl(dsl2)
+    fq_name2 = fm.add_workflow(dsl2)
     logger.info(f"Second DSL FQ name: {fq_name2}")
     
     # Extract the auto-generated graph name
@@ -297,7 +297,7 @@ def test_new_dsl_with_same_structure():
     
     # Add third DSL
     logger.info("Adding third DSL with different job names")
-    fq_name3 = fm.add_dsl(dsl3)
+    fq_name3 = fm.add_workflow(dsl3)
     logger.info(f"Third DSL FQ name: {fq_name3}")
     
     # Extract the auto-generated graph name
@@ -344,7 +344,7 @@ def test_add_dsl_dict_single_graph_no_variants():
     
     # Add the DSL dict
     logger.info("Adding DSL dict with single graph, no variants")
-    fq_names = fm.add_dsl_dict(dsl_dict)
+    fq_names = fm.add_workflows(dsl_dict)
     
     # Verify a single FQ name was returned
     assert len(fq_names) == 1, "Should return exactly one FQ name"
@@ -458,7 +458,7 @@ def test_add_dsl_dict_single_graph_with_variants():
     
     # Add the DSL dict
     logger.info("Adding DSL dict with single graph, with variants")
-    fq_names = fm.add_dsl_dict(dsl_dict)
+    fq_names = fm.add_workflows(dsl_dict)
     
     # Verify two FQ names were returned (one for each variant)
     assert len(fq_names) == 2, "Should return exactly two FQ names (one for each variant)"
@@ -602,7 +602,7 @@ def test_add_dsl_dict_multiple_graphs_no_variants():
     
     # Add the DSL dict
     logger.info("Adding DSL dict with multiple graphs, no variants")
-    fq_names = fm.add_dsl_dict(dsl_dict)
+    fq_names = fm.add_workflows(dsl_dict)
     
     # Verify two FQ names were returned
     assert len(fq_names) == 2, "Should return exactly two FQ names"
@@ -726,7 +726,7 @@ def test_add_dsl_dict_multiple_graphs_with_variants():
     
     # Add the DSL dict
     logger.info("Adding DSL dict with multiple graphs, with variants")
-    fq_names = fm.add_dsl_dict(dsl_dict)
+    fq_names = fm.add_workflows(dsl_dict)
     
     # Verify four FQ names were returned (one for each graph-variant combination)
     assert len(fq_names) == 4, "Should return exactly four FQ names"
