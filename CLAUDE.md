@@ -30,4 +30,4 @@
 - Always call super().__init__ with name and properties parameters
 
 ## Architecture
-Always read docs/ARCHITECTURE.md before anything other than simple command execution.
+Always read README.md and before any serious work, it contains the usability core of the framework, how it is meant to feel to use to developers, /examples folder contains many examples of how to use the framework.  Read docs/ARCHITECTURE.md for architectural overview about how the code internals are put together.
