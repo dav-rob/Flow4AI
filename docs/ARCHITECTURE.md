@@ -401,11 +401,15 @@ The main technical distinction between these two approaches is how they access i
 
 #### Job Classes
 
-JobABC subclasses implement an asynchronous `run` method and can directly access inputs from predecessor jobs using the built-in `get_inputs()` method:
+JobABC subclasses implement an asynchronous `run` method and can access data using built-in methods:
 
 ```python
 class MyCustomJob(JobABC):
     async def run(self, task):
+        # NEW: Use get_params() for clean parameter access (matches function behavior)
+        params = self.get_params()  # Auto-extracts params for THIS job from task
+        my_value = params.get("my_param", None)
+        
         # Access inputs from predecessor jobs
         inputs = self.get_inputs()
         
@@ -419,11 +423,12 @@ class MyCustomJob(JobABC):
         return {"processed_data": processed_data}
 ```
 
+**Available Methods:**
+- `self.get_params()` - Parameters for THIS job (extracted from task dict)
+- `self.get_inputs()` - Results from predecessor jobs (dict keyed by short job name)
+- `self.get_task()` - The full original task dictionary
+
 **Important:** The `run` method is defined as `async` and should use asynchronous patterns. Avoid synchronous blocking operations that could affect performance.
-
-**Important**: `get_inputs()` relies on proper job naming conventions. The `parse_job_name` method extracts short names from fully qualified ones using a specific format: `graph_name$$param_name$$job_name$$`. If a job name doesn't follow this pattern, it returns "UNSUPPORTED NAME FORMAT", which may cause input retrieval issues.
-
-The `get_inputs()` method returns a dictionary with short job names as keys, making it easy to access upstream job results.
 
 #### Functions
 

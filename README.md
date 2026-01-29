@@ -13,9 +13,8 @@ Whether you're processing thousands of documents, chaining complex LLM calls, or
 - [The Core Pattern: Divide and Aggregate](#the-core-pattern-divide-and-aggregate)
 - [Massive Parallelism](#massive-parallel-execution)
 - [Complex Workflows](#complex-workflow-example)
-- [Task Passthrough and Intermediate Results](#task-passthrough-and-intermediate-results)
 - [Working Examples](#working-examples)
-- [Deep Dive: Job Syntax & Parameters](#deep-dive-job-syntax-parameters)
+- [Deep Dive: Functions vs Job Classes](#deep-dive-functions-vs-job-classes)
 
 ## Quick Start
 
@@ -225,67 +224,6 @@ print(result["task_pass_through"])  # Original task data
 ```
 
 
-## Task Passthrough and Intermediate Results
-
-### Task Passthrough
-
-> **Example Script**: [`examples/02_task_passthrough.py`](examples/02_task_passthrough.py)
-
-When processing multiple tasks with different data, results need access to the **original task data**. Flow4AI automatically includes `task_pass_through` in every result, preserving the complete original task.
-
-**Why it matters:** Each task carries independent data (customer orders, documents, API requests). Your result processing functions need to correlate results back to specific inputs.
-
-```python
-from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import job
-
-def process_order(order_id, amount):
-    tax = amount * 0.08
-    return {"tax": tax, "total": amount + tax}
-
-jobs = job({"process": process_order})
-fm = FlowManager()
-fq_name = fm.add_dsl(jobs["process"], "orders")
-
-# Submit multiple orders with different data
-orders = [
-    {"process.order_id": "ORD-001", "process.amount": 100.00},
-    {"process.order_id": "ORD-002", "process.amount": 250.50},
-]
-
-for order in orders:
-    fm.submit_task(order, fq_name)
-
-fm.wait_for_completion()
-results = fm.pop_results()
-
-# Access original task data via task_pass_through
-for result in results["completed"][fq_name]:
-    original_order_id = result["task_pass_through"]["process.order_id"]
-    total = result["result"]["total"]
-    print(f"Order {original_order_id}: ${total:.2f}")
-```
-
-### Accessing Intermediate Results
-
-Use `save_result = True` to capture outputs from any job in your workflow. These are available in the final result's `SAVED_RESULTS` dictionary.
-
-```python
-jobs = job({"step1": func1, "step2": func2, "step3": func3})
-jobs["step1"].save_result = True
-jobs["step2"].save_result = True
-
-dsl = jobs["step1"] >> jobs["step2"] >> jobs["step3"]
-errors, result = FlowManager.run(dsl, task, "pipeline")
-
-# Access intermediate results
-print(result["SAVED_RESULTS"]["step1"])  # Output from step1
-print(result["SAVED_RESULTS"]["step2"])  # Output from step2
-print(result["result"])                   # Final output from step3
-```
-
-
-
 ## Working Examples
 
 Complete, runnable examples are available in the [`examples/`](./examples/) directory:
@@ -305,23 +243,104 @@ python examples/01_basic_workflow.py
 ```
 
 
-### Deep Dive: Functions vs Job Classes
+## Deep Dive: Functions vs Job Classes
 
 > **Example Script**: [`examples/09_syntax_details.py`](examples/09_syntax_details.py)
 
 Flow4AI offers two ways to define jobs. Both are equally capable — choose based on your preference:
 
 1.  **Functions** (Recommended): Just write regular Python functions. This is the natural, Pythonic approach.
-    -   Parameters passed as **arguments** (e.g., `def func(x, y):`)
-    -   Access upstream results via optional `j_ctx` argument (e.g., `def func(j_ctx):`)
 2.  **Job Classes**: Subclass `JobABC` for more structure — useful when building reusable library components.
-    -   Access inputs via `self.get_inputs()`
-    -   Access full task dictionary via `task` argument in `run()`
 
-Check out [`examples/09_syntax_details.py`](examples/09_syntax_details.py) for a comprehensive guide on these differences and how to handle nested task parameters correctly. It also covers advanced topics like:
--   Handling multiple tail jobs
--   Accessing intermediate results
--   Using `on_complete` callbacks
+### Accessing Data Inside Jobs
+
+The table below shows how to access different types of data from within your job:
+
+| Data You Need | Job Class (`JobABC`) | Function (with `j_ctx`) | Function (simple) |
+|---|---|---|---|
+| **Parameters for *this* job** | `self.get_params()` | `**kwargs` | Function arguments |
+| **Predecessor outputs** | `self.get_inputs()` | `j_ctx["inputs"]` | ❌ Not available |
+| **Full task dictionary** | `self.get_task()` | `j_ctx["task"]` | ❌ Not available |
+
+**Examples:**
+
+```python
+# Job Class - use get_params() for clean parameter access
+class MyJob(JobABC):
+    async def run(self, task):
+        params = self.get_params()       # {"val": 10, "name": "test"}
+        val = params.get("val", 0)
+        
+        inputs = self.get_inputs()        # Results from predecessor jobs
+        prev = inputs.get("other_job", {}).get("result")
+        return {"result": val * 2}
+
+# Function with j_ctx - full context access
+def my_function(j_ctx, **kwargs):
+    val = kwargs.get("val", 0)            # Auto-extracted from task
+    inputs = j_ctx["inputs"]              # Results from predecessor jobs
+    task = j_ctx["task"]                  # Full task dictionary
+    return {"result": val * 2}
+
+# Simple function - parameters auto-injected as arguments
+def simple_function(val):
+    return {"result": val * 2}
+```
+
+### Processing Results After Execution
+
+Flow4AI provides two ways to access results: via an `on_complete` callback (async/streaming) or by calling `pop_results()` (synchronous/batch).
+
+| Data You Need | Via `on_complete` callback | Via `pop_results()` |
+|---|---|---|
+| **Final result** | `result["key"]` | `results["completed"][fq_name][i]["key"]` |
+| **Original task (passthrough)** | `result["task_pass_through"]` | `results["completed"][fq_name][i]["task_pass_through"]` |
+| **Intermediate results** | `result["SAVED_RESULTS"]["job_name"]` | `results["completed"][fq_name][i]["SAVED_RESULTS"]["job_name"]` |
+| **Errors** | N/A (callback not called) | `results["errors"]` |
+
+**Task Passthrough:** Flow4AI automatically includes `task_pass_through` in every result, preserving the original task. This lets you correlate results back to specific inputs when processing batches.
+
+**Intermediate Results:** Set `job.save_result = True` on any job to capture its output in `SAVED_RESULTS`.
+
+**Examples:**
+
+```python
+# Setup: Enable intermediate result saving
+jobs = job({"step1": func1, "step2": func2, "step3": func3})
+jobs["step1"].save_result = True
+jobs["step2"].save_result = True
+dsl = jobs["step1"] >> jobs["step2"] >> jobs["step3"]
+
+# Option A: on_complete callback (async, per-task)
+def on_complete(result):
+    original_task = result["task_pass_through"]       # Original task data
+    step1_output = result["SAVED_RESULTS"]["step1"]   # Intermediate result
+    final_output = result["result"]                   # Tail job result
+    print(f"Completed task {original_task['id']}: {final_output}")
+
+fm = FlowManager(on_complete=on_complete)
+fq_name = fm.add_dsl(dsl, "pipeline")
+fm.submit_task({"id": "task-1", "step1.x": 10}, fq_name)
+fm.wait_for_completion()
+
+# Option B: pop_results() (synchronous, batch)
+fm = FlowManager()
+fq_name = fm.add_dsl(dsl, "pipeline")
+fm.submit_task({"id": "task-1", "step1.x": 10}, fq_name)
+fm.wait_for_completion()
+results = fm.pop_results()
+
+for result in results["completed"][fq_name]:
+    original_task = result["task_pass_through"]
+    step1_output = result["SAVED_RESULTS"]["step1"]
+    final_output = result["result"]
+    print(f"Completed task {original_task['id']}: {final_output}")
+
+for error in results["errors"]:
+    print(f"Error: {error}")
+```
+
+Check out [`examples/09_syntax_details.py`](examples/09_syntax_details.py) for more comprehensive examples including multiple tail jobs and advanced callback patterns.
 
 
 ## Further Documentation

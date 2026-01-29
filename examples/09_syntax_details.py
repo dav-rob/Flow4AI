@@ -23,16 +23,18 @@ def scenario_1_syntax_differences():
     # Best for: Complex logic, maintaining state, inheritance
     class ClassBasedJob(JobABC):
         async def run(self, task):
-            # IMPORTANT: The 'task' argument is the FULL task dictionary.
-            # You must manually navigate to your job's specific parameters.
-            # E.g., if task is {"class_job": {"param": 10}}, you access it via:
-            my_params = task.get("class_job", {})
-            val = my_params.get("val", 0)
+            # NEW: Use get_params() for clean parameter access (matches function behavior)
+            params = self.get_params()  # Returns {"val": 10} for this job
+            val = params.get("val", 0)
+            
+            # OLD APPROACH (still works, but more verbose):
+            # my_params = task.get("class_job", {})
+            # val = my_params.get("val", 0)
             
             # Access upstream inputs via self.get_inputs()
-            # (None here as this is a head node in this example)
+            # (Empty dict here as this is a head node in this example)
             
-            print(f"[ClassBasedJob] Raw task access. val={val}")
+            print(f"[ClassBasedJob] Using get_params(). val={val}")
             return {"result": val * 2}
 
     # --- 1b. Wrapped Function (Context Aware) ---

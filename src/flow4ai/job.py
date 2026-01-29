@@ -517,13 +517,28 @@ class JobABC(ABC, metaclass=JobMeta):
         """
         task = self.get_context()[JobABC.TASK_PASSTHROUGH_KEY]
         return task
+
+    def get_params(self) -> Dict[str, Any]:
+        """
+        Get the parameters for THIS job, extracted from the task dictionary.
         
-        # if not self.is_head_job(): 
-        #     first_parent_result = next(iter(inputs.values()))
-        #     task = first_parent_result[JobABC.TASK_PASSTHROUGH_KEY]
-        # else:
-        #     task = inputs
-        # return task
+        This is a convenience method that navigates the task dictionary for you,
+        matching the auto-extraction behavior that wrapped functions receive.
+        
+        For a job named "my_job", if the task is:
+            {"my_job": {"val": 10, "name": "test"}, "other_job": {...}}
+        
+        Then get_params() returns:
+            {"val": 10, "name": "test"}
+        
+        Returns:
+            Dict[str, Any]: The parameters for this job, or empty dict if none found.
+        """
+        task = self.get_task()
+        short_name = JobABC.parse_job_name(self.name)
+        if short_name == "UNSUPPORTED NAME FORMAT":
+            short_name = self.name
+        return task.get(short_name, {})
 
     def update_context(self, new_context: Dict[str, Any]) -> None:
         """
