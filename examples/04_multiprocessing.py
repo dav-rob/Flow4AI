@@ -78,11 +78,13 @@ def main():
     # Create partial function with shared results list
     collector = partial(handle_completion, completed_tasks)
     
-    # Wrap the CPU-intensive function
-    dsl = job(compute=cpu_intensive_task)
+    # Create workflow from CPU-intensive function
+    # WORKFLOW = a graph of connected jobs defining your pipeline
+    workflow = job(compute=cpu_intensive_task)
     
     # Create FlowManagerMP with on_complete callback
-    fm = FlowManagerMP(dsl, on_complete=collector)
+    # FlowManagerMP uses multiprocessing for CPU-bound parallelism
+    fm = FlowManagerMP(workflow, on_complete=collector)
     fq_name = fm.get_fq_names()[0]
     
     # Submit multiple CPU-intensive tasks

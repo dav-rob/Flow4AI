@@ -75,13 +75,14 @@ def main():
     jobs["square"].save_result = True
     
     # Build complex workflow:
+    # WORKFLOW = a graph of connected jobs (created once, reused for many tasks)
     # 1. Three parallel initial jobs (analyzer, cache_manager, times)
     # 2. Serial transformer
     # 3. Serial formatter
     # 4. Two parallel jobs (add, square)
     # 5. Context aggregator
     # 6. Final aggregator
-    dsl = (
+    workflow = (
         p(jobs["analyzer"], jobs["cache_manager"], jobs["times"])
         >> jobs["transformer"]
         >> jobs["formatter"]
@@ -100,7 +101,7 @@ def main():
     
     # Execute workflow
     fm = FlowManager()
-    fq_name = fm.add_dsl(dsl)
+    fq_name = fm.add_workflow(workflow)
     
     task = {
         "times": {"fn.x": 5},

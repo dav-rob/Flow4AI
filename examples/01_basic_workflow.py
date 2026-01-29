@@ -86,10 +86,12 @@ def main():
     jobs["keywords"].save_result = True
     
     # Build workflow: 3 parallel analysis jobs >> aggregation
+    # WORKFLOW = a graph of connected jobs (created once, reused for many tasks)
     # p() creates parallel branches that execute concurrently
-    dsl = p(jobs["analyze"], jobs["sentiment"], jobs["keywords"]) >> jobs["aggregate"]
+    workflow = p(jobs["analyze"], jobs["sentiment"], jobs["keywords"]) >> jobs["aggregate"]
     
     # Execute the workflow
+    # TASK = data sent to a workflow for processing
     task = {
         "analyze.text": "This is a great example of text analysis",
         "sentiment.text": "This is a great example of text analysis",
@@ -99,7 +101,7 @@ def main():
     print("Input text: 'This is a great example of text analysis'\n")
     print("Running parallel analysis (analyze + sentiment + keywords) >> aggregate...\n")
     
-    errors, result = FlowManager.run(dsl, task, graph_name="text_analyzer")
+    errors, result = FlowManager.run(workflow, task, graph_name="text_analyzer")
     
     if errors:
         print(f"❌ Errors occurred: {errors}")

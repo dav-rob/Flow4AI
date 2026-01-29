@@ -65,7 +65,8 @@ def scenario_1_syntax_differences():
     })
     
     # Simple parallel execution of all three
-    dsl = p(jobs["class_job"], jobs["context_job"], jobs["simple_job"])
+    # WORKFLOW = connected jobs defining your pipeline
+    workflow = p(jobs["class_job"], jobs["context_job"], jobs["simple_job"])
     
     task = {
         "class_job": {"val": 10},
@@ -73,7 +74,7 @@ def scenario_1_syntax_differences():
         "simple_job": {"val": 30}
     }
     
-    errors, results = FlowManager.run(dsl, task, "scenario_1")
+    errors, results = FlowManager.run(workflow, task, "scenario_1")
     if not errors:
         # Results from parallel tail jobs are in the results dict keyed by job name
         print(f"Results: {results}")
@@ -107,9 +108,9 @@ def scenario_2_multiple_tails():
     })
     
     # Define split
-    dsl = jobs["start"] >> (jobs["branch_a"] | jobs["branch_b"])
+    workflow = jobs["start"] >> (jobs["branch_a"] | jobs["branch_b"])
     
-    errors, results = FlowManager.run(dsl, {}, "scenario_2")
+    errors, results = FlowManager.run(workflow, {}, "scenario_2")
     
     if not errors:
         # When there are multiple tail jobs, 'results' is a dictionary containing all of them.
@@ -154,10 +155,10 @@ def scenario_3_intermediate_and_lifecycle():
     fm = FlowManager(on_complete=scenario3_callback)
     
     # Define DSL
-    dsl = jobs["step1"] >> jobs["step2"] >> jobs["step3"]
+    workflow = jobs[\"step1\"] >> jobs[\"step2\"] >> jobs[\"step3\"]
     
-    # Add the DSL to the manager
-    fq_name = fm.add_dsl(dsl, "scenario_3")
+    # Add the workflow to the manager
+    fq_name = fm.add_workflow(workflow, \"scenario_3\")
     
     task = {"user_id": "user_123"} 
     

@@ -139,54 +139,56 @@ class FlowManagerABC(ABC):
         """
         self.__class__.RAISE_ON_ERROR = value
         
-    def add_dsl(self, dsl: DSLComponent, graph_name: str = "", variant: str = "") -> str:
+    def add_workflow(self, workflow: DSLComponent, graph_name: str = "", variant: str = "") -> str:
         """
-        Adds a DSL component to the FlowManager. Each DSL component should only be added once
-        as it is modified during the process by dsl_to_precedence_graph.
+        Add a workflow to the FlowManager.
+        
+        A workflow is a graph of connected jobs that defines your processing pipeline.
+        Each workflow should only be added once as it is modified during processing.
 
         Args:
-            dsl: The DSL component defining the data flow between jobs.
-                This DSL will be modified by being converted to a precedence graph.
+            workflow: The workflow (DSL component) defining the data flow between jobs.
+                This will be modified by being converted to a precedence graph.
             graph_name: The name of the graph. Used to generate fully qualified job names.
                 If empty, a name will be automatically generated based on head jobs.
             variant: The variant of the graph e.g. "dev", "prod"
 
         Returns:
-            str: The fully qualified name of the head job in the graph, to be used with submit().
+            str: The fully qualified name of the head job in the graph, to be used with submit_task().
 
         Warning:
-            Do not add the same DSL object multiple times, as it will be modified each time.
+            Do not add the same workflow object multiple times, as it will be modified each time.
             Instead, get the fully qualified name (FQ name) from the first call and reuse it.
         """
-        if dsl is None:
-            raise ValueError("graph cannot be None")
+        if workflow is None:
+            raise ValueError("workflow cannot be None")
 
-        # Check if this DSL has a tracking attribute to prevent multiple additions
-        if hasattr(dsl, "_f4a_already_added") and dsl._f4a_already_added:
-            # Try to find the existing graph for this DSL
+        # Check if this workflow has a tracking attribute to prevent multiple additions
+        if hasattr(workflow, "_f4a_already_added") and workflow._f4a_already_added:
+            # Try to find the existing graph for this workflow
             for job in self.head_jobs:
-                # Check if this job's associated DSL is the same object
-                if hasattr(job, "_f4a_source_dsl") and job._f4a_source_dsl is dsl:
-                    self.logger.info(f"DSL already added, returning existing FQ name: {job.name}")
+                # Check if this job's associated workflow is the same object
+                if hasattr(job, "_f4a_source_dsl") and job._f4a_source_dsl is workflow:
+                    self.logger.info(f"Workflow already added, returning existing FQ name: {job.name}")
                     return job.name
 
             self.logger.warning(
-                f"DSL appears to have been added already but existing graph not found. "
+                f"Workflow appears to have been added already but existing graph not found. "
                 f"Creating a new graph, which may lead to duplicate processing."
             )
 
-        # Transform the DSL into a precedence graph (this modifies the DSL)
-        graph, jobs = dsl_to_precedence_graph(dsl)
+        # Transform the workflow into a precedence graph (this modifies the workflow)
+        graph, jobs = dsl_to_precedence_graph(workflow)
 
-        # Mark this DSL as added to prevent multiple additions
-        setattr(dsl, "_f4a_already_added", True)
+        # Mark this workflow as added to prevent multiple additions
+        setattr(workflow, "_f4a_already_added", True)
         
         # If no graph_name was provided, generate one based on head jobs
         if not graph_name:
             graph_name = self.create_graph_name(graph)
             self.logger.info(f"Auto-generated graph name: {graph_name}")
 
-        # Check for FQ name collisions from different DSL objects with same structure
+        # Check for FQ name collisions from different workflow objects with same structure
         # Create a base name prefix to check for collisions
         base_name_prefix = f"{graph_name}{SPLIT_STR}{variant}"
 
@@ -204,83 +206,89 @@ class FlowManagerABC(ABC):
         # Add the graph to our job graph map with potentially modified variant name
         fq_name = self.add_to_job_graph_map(graph, jobs, graph_name, enhanced_variant)
 
-        # Store the reference to the source DSL in the head job
+        # Store the reference to the source workflow in the head job
         head_job = self.job_graph_map[fq_name]
-        setattr(head_job, "_f4a_source_dsl", dsl)
+        setattr(head_job, "_f4a_source_dsl", workflow)
 
         return fq_name
 
-    def add_dsl_dict(self, dsl_dict: Dict) -> List[str]:
+    # Backward-compatible alias
+    add_dsl = add_workflow
+
+    def add_workflows(self, workflows_dict: Dict) -> List[str]:
         """
-        Adds multiple graphs to the task manager from a dictionary structure.
+        Add multiple workflows to the FlowManager from a dictionary structure.
 
         Args:
-            dsl_dict: A dictionary containing graph definitions, with optional variants.
+            workflows_dict: A dictionary containing workflow definitions, with optional variants.
                 Format can be either:
                 {
-                    "graph1": {
-                        "dev": dsl1d,
-                        "prod": dsl1p
-                    }
-                    "graph2": {
-                        "dev": dsl2d,
-                        "prod": dsl2p
+                    "workflow1": {
+                        "dev": workflow1_dev,
+                        "prod": workflow1_prod
+                    },
+                    "workflow2": {
+                        "dev": workflow2_dev,
+                        "prod": workflow2_prod
                     }
                 }
                 Or without variants:
                 {
-                    "graph1": dsl1,
-                    "graph2": dsl2
+                    "workflow1": workflow1,
+                    "workflow2": workflow2
                 }
 
         Returns:
-            List[str]: The fully qualified names of all added graphs.
+            List[str]: The fully qualified names of all added workflows.
 
         Raises:
             ValueError: If the dictionary structure is invalid or missing required components.
         """
-        if not dsl_dict:
-            raise ValueError("dsl_dict cannot be None or empty")
+        if not workflows_dict:
+            raise ValueError("workflows_dict cannot be None or empty")
 
         fq_names = []
 
-        for graph_name, graph_data in dsl_dict.items():
-            # Check if graph_data is a DSL component directly (no variants)
+        for graph_name, graph_data in workflows_dict.items():
+            # Check if graph_data is a workflow directly (no variants)
             if not isinstance(graph_data, dict):
-                # No variants, graph_data is the DSL directly
-                dsl = graph_data
+                # No variants, graph_data is the workflow directly
+                workflow = graph_data
 
-                fq_name = self.add_dsl(dsl, graph_name)
+                fq_name = self.add_workflow(workflow, graph_name)
                 fq_names.append(fq_name)
             else:
                 # Check if this is a variant structure or old-style direct dsl structure
                 if "dsl" in graph_data:
                     # Old format - no variants, direct dsl
-                    dsl = graph_data.get("dsl")
+                    workflow = graph_data.get("dsl")
 
-                    if dsl is None:
+                    if workflow is None:
                         raise ValueError(f"Graph '{graph_name}' is missing required 'dsl'")
 
-                    fq_name = self.add_dsl(dsl, graph_name)
+                    fq_name = self.add_workflow(workflow, graph_name)
                     fq_names.append(fq_name)
                 else:
-                    # With variants - each key is a variant name, value is the DSL
+                    # With variants - each key is a variant name, value is the workflow
                     for variant, variant_data in graph_data.items():
                         # Check if variant_data is a dict with 'dsl' key (old format)
                         if isinstance(variant_data, dict) and "dsl" in variant_data:
                             # Old format with nested 'dsl' key
-                            dsl = variant_data.get("dsl")
+                            workflow = variant_data.get("dsl")
 
-                            if dsl is None:
+                            if workflow is None:
                                 raise ValueError(f"Graph '{graph_name}' variant '{variant}' is missing required 'dsl'")
                         else:
-                            # New format - variant_data is the DSL directly
-                            dsl = variant_data
+                            # New format - variant_data is the workflow directly
+                            workflow = variant_data
 
-                        fq_name = self.add_dsl(dsl, graph_name, variant)
+                        fq_name = self.add_workflow(workflow, graph_name, variant)
                         fq_names.append(fq_name)
 
         return fq_names
+
+    # Backward-compatible alias
+    add_dsl_dict = add_workflows
 
     def add_to_job_graph_map(self, precedence_graph: PrecedenceGraph, jobs: JobsDict, graph_name: str, variant: str = "") -> str:
         """
@@ -356,7 +364,7 @@ class FlowManagerABC(ABC):
 
     def create_job_graph_map(self, dsl):
         if isinstance(dsl, Dict):
-            self.add_dsl_dict(dsl)
+            self.add_workflows(dsl)
         elif isinstance(dsl, Collection) and not isinstance(dsl, (str, bytes, bytearray)):
             # Handle collections first, before checking for DSLComponent
             if not dsl:  # Check if collection is empty
@@ -366,12 +374,12 @@ class FlowManagerABC(ABC):
             for j in dsl:
                 # Add the job to DSL if it's a DSLComponent
                 if isinstance(j, DSLComponent):  # Check if it's a DSLComponent
-                    self.add_dsl(j)
+                    self.add_workflow(j)
                 else:
                     raise TypeError(f"Items in job collection must be DSLComponent instances, got {type(j)}")
         elif isinstance(dsl, DSLComponent):  # Check if it's a DSLComponent
             # Process as a single DSL component
-            self.add_dsl(dsl)
+            self.add_workflow(dsl)
         else:
             raise TypeError(f"dsl must be either Dict[str, Any], DSLComponent instance, or Collection of DSLComponent instances, got {type(dsl)}")
 

@@ -66,13 +66,14 @@ def main():
     print("3. These are DISCONNECTED - callback has no access to submission context")
     print("4. task_pass_through is the ONLY way to correlate results with customers\n")
     
-    # Wrap the function as a job
-    dsl = job(process=process_order)
+    # Create workflow (JOB = a single execution unit like this function)
+    # WORKFLOW = a graph of connected jobs (here just one job)
+    workflow = job(process=process_order)
     
     # Create FlowManager with on_complete callback
     # NOTE: The callback is defined ABOVE, completely separate from this code
     fm = FlowManager(on_complete=handle_completed_order)
-    fq_name = fm.add_dsl(dsl, "order_processor")
+    fq_name = fm.add_workflow(workflow, "order_processor")
     
     # Submit multiple tasks with different customer data
     print("Processing multiple orders...\n")

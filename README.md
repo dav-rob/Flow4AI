@@ -132,7 +132,7 @@ async def fetch_data(task_id):
 
 jobs = job({"fetch": fetch_data})
 fm = FlowManager()
-fq_name = fm.add_dsl(jobs["fetch"], "parallel_workers")
+fq_name = fm.add_workflow(jobs["fetch"], "parallel_workers")  # Renamed from add_dsl
 
 # Submit 1000 tasks - all execute concurrently
 import time
@@ -322,13 +322,13 @@ def on_complete(result):
     print(f"Completed task {original_task['id']}: {final_output}")
 
 fm = FlowManager(on_complete=on_complete)
-fq_name = fm.add_dsl(dsl, "pipeline")
+fq_name = fm.add_workflow(workflow, "pipeline")
 fm.submit_task({"id": "task-1", "step1.x": 10}, fq_name)
 fm.wait_for_completion()
 
 # Option B: pop_results() (synchronous, batch)
 fm = FlowManager()
-fq_name = fm.add_dsl(dsl, "pipeline")
+fq_name = fm.add_workflow(workflow, "pipeline")
 fm.submit_task({"id": "task-1", "step1.x": 10}, fq_name)
 fm.wait_for_completion()
 results = fm.pop_results()

@@ -152,7 +152,7 @@ def demo_function_parameters():
     
     # Run workflow
     fm = FlowManager()
-    fq_name = fm.add_dsl(workflow, "function_demo")
+    fq_name = fm.add_workflow(workflow, "function_demo")
     
     # Task with nested format
     task = {
@@ -188,7 +188,7 @@ def demo_job_class_parameters():
     workflow = job({"processor": processor})
     
     fm = FlowManager()
-    fq_name = fm.add_dsl(workflow, "class_demo")
+    fq_name = fm.add_workflow(workflow, "class_demo")
     
     # Nested format for get_params()
     task = {"processor": {"value": 50, "factor": 4}}
@@ -226,7 +226,7 @@ def demo_batch_processing():
     workflow = job({"process_order": process_order})
     
     fm = FlowManager()
-    fq_name = fm.add_dsl(workflow, "batch_orders")
+    fq_name = fm.add_workflow(workflow, "batch_orders")
     
     # Submit 5 different orders as 5 separate tasks
     orders = [
@@ -276,7 +276,7 @@ def demo_task_passthrough():
     workflow = wrapped_analyze
     
     fm = FlowManager()
-    fq_name = fm.add_dsl(workflow, "passthrough_demo")
+    fq_name = fm.add_workflow(workflow, "passthrough_demo")
     
     # Include correlation data in the task
     task = {

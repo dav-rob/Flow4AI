@@ -56,12 +56,13 @@ def main():
     print("- First task completes before last task is even submitted!")
     print("- Shows interlacing of submission and completion\n")
     
-    # Wrap the async function as a job
-    dsl = job(worker=simulate_work)
+    # Create workflow from async function
+    # WORKFLOW = a graph of connected jobs (here just one job)
+    workflow = job(worker=simulate_work)
     
     # Create FlowManager with completion handler
     fm = FlowManager(on_complete=handle_completion)
-    fq_name = fm.add_dsl(dsl, "parallel_workers")
+    fq_name = fm.add_workflow(workflow, "parallel_workers")
     
     # Test with increasing task counts
     task_counts = [100, 500, 1000]
