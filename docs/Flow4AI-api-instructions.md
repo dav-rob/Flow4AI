@@ -317,8 +317,10 @@ from flow4ai.dsl import job
 
 class NumberGenerator(JobABC):
     async def run(self, task):
-        start = task.get("start", 0)
-        count = task.get("count", 5)
+        # Use get_params() for clean parameter access
+        params = self.get_params()
+        start = params.get("start", 0)
+        count = params.get("count", 5)
         return {"numbers": list(range(start, start + count))}
 
 class MathOperation(JobABC):
@@ -353,7 +355,7 @@ dsl = jobs["generator"] >> jobs["math_op"]
 # Execute
 fm = FlowManager()
 fq_name = fm.add_dsl(dsl, "custom_jobs")
-task = {"start": 1, "count": 3}
+task = {"generator": {"start": 1, "count": 3}}  # Nested format for get_params()
 fm.submit(task, fq_name)
 fm.wait_for_completion()
 results = fm.pop_results()
@@ -372,16 +374,13 @@ def generate_data(value):
     return {"data": [value, value*2, value*3]}
 
 # Function using context to access task data and inputs
-def process_with_context(j_ctx):
-    # Access task data
-    task = j_ctx["task"]
-    
+def process_with_context(j_ctx, **kwargs):
     # Access inputs from predecessor jobs
     inputs = j_ctx["inputs"]
     data = inputs["generator"]["data"]
     
-    # Process data based on task parameter
-    operation = task.get("operation", "sum")
+    # Process data based on task parameter (auto-extracted via **kwargs)
+    operation = kwargs.get("operation", "sum")
     if operation == "sum":
         result = sum(data)
     elif operation == "product":
