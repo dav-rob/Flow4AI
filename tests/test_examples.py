@@ -193,7 +193,6 @@ def test_directory_structure():
     integrations = [
         "integrations/langchain_simple.py",
         "integrations/langchain_chains.py",
-        "integrations/openai_native.py",
     ]
     
     for integration in integrations:
@@ -241,35 +240,24 @@ except ImportError:
     LANGCHAIN_AVAILABLE = False
 
 
-@pytest.mark.skip(reason="Requires OPENAI_API_KEY - run manually if needed")
 def test_langchain_simple():
-    """Test that integrations/langchain_simple.py structure is correct."""
+    """Test that integrations/langchain_simple.py executes correctly."""
     return_code, stdout, stderr = run_example("integrations/langchain_simple.py")
     
-    # Should complete successfully or show langchain status
-    assert return_code == 0 or "LangChain" in stdout, \
-        f"Example had unexpected failure. return_code: {return_code}, stderr: {stderr}"
+    # Should complete successfully
+    assert return_code == 0, f"Example failed with return code {return_code}. stderr: {stderr}"
+    assert "LangChain Integration" in stdout
+    assert "Sentiment:" in stdout
 
 
-@pytest.mark.skip(reason="Requires OPENAI_API_KEY - run manually if needed")
 def test_langchain_chains():
-    """Test that integrations/langchain_chains.py structure is correct."""
+    """Test that integrations/langchain_chains.py executes correctly."""
     return_code, stdout, stderr = run_example("integrations/langchain_chains.py")
     
-    # Should complete successfully or show langchain status
-    assert return_code == 0 or "LangChain" in stdout, \
-        f"Example had unexpected failure. return_code: {return_code}, stderr: {stderr}"
-
-
-@pytest.mark.skip(reason="Requires OPENAI_API_KEY - run manually if needed")
-def test_openai_native():
-    """Test that integrations/openai_native.py structure is correct."""
-    return_code, stdout, stderr = run_example("integrations/openai_native.py")
-    
-    # Should complete successfully or show OpenAI status
-    assert return_code == 0 or "OpenAI" in stdout, \
-        f"Example had unexpected failure. return_code: {return_code}, stderr: {stderr}"
-
+    # Should complete successfully
+    assert return_code == 0, f"Example failed with return code {return_code}. stderr: {stderr}"
+    assert "LangChain Integration" in stdout
+    assert "Analysis Complete" in stdout
 
 if __name__ == "__main__":
     # Run tests with pytest

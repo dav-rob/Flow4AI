@@ -1,4 +1,5 @@
 import os
+import warnings
 from typing import Any, Dict, Optional, Union
 
 from aiolimiter import AsyncLimiter
@@ -33,6 +34,12 @@ class OpenAIClient:
         return cls._client
 
 class OpenAIJob(JobABC):
+    """
+    .. deprecated::
+        OpenAIJob is deprecated. Use LangChain integration instead for better
+        flexibility and ecosystem support. See examples/integrations/langchain_chains.py
+        for recommended patterns.
+    """
 
     # Shared AsyncLimiter for all jobs, default to 5,000 requests per minute
     default_rate_limit = {"max_rate": 5000, "time_period": 60}

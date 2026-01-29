@@ -1,5 +1,5 @@
 """
-Example 6: LangChain Integration - Simple
+LangChain Integration - Simple
 
 Demonstrates using LangChain within Flow4AI workflows:
 - Wrap LangChain LLM calls as Flow4AI jobs
@@ -36,7 +36,7 @@ async def analyze_sentiment_langchain(text):
         return {"error": "LangChain not installed"}
     
     # Create LangChain LLM
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, max_tokens=100)
     
     # Create prompt
     messages = [
@@ -58,7 +58,7 @@ async def summarize_langchain(text):
     if not LANGCHAIN_AVAILABLE:
         return {"error": "LangChain not installed"}
     
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, max_tokens=100)
     
     messages = [
         HumanMessage(content=f"Summarize this text in one short sentence: {text}")
