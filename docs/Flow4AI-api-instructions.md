@@ -60,17 +60,17 @@ The simplest way to execute a job graph is using the static `run` method:
 
 ```python
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap
+from flow4ai.dsl import job
 
-# Define functions to be wrapped into jobs
+# Define functions to become jobs
 def square(x):
     return x**2
     
 def double(x):
     return x*2
 
-# Create wrapped jobs and a DSL pipeline
-jobs = wrap({
+# Create jobs and a DSL pipeline
+jobs = job({
     "square": square,
     "double": double
 })
@@ -99,8 +99,8 @@ from flow4ai.job import Task # Import Task for explicit task creation
 def process_text(text_input): # Renamed for clarity
     return text_input.upper()
 
-# Create wrapped jobs
-jobs = wrap({"processor": process_text})
+# Create jobs
+jobs = job({"processor": process_text})
 dsl_component = jobs["processor"] # The DSL component is the job itself
 
 # Create FlowManager instance
@@ -182,8 +182,8 @@ def square_numbers(numbers):
 def calculate_sum(numbers):
     return sum(numbers)
 
-# Wrap functions into jobs
-jobs = wrap({
+# Create jobs
+jobs = job({
     "generator": generate_numbers,
     "transformer": square_numbers,
     "aggregator": calculate_sum
@@ -232,8 +232,8 @@ def combine_results(j_ctx):
     doubled = inputs["double"]["result"]
     return {"squared": squared, "doubled": doubled}
 
-# Wrap functions into jobs
-jobs = wrap({
+# Create jobs
+jobs = job({
     "generator": generate_numbers,
     "square": square_numbers,
     "double": double_numbers,
@@ -274,8 +274,8 @@ def add(x_val): # Renamed for clarity
 def multiply_output(input_val): # Renamed for clarity
     return input_val * 2
 
-# Create wrapped jobs
-jobs = wrap({"add_job": add, "multiply_job": multiply_output}) # Use descriptive short names
+# Create jobs
+jobs = job({"add_job": add, "multiply_job": multiply_output}) # Use descriptive short names
 jobs["add_job"].save_result = True # Save intermediate result from 'add_job'
 
 # Build DSL
@@ -346,8 +346,8 @@ class MathOperation(JobABC):
 generator = NumberGenerator("generator")
 math_op = MathOperation("math_op", "square")
 
-# Wrap jobs and create DSL
-jobs = wrap({"generator": generator, "math_op": math_op})
+# Create jobs and DSL
+jobs = job({"generator": generator, "math_op": math_op})
 dsl = jobs["generator"] >> jobs["math_op"]
 
 # Execute
@@ -359,9 +359,9 @@ fm.wait_for_completion()
 results = fm.pop_results()
 ```
 
-### 7. Using Context Parameter in Wrapped Functions
+### 7. Using Context Parameter in Functions
 
-Use the `j_ctx` parameter to access context information in wrapped functions:
+Use the `j_ctx` parameter to access context information in functions:
 
 ```python
 from flow4ai.flowmanager import FlowManager
@@ -393,8 +393,8 @@ def process_with_context(j_ctx):
         
     return {"result": result, "operation": operation}
 
-# Wrap functions
-jobs = wrap({
+# Create jobs
+jobs = job({
     "generator": generate_data,
     "processor": process_with_context
 })
@@ -524,8 +524,8 @@ def my_completion_callback(result_dict):
 fm = FlowManager(on_complete=my_completion_callback)
 
 # Create and add DSL
-job = wrap({"processor": process_data_job})["processor"]
-fq_name = fm.add_dsl(job, "callback_graph")
+job_instance = job({"processor": process_data_job})["processor"]
+fq_name = fm.add_dsl(job_instance, "callback_graph")
 
 # Submit task
 task = {"processor.data_input": 10}
@@ -549,8 +549,8 @@ def process_value(value):
 
 # Create and set up FlowManager
 fm = FlowManager()
-job = wrap({"processor": process_value})["processor"]
-fq_name = fm.add_dsl(job, "batch_processor")
+job_instance = job({"processor": process_value})["processor"]
+fq_name = fm.add_dsl(job_instance, "batch_processor")
 
 # Create a list of tasks
 tasks = [

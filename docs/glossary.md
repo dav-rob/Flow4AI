@@ -46,12 +46,12 @@ A multiprocessing implementation of FlowManager that enables parallel task execu
 The abstract base class that defines the core contract for job execution. All custom jobs must inherit from this class and implement the required `run` method.
 
 ### WrappingJob
-A specialized job implementation that wraps regular Python functions, enabling them to be integrated into Flow4AI job graphs without creating custom `JobABC` subclasses.
+An internal implementation detail. When you pass a regular Python function to `job()`, Flow4AI creates a `WrappingJob` behind the scenes to integrate it into job graphs.
 
 ## Technical Patterns
 
 ### Job Context (j_ctx)
-A special parameter used in wrapped functions to access task data, inputs from predecessor jobs, and other contextual information required for execution.
+A special parameter used in functions to access task data, inputs from predecessor jobs, and other contextual information required for execution.
 
 ### get_inputs()
 A method available in `JobABC` subclasses that provides access to inputs from predecessor jobs, returning a dictionary with short job names as keys.
@@ -68,23 +68,23 @@ Flow4AI is built on an asynchronous execution model, which is essential for unde
 
 ## Recommended Practices
 
-### Job Execution Paradigms: JobABC Subclasses vs. Wrapped Functions
+### Job Execution Paradigms: Job Classes vs Functions
 
-Flow4AI supports two primary approaches for defining jobs, each with distinct use cases:
+Flow4AI supports two primary approaches for defining jobs:
 
-#### When to Use Wrapped Functions
+#### When to Use Functions
 
-- **Framework Integration**: Wrapped functions were designed to allow seamless integration with diverse frameworks like LangChain, LlamaIndex, or any other AI or data processing framework that users are already familiar with.
+- **Just Python**: Write normal Python functions. Flow4AI handles the rest. This is the recommended approach.
 
-- **Simplicity and Familiarity**: For users who prefer writing standard Python functions, wrapped functions provide a straightforward approach with no reduction in functionality compared to JobABC subclasses.
+- **Framework Integration**: Easily integrate code from LangChain, LlamaIndex, or any other framework you're already familiar with.
 
-- **Minimal Dependencies**: When a job doesn't need to access inputs from predecessor jobs or task metadata, wrapped functions without the `j_ctx` parameter offer the cleanest implementation.
+- **Minimal Ceremony**: When a job doesn't need to access inputs from predecessor jobs or task metadata, functions without the `j_ctx` parameter offer the cleanest implementation.
 
-#### When to Use JobABC Subclasses
+#### When to Use Job Classes
 
-- **Built-in Context Access**: JobABC subclasses provide built-in `get_inputs()` and `get_task()` methods, making access to predecessor outputs and task data more direct without needing to extract this information from a context parameter.
+- **Built-in Context Access**: JobABC subclasses provide built-in `get_inputs()` and `get_task()` methods for direct access to predecessor outputs and task data.
 
-- **Object-Oriented Design**: For complex jobs that benefit from encapsulation, inheritance, and other OOP principles, subclassing JobABC provides a more natural structure.
+- **Library Components**: For reusable components with configuration (like `OpenAIJob`), subclassing JobABC provides more structure.
 
-- **Legacy Integration**: JobABC is the original way of creating jobs in Flow4AI and remains fully supported for backward compatibility and consistency with existing code.
+- **Instance State**: When you need to maintain state or configuration across the job lifecycle.
 

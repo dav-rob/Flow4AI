@@ -86,17 +86,17 @@ dsl = (
 There are two job types in Flow4AI:
 
 ### JobABC
-The abstract base class that defines the core contract for job execution. All custom jobs must inherit from this class and implement the required `run` method.  For complex jobs that benefit from encapsulation, inheritance, and other OOP principles, subclassing JobABC provides a more natural structure.
+The abstract base class that defines the core contract for job execution. Subclass JobABC when you need more structure — for example when building reusable library components with instance-level configuration.
 
 ### WrappingJob
-A specialized job implementation that wraps regular Python functions, enabling them to be integrated into Flow4AI job graphs without creating custom `JobABC` subclasses.  This method is often used to wrap functions from LangChain, LlamaIndex, or other AI and data processing frameworks, or simply by those who prefer to use regular Python functions.
+An internal implementation detail. When you pass a regular Python function to `job()`, Flow4AI creates a `WrappingJob` behind the scenes. You don't need to know this — just write functions.
 
-##  Task Parameter Formats for different job types
+##  Task Parameter Formats
 
-Tasks pass data to jobs in job graphs.  A job graph can support 1000s or 10s of thousands of tasks being submitted concurrently.  Flow4AI can pass task parameters in the two formats ways:
+Tasks pass data to jobs in job graphs. A job graph can support 1000s or 10s of thousands of tasks being submitted concurrently. Flow4AI can pass task parameters in two formats:
 
-1. To any JobABC subclass
-2. To any Python function that is automatically wrapped and assigned a job name using the `wrap()` function
+1. To any JobABC subclass (job class)
+2. To any Python function via `job()`
 
 ### JobABC Subclass Task Format
 
@@ -125,9 +125,9 @@ task = {
 }
 ```
 
-If the job is a wrapped function, then the parameters are passed as arguments to the function, as shown below.  Parameters can be passed in short form or long form.
+If the job is a function, then the parameters are passed as arguments to the function, as shown below. Parameters can be passed in short form or long form.
 
-### Wrapped Function Short Form (Dot Notation)
+### Function Short Form (Dot Notation)
 
 The short form uses dot notation to specify job parameters to wrapped functions.
 
@@ -142,7 +142,7 @@ task = {
 }
 ```
 
-### Wrapped Function Long Form (Nested Dictionaries)
+### Function Long Form (Nested Dictionaries)
 
 The long form uses nested dictionaries for a more structured format that resembles the typical JobABC subclass task format.
 
@@ -308,23 +308,23 @@ fq_name2 = fm.add_dsl(dsl, "graph_name2")  # Second addition - modifies already 
 -   Exceptions raised within an `on_complete` callback (if provided to `FlowManager`) are *not* caught by `FlowManager`'s internal error handling.
 -   `fm.get_counts()`: Returns cumulative `{'submitted': X, 'completed': Y, 'errors': Z}`.
 
-## JobABC Subclasses vs Wrapped Functions
+## Job Classes vs Functions
 
 Flow4AI supports two primary methods for defining jobs in a job graph:
 
-1. **JobABC Subclasses** - Object-oriented approach with inheritance
-2. **Wrapped Functions** - Functional approach using plain functions
+1. **Functions** — Just write regular Python functions (the natural approach)
+2. **Job Classes** — Subclass JobABC for more structure
 
 
-### When to Use Wrapped Functions
+### When to Use Functions
 
-Wrapped functions were designed to enable seamless integration with existing frameworks and simplify the developer experience:
+Functions are the default, recommended approach:
 
-- **Framework Integration**: Easily wrap code from LangChain, LlamaIndex, or any other AI or data processing framework that users are already familiar with.
+- **Just Python**: Write normal Python functions. Flow4AI handles the rest.
 
-- **Simplicity First**: For users who prefer writing standard Python functions, wrapped functions provide a straightforward approach with no reduction in functionality compared to JobABC subclasses.
+- **Framework Integration**: Easily integrate code from LangChain, LlamaIndex, or any other framework you're already familiar with.
 
-- **Minimal Context Dependencies**: Most transformation functions don't need access to job context data. When a job doesn't need to access inputs from predecessor jobs or task metadata, wrapped functions without the `j_ctx` parameter offer the cleanest implementation.
+- **Minimal Ceremony**: Most jobs don't need access to upstream results or task metadata — just write a function with the parameters you need.
 
 ```python
 # Example: Simple wrapped function without need for context
@@ -340,37 +340,32 @@ def advanced_process(j_ctx):
     return {"result": processed_data}
 ```
 
-### When to Use JobABC Subclasses
+### When to Use Job Classes
 
-For more complex scenarios, subclassing JobABC remains fully supported and is recommended when:
+Subclassing JobABC is recommended when:
 
-- You need direct access to built-in context methods like `get_inputs()` and `get_task()`
-- Your job benefits from object-oriented design principles
-- You're extending existing JobABC-based code
+- You need instance-level configuration (rate limiters, API clients)
+- You're building reusable library components (like `OpenAIJob`)
+- You benefit from object-oriented design principles
 
-### Best Practice for Job Definition and DSL Construction
+### Best Practice for Job Definition
 
-The recommended approach for defining job names and constructing DSL components is to use the `wrap()` function with a dictionary mapping names to job implementations. This method provides several advantages:
-
-1. **Explicit Naming**: Each job gets a clear, explicit name that will be used as its short job name in the job graph
-2. **Unified Treatment**: Both JobABC subclasses and regular functions are handled consistently
-3. **Reference Convenience**: The resulting dictionary allows for easy job reference when constructing the DSL
-4. **Code Readability**: The job graph structure becomes visually apparent in the DSL construction
+The recommended approach for defining job names and constructing DSL components is to use the `job()` function with a dictionary mapping names to implementations:
 
 ```python
 # First define or import your job implementations
 analyzer2 = ProcessorJob("Analyzer2", "analyze")  # JobABC subclass
 cache_manager = ProcessorJob("CacheManager", "cache")  # JobABC subclass
-times = lambda x: {"result": x * 3}  # Simple function to be wrapped
+times = lambda x: {"result": x * 3}  # Simple function
 transformer = ProcessorJob("Transformer", "transform")  # JobABC subclass
 formatter = ProcessorJob("Formatter", "format")  # JobABC subclass
-add = lambda x: {"result": x + 2}  # Simple function to be wrapped
-square = lambda x: {"result": x * x}  # Simple function to be wrapped
+add = lambda x: {"result": x + 2}  # Simple function
+square = lambda x: {"result": x * x}  # Simple function
 aggregator = ProcessorJob("Aggregator", "aggregate")  # JobABC subclass
 test_context = lambda j_ctx: {"result": process(j_ctx)}  # Function with context access
 
-# Wrap all jobs in a dictionary with their short names
-jobs:JobsDict = wrap({
+# Turn all of them into jobs with their short names
+jobs:JobsDict = job({
         "analyzer2": analyzer2,
         "cache_manager": cache_manager,
         "times": times,
@@ -398,13 +393,13 @@ dsl:DSLComponent = (
 )
 ```
 
-This approach works seamlessly for both JobABC subclasses and functions. When a JobABC subclass is "wrapped," it simply assigns the provided name without any negative side effects. For functions, it creates proper WrappingJob instances to integrate them into the job graph.
+This approach works seamlessly for both job classes and functions. When a JobABC subclass is passed to `job()`, it simply assigns the provided name. For functions, it creates proper job instances internally to integrate them into the job graph.
 
 ### Input Handling Differences
 
-The main technical distinction between these two approaches is how they access inputs from predecessor jobs in the job graph. Importantly, only a small subset of wrapped functions typically need access to previous inputs or task metadata, making the wrapped function approach particularly clean for straightforward transformations:
+The main technical distinction between these two approaches is how they access inputs from predecessor jobs. Importantly, most functions don't need upstream results — making functions particularly clean for straightforward transformations:
 
-#### JobABC Subclasses
+#### Job Classes
 
 JobABC subclasses implement an asynchronous `run` method and can directly access inputs from predecessor jobs using the built-in `get_inputs()` method:
 
@@ -430,9 +425,9 @@ class MyCustomJob(JobABC):
 
 The `get_inputs()` method returns a dictionary with short job names as keys, making it easy to access upstream job results.
 
-#### Wrapped Functions
+#### Functions
 
-For regular Python functions that are wrapped using the Flow4AI `wrap()` utility, inputs must be accessed through a special parameter named `j_ctx` (job context):
+For regular Python functions, inputs are accessed through a special parameter named `j_ctx` (job context):
 
 ```python
 def my_function(j_ctx):
@@ -449,14 +444,14 @@ def my_function(j_ctx):
     return {"processed_data": process(predecessor_result)}
 ```
 
-The `j_ctx` parameter is automatically populated by the `WrappingJob` class when it executes the function. In the `WrappingJob.run()` method, it detects if the function accepts a parameter named `FN_CONTEXT` (which defaults to "j_ctx") and populates it with the necessary context information.
+The `j_ctx` parameter is automatically populated when Flow4AI executes the function. It detects if the function accepts a parameter named `j_ctx` and populates it with the necessary context information.
 
 ### Best Practices
 
-1. For complex jobs with state or configuration, use **JobABC subclasses** and leverage the `get_inputs()` method.
-2. For simple transformations or operations, use **wrapped functions** with the `j_ctx` parameter.
-3. When refactoring between approaches, be aware of this fundamental difference in accessing inputs.
-4. Always use the `wrap()` utility to properly integrate regular functions into the Flow4AI job graph system.
+1. For most jobs, use **functions** — they're simpler and more Pythonic.
+2. For complex jobs with state or configuration, use **job classes** and leverage the `get_inputs()` method.
+3. When refactoring between approaches, be aware of the difference in accessing inputs.
+4. Always use the `job()` function to properly integrate functions into the Flow4AI job graph system.
 
 ### Implementation Details
 

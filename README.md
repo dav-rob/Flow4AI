@@ -23,9 +23,9 @@ Whether you're processing thousands of documents, chaining complex LLM calls, or
 
 ```python
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap
+from flow4ai.dsl import job
 
-# Define your processing steps as simple functions
+# Define your processing steps as simple Python functions
 def analyze(text):
     return f"Analysis of: {text}"
 
@@ -35,8 +35,8 @@ def summarize(j_ctx):
     analysis = inputs["analyze"]["result"]
     return f"Summary: {analysis}"
 
-# Wrap functions as jobs and build a pipeline
-jobs = wrap({"analyze": analyze, "summarize": summarize})
+# Turn functions into jobs and build a pipeline
+jobs = job({"analyze": analyze, "summarize": summarize})
 dsl = jobs["analyze"] >> jobs["summarize"]
 
 # Execute
@@ -51,7 +51,7 @@ print(result["result"])  # "Summary: Analysis of: Hello World"
 A **workflow** is your complete processing pipeline - a collection of jobs connected in parallel and serial configurations. Think of it as the blueprint that defines how your data flows through different processing steps.
 
 ### Job
-A **job** is an individual unit of work within your workflow. Each job can run independently and in parallel with other jobs when the workflow structure allows it. Jobs process data and pass their results to downstream jobs.
+A **job** is an individual unit of work within your workflow. Jobs are just Python functions (or classes) that Flow4AI runs in parallel when the workflow structure allows. Jobs process data and pass their results to downstream jobs.
 
 ### Task
 A **task** represents a single, independent unit of data flowing through your workflow. When you submit multiple tasks, each one carries its own unique data through the entire workflow. This is what enables true parallel processing - thousands of tasks can execute simultaneously through the same workflow.
@@ -60,8 +60,8 @@ A **task** represents a single, independent unit of data flowing through your wo
 | Operator | Name | Description |
 |----------|------|-------------|
 | `>>` | Serial | Execute jobs in sequence. Output of first becomes input to second. |
-| `\|` | Parallel | Execute jobs concurrently. Both receive the same input. |
-| `p()` | Parallel | Function alternative to `\|`. Use for grouping: `p(job1, job2, job3)` |
+| `|` | Parallel | Execute jobs concurrently. Both receive the same input. |
+| `p()` | Parallel | Function alternative to `|`. Use for grouping: `p(job1, job2, job3)` |
 
 ## The Core Pattern: Divide and Aggregate
 
@@ -69,7 +69,7 @@ The key use case is breaking a large task into subtasks that run in parallel, th
 
 ```python
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap, p
+from flow4ai.dsl import job, p
 
 # Step 1: Split work into parallel branches
 def extract_keywords(text):
@@ -91,7 +91,7 @@ def combine_results(j_ctx):
     }
 
 # Build the graph
-jobs = wrap({
+jobs = job({
     "keywords": extract_keywords,
     "sentiment": analyze_sentiment,
     "count": count_words,
@@ -131,7 +131,7 @@ async def fetch_data(task_id):
     await asyncio.sleep(0.5)  # Simulate I/O
     return {"task_id": task_id, "status": "complete"}
 
-jobs = wrap({"fetch": fetch_data})
+jobs = job({"fetch": fetch_data})
 fm = FlowManager()
 fq_name = fm.add_dsl(jobs["fetch"], "parallel_workers")
 
@@ -165,7 +165,7 @@ def cpu_intensive(n):
     # CPU-bound computation (e.g., prime calculations)
     return {"result": sum(i for i in range(n) if all(i % j != 0 for j in range(2, int(i**0.5) + 1)))}
 
-jobs = wrap({"compute": cpu_intensive})
+jobs = job({"compute": cpu_intensive})
 fm = FlowManagerMP(jobs["compute"])
 fq_name = fm.get_fq_names()[0]
 
@@ -180,11 +180,11 @@ fm.close_processes()  # Waits for completion and cleans up
 
 ## Complex Workflow Example
 
-Combine JobABC classes, functions, and lambdas in sophisticated workflows:
+Combine job classes, functions, and lambdas in sophisticated workflows:
 
 ```python
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap, p
+from flow4ai.dsl import job, p
 from flow4ai.job import JobABC
 
 class Analyzer(JobABC):
@@ -201,7 +201,7 @@ def aggregate(j_ctx):
 times = lambda x: x * 2
 add = lambda x: x + 3
 
-jobs = wrap({
+jobs = job({
     "analyzer": Analyzer("analyzer"),
     "times": times,
     "add": add,
@@ -243,7 +243,7 @@ def process_order(order_id, amount):
     tax = amount * 0.08
     return {"tax": tax, "total": amount + tax}
 
-jobs = wrap({"process": process_order})
+jobs = job({"process": process_order})
 fm = FlowManager()
 fq_name = fm.add_dsl(jobs["process"], "orders")
 
@@ -271,7 +271,7 @@ for result in results["completed"][fq_name]:
 Use `save_result = True` to capture outputs from any job in your workflow. These are available in the final result's `SAVED_RESULTS` dictionary.
 
 ```python
-jobs = wrap({"step1": func1, "step2": func2, "step3": func3})
+jobs = job({"step1": func1, "step2": func2, "step3": func3})
 jobs["step1"].save_result = True
 jobs["step2"].save_result = True
 
@@ -305,23 +305,23 @@ python examples/01_basic_workflow.py
 ```
 
 
-### Deep Dive: Job Syntax & Parameters
+### Deep Dive: Functions vs Job Classes
 
 > **Example Script**: [`examples/09_syntax_details.py`](examples/09_syntax_details.py)
 
-Flow4AI offers two ways to define jobs, each with different syntax for accessing data:
+Flow4AI offers two ways to define jobs. Both are equally capable — choose based on your preference:
 
-1.  **Wrapped Functions** (Functional, Simple): Best for straightforward transformations.
-    -   Parameters passed as **arguments** (e.g., `def func(x, y):`).
-    -   Access context via `j_ctx` argument (e.g., `def func(j_ctx, **kwargs):`).
-2.  **JobABC Subclasses** (Object-Oriented, Powerful): Best for complex logic and state.
-    -   Access inputs via `self.get_inputs()`.
-    -   Access full task dictionary via `task` argument in `run()`.
+1.  **Functions** (Recommended): Just write regular Python functions. This is the natural, Pythonic approach.
+    -   Parameters passed as **arguments** (e.g., `def func(x, y):`)
+    -   Access upstream results via optional `j_ctx` argument (e.g., `def func(j_ctx):`)
+2.  **Job Classes**: Subclass `JobABC` for more structure — useful when building reusable library components.
+    -   Access inputs via `self.get_inputs()`
+    -   Access full task dictionary via `task` argument in `run()`
 
 Check out [`examples/09_syntax_details.py`](examples/09_syntax_details.py) for a comprehensive guide on these differences and how to handle nested task parameters correctly. It also covers advanced topics like:
--   Handling multiple tail jobs.
--   Accessing intermediate results.
--   Using `on_complete` callbacks.
+-   Handling multiple tail jobs
+-   Accessing intermediate results
+-   Using `on_complete` callbacks
 
 
 ## Further Documentation

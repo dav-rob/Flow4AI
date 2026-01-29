@@ -119,8 +119,9 @@ def wrap(obj=None, **kwargs):
         return obj  # Already has the operations we need
     return WrappingJob(obj)
 
-# Synonym for wrap
+# Synonyms for wrap
 w = wrap
+job = wrap  # More intuitive alias: functions become jobs
 
 def parallel(*objects, **kwargs):
     """
