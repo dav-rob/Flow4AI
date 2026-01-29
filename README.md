@@ -226,27 +226,41 @@ print(result["task_pass_through"])  # Original task data
 
 ## Working Examples
 
-Complete, runnable examples are available in the [`examples/`](./examples/) directory:
+Complete, runnable examples are available in the [`examples/`](./examples/) directory, organized into two categories:
 
-- **01_basic_workflow.py** - Parallel analysis with result aggregation
-- **02_task_passthrough.py** - Task data preservation and batch processing  
-- **03_parallel_execution.py** - 1000 concurrent tasks with FlowManager
-- **04_multiprocessing.py** - CPU-bound processing with FlowManagerMP
-- **05_complex_workflow.py** - Interdependent jobs exchanging data.
-- **07_langchain_chains.py** - Integrating LangChain chains
-- **08_openai_job_chains.py** - Native OpenAI job chains (Performance benchmark)
-- **09_syntax_details.py** - Syntax guide for JobABC vs ordinary python Functions
-- **10_tasks_and_parameters.py** - All task formats and parameter patterns
+### Tutorials (Learn Flow4AI)
+
+Work through these in order for the best learning experience:
+
+| # | File | Description |
+|---|------|-------------|
+| 01 | [`hello_workflow.py`](examples/tutorials/01_hello_workflow.py) | Parallel analysis with result aggregation |
+| 02 | [`parameters.py`](examples/tutorials/02_parameters.py) | **Core!** Task formats and parameter patterns |
+| 03 | [`parallel_jobs.py`](examples/tutorials/03_parallel_jobs.py) | 1000 concurrent tasks with FlowManager |
+| 04 | [`multiprocessing.py`](examples/tutorials/04_multiprocessing.py) | CPU-bound processing with FlowManagerMP |
+| 05 | [`job_types.py`](examples/tutorials/05_job_types.py) | JobABC vs functions, syntax details |
+| 06 | [`data_flow.py`](examples/tutorials/06_data_flow.py) | Task passthrough for batch correlation |
+| 07 | [`complex_pipelines.py`](examples/tutorials/07_complex_pipelines.py) | Advanced workflows, mixed job types |
+
+### Integrations (External Frameworks)
+
+See how Flow4AI orchestrates popular AI libraries:
+
+| File | Description |
+|------|-------------|
+| [`langchain_simple.py`](examples/integrations/langchain_simple.py) | LangChain LLM calls as Flow4AI jobs |
+| [`langchain_chains.py`](examples/integrations/langchain_chains.py) | Parallel LangChain chains |
+| [`openai_native.py`](examples/integrations/openai_native.py) | Native OpenAI integration |
 
 Run any example:
 ```bash
-python examples/01_basic_workflow.py
+python examples/tutorials/01_hello_workflow.py
 ```
 
 
 ## Deep Dive: Functions vs Job Classes
 
-> **Example Script**: [`examples/09_syntax_details.py`](examples/09_syntax_details.py)
+> **Example Script**: [`tutorials/05_job_types.py`](examples/tutorials/05_job_types.py)
 
 Flow4AI offers two ways to define jobs. Both are equally capable — choose based on your preference:
 
@@ -263,7 +277,7 @@ The table below shows how to access different types of data from within your job
 | **Predecessor outputs** | `self.get_inputs()` | `j_ctx["inputs"]` | ❌ Not available |
 | **Full task dictionary** | `self.get_task()` | `j_ctx["task"]` | ❌ Not available |
 
-**How parameters get to jobs:** Parameters are passed via the task dictionary. Use nested format `{"job_name": {"param": value}}` or shorthand `{"job_name.param": value}`. For functions, parameters matching the signature are auto-injected; use `**kwargs` to receive all parameters. See [`examples/10_tasks_and_parameters.py`](examples/10_tasks_and_parameters.py) for comprehensive examples.
+**How parameters get to jobs:** Parameters are passed via the task dictionary. Use nested format `{"job_name": {"param": value}}` or shorthand `{"job_name.param": value}`. For functions, parameters matching the signature are auto-injected; use `**kwargs` to receive all parameters. See [`tutorials/02_parameters.py`](examples/tutorials/02_parameters.py) for comprehensive examples.
 
 **Examples:**
 
@@ -343,7 +357,7 @@ for error in results["errors"]:
     print(f"Error: {error}")
 ```
 
-Check out [`examples/09_syntax_details.py`](examples/09_syntax_details.py) for more comprehensive examples including multiple tail jobs and advanced callback patterns.
+Check out [`tutorials/05_job_types.py`](examples/tutorials/05_job_types.py) for more comprehensive examples including multiple tail jobs and advanced callback patterns.
 
 
 ## Further Documentation

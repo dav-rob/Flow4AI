@@ -1,5 +1,5 @@
 """
-Example 9: Syntax Details & Advanced Features
+Tutorial 05: Job Types & Syntax
 
 This example demonstrates critical Flow4AI concepts across three scenarios:
 1.  **Job Syntax & Parameters**: JobABC vs. Wrapped functions, and how to access parameters.
@@ -155,10 +155,10 @@ def scenario_3_intermediate_and_lifecycle():
     fm = FlowManager(on_complete=scenario3_callback)
     
     # Define DSL
-    workflow = jobs[\"step1\"] >> jobs[\"step2\"] >> jobs[\"step3\"]
+    workflow = jobs["step1"] >> jobs["step2"] >> jobs["step3"]
     
     # Add the workflow to the manager
-    fq_name = fm.add_workflow(workflow, \"scenario_3\")
+    fq_name = fm.add_workflow(workflow, "scenario_3")
     
     task = {"user_id": "user_123"} 
     

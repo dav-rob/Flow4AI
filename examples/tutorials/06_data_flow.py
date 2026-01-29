@@ -1,5 +1,5 @@
 """
-Example 2: Task Passthrough
+Tutorial 06: Data Flow & Task Passthrough
 
 Demonstrates why task_pass_through is essential:
 - Each task carries independent data through the workflow

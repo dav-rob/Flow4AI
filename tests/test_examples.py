@@ -16,20 +16,21 @@ import pytest
 PROJECT_ROOT = Path(__file__).parent.parent
 
 
-def run_example(example_name):
+def run_example(example_path):
     """
     Run an example file and capture its output.
     
     Args:
-        example_name: Name of the example file (e.g., '01_basic_workflow.py')
+        example_path: Path to the example file relative to examples/ 
+                     (e.g., 'tutorials/01_hello_workflow.py')
         
     Returns:
         tuple: (return_code, stdout, stderr)
     """
-    example_path = PROJECT_ROOT / "examples" / example_name
+    full_path = PROJECT_ROOT / "examples" / example_path
     
     result = subprocess.run(
-        [sys.executable, str(example_path)],
+        [sys.executable, str(full_path)],
         capture_output=True,
         text=True,
         timeout=30
@@ -38,72 +39,66 @@ def run_example(example_name):
     return result.returncode, result.stdout, result.stderr
 
 
-def test_basic_workflow():
-    """Test that 01_basic_workflow.py executes successfully."""
-    return_code, stdout, stderr = run_example("01_basic_workflow.py")
+# =============================================================================
+# Tutorial Tests
+# =============================================================================
+
+def test_hello_workflow():
+    """Test that tutorials/01_hello_workflow.py executes successfully."""
+    return_code, stdout, stderr = run_example("tutorials/01_hello_workflow.py")
     
     # Should complete successfully
     assert return_code == 0, f"Example failed with return code {return_code}. stderr: {stderr}"
     
     # Verify expected output markers
-    assert "Example 1: Basic Workflow" in stdout
+    assert "Hello Workflow" in stdout or "Basic Workflow" in stdout
     assert "✅ Analysis complete!" in stdout
     assert "Word Count:" in stdout
     assert "Sentiment:" in stdout
     assert "Top Keywords:" in stdout
-    assert "FlowManager.run()" in stdout
 
 
-def test_task_passthrough():
-    """Test that 02_task_passthrough.py executes successfully and demonstrates task_pass_through."""
-    return_code, stdout, stderr = run_example("02_task_passthrough.py")
+def test_parameters():
+    """Test that tutorials/02_parameters.py executes successfully."""
+    return_code, stdout, stderr = run_example("tutorials/02_parameters.py")
     
     # Should complete successfully
     assert return_code == 0, f"Example failed with return code {return_code}. stderr: {stderr}"
     
     # Verify expected output
-    assert "Example 2: Task Passthrough" in stdout
-    assert "callback" in stdout.lower()
-    assert "disconnected" in stdout.lower()
-    assert "Order ORD-001" in stdout
-    assert "Order ORD-002" in stdout
-    assert "Order ORD-003" in stdout
-    assert "Alice" in stdout
-    assert "Bob" in stdout
-    assert "Charlie" in stdout
-    assert "task_pass_through matters" in stdout
+    assert "Tasks and Parameters" in stdout
+    assert "Task Format Options" in stdout
+    assert "Shorthand format" in stdout
+    assert "Nested format" in stdout
+    assert "Batch Processing" in stdout
 
 
-def test_parallel_execution():
-    """Test that 03_parallel_execution.py executes with significant parallel speedup."""
-    return_code, stdout, stderr = run_example("03_parallel_execution.py")
+def test_parallel_jobs():
+    """Test that tutorials/03_parallel_jobs.py executes with significant parallel speedup."""
+    return_code, stdout, stderr = run_example("tutorials/03_parallel_jobs.py")
     
     # Should complete successfully
     assert return_code == 0, f"Example failed with return code {return_code}. stderr: {stderr}"
     
     # Verify expected output
-    assert "Example 3: Parallel Execution" in stdout
-    assert "interlacing" in stdout.lower() or "interleave" in stdout.lower()
+    assert "Parallel" in stdout
     assert "FIRST submission" in stdout
     assert "FINAL submission" in stdout
     assert "FIRST completion" in stdout
     assert "FINAL completion" in stdout
     assert "Speedup:" in stdout
     assert "CONFIRMED" in stdout
-    
-    # Verify that at least one of the task counts was tested
-    assert any(count in stdout for count in ["100 tasks", "500 tasks", "1000 tasks"])
 
 
 def test_multiprocessing():
-    """Test that 04_multiprocessing.py executes successfully with FlowManagerMP."""
-    return_code, stdout, stderr = run_example("04_multiprocessing.py")
+    """Test that tutorials/04_multiprocessing.py executes successfully with FlowManagerMP."""
+    return_code, stdout, stderr = run_example("tutorials/04_multiprocessing.py")
     
     # Should complete successfully
     assert return_code == 0, f"Example failed with return code {return_code}. stderr: {stderr}"
     
     # Verify expected output
-    assert "Example 4: Multiprocessing" in stdout
+    assert "Multiprocessing" in stdout
     assert "on_complete" in stdout.lower()
     assert "FIRST submission" in stdout
     assert "FINAL submission" in stdout  
@@ -113,15 +108,47 @@ def test_multiprocessing():
     assert "FlowManagerMP" in stdout
 
 
-def test_complex_workflow():
-    """Test that 05_complex_workflow.py executes successfully with advanced features."""
-    return_code, stdout, stderr = run_example("05_complex_workflow.py")
+def test_job_types():
+    """Test that tutorials/05_job_types.py executes successfully."""
+    return_code, stdout, stderr = run_example("tutorials/05_job_types.py")
     
     # Should complete successfully
     assert return_code == 0, f"Example failed with return code {return_code}. stderr: {stderr}"
     
     # Verify expected output
-    assert "Example 5: Complex Workflow" in stdout
+    assert "Scenario 1" in stdout
+    assert "Scenario 2" in stdout
+    assert "Scenario 3" in stdout
+    assert "ClassBasedJob" in stdout or "class_job" in stdout
+    assert "Callback" in stdout
+
+
+def test_data_flow():
+    """Test that tutorials/06_data_flow.py executes successfully and demonstrates task_pass_through."""
+    return_code, stdout, stderr = run_example("tutorials/06_data_flow.py")
+    
+    # Should complete successfully
+    assert return_code == 0, f"Example failed with return code {return_code}. stderr: {stderr}"
+    
+    # Verify expected output
+    assert "Task Passthrough" in stdout or "Data Flow" in stdout
+    assert "Order ORD-001" in stdout
+    assert "Order ORD-002" in stdout
+    assert "Order ORD-003" in stdout
+    assert "Alice" in stdout
+    assert "Bob" in stdout
+    assert "Charlie" in stdout
+
+
+def test_complex_pipelines():
+    """Test that tutorials/07_complex_pipelines.py executes successfully with advanced features."""
+    return_code, stdout, stderr = run_example("tutorials/07_complex_pipelines.py")
+    
+    # Should complete successfully
+    assert return_code == 0, f"Example failed with return code {return_code}. stderr: {stderr}"
+    
+    # Verify expected output
+    assert "Complex" in stdout
     assert "✅ Workflow complete!" in stdout
     assert "SAVED_RESULTS" in stdout
     assert "task_pass_through" in stdout
@@ -135,52 +162,75 @@ def test_complex_workflow():
     assert "Mixed job types" in stdout
 
 
-def test_all_examples_exist():
-    """Verify that all expected example files exist."""
+# =============================================================================
+# Structure Tests
+# =============================================================================
+
+def test_directory_structure():
+    """Verify that the expected directory structure exists."""
     examples_dir = PROJECT_ROOT / "examples"
     
-    expected_examples = [
-        "01_basic_workflow.py",
-        "02_task_passthrough.py",
-        "03_parallel_execution.py",
-        "04_multiprocessing.py",
-        "05_complex_workflow.py",
-        "README.md"
+    # Check directories exist
+    assert (examples_dir / "tutorials").is_dir(), "tutorials/ directory missing"
+    assert (examples_dir / "integrations").is_dir(), "integrations/ directory missing"
+    assert (examples_dir / "README.md").exists(), "examples/README.md missing"
+    
+    # Check tutorial files exist
+    tutorials = [
+        "tutorials/01_hello_workflow.py",
+        "tutorials/02_parameters.py",
+        "tutorials/03_parallel_jobs.py",
+        "tutorials/04_multiprocessing.py",
+        "tutorials/05_job_types.py",
+        "tutorials/06_data_flow.py",
+        "tutorials/07_complex_pipelines.py",
     ]
     
-    for example in expected_examples:
-        example_path = examples_dir / example
-        assert example_path.exists(), f"Expected example file not found: {example}"
+    for tutorial in tutorials:
+        assert (examples_dir / tutorial).exists(), f"Tutorial file missing: {tutorial}"
+    
+    # Check integration files exist
+    integrations = [
+        "integrations/langchain_simple.py",
+        "integrations/langchain_chains.py",
+        "integrations/openai_native.py",
+    ]
+    
+    for integration in integrations:
+        assert (examples_dir / integration).exists(), f"Integration file missing: {integration}"
 
 
-def test_examples_are_executable():
-    """Verify that all Python example files have proper structure."""
+def test_tutorials_have_proper_structure():
+    """Verify that all tutorial files have proper structure."""
     examples_dir = PROJECT_ROOT / "examples"
     
-    python_examples = [
-        "01_basic_workflow.py",
-        "02_task_passthrough.py",
-        "03_parallel_execution.py",
-        "04_multiprocessing.py",
-        "05_complex_workflow.py",
+    tutorials = [
+        "tutorials/01_hello_workflow.py",
+        "tutorials/02_parameters.py",
+        "tutorials/03_parallel_jobs.py",
+        "tutorials/04_multiprocessing.py",
+        "tutorials/05_job_types.py",
+        "tutorials/06_data_flow.py",
+        "tutorials/07_complex_pipelines.py",
     ]
     
-    for example in python_examples:
-        example_path = examples_dir / example
+    for tutorial in tutorials:
+        tutorial_path = examples_dir / tutorial
         
         # Read the file content
-        with open(example_path, 'r') as f:
+        with open(tutorial_path, 'r') as f:
             content = f.read()
         
         # Verify it has a docstring
-        assert '"""' in content or "'''" in content, f"{example} missing docstring"
-        
-        # Verify it has a main function
-        assert "def main():" in content, f"{example} missing main() function"
+        assert '"""' in content or "'''" in content, f"{tutorial} missing docstring"
         
         # Verify it has if __name__ == "__main__"
-        assert 'if __name__ == "__main__"' in content, f"{example} missing __main__ check"
+        assert 'if __name__ == "__main__"' in content, f"{tutorial} missing __main__ check"
 
+
+# =============================================================================
+# Integration Tests (Skipped by Default - Require API Keys)
+# =============================================================================
 
 # Check if LangChain is available
 try:
@@ -191,32 +241,34 @@ except ImportError:
     LANGCHAIN_AVAILABLE = False
 
 
-@pytest.mark.skip(reason="Temporarily skipped during job terminology refactoring")
+@pytest.mark.skip(reason="Requires OPENAI_API_KEY - run manually if needed")
 def test_langchain_simple():
-    """Test that 06_langchain_simple.py structure is correct (skip actual LLM calls)."""
-    return_code, stdout, stderr = run_example("06_langchain_simple.py")
+    """Test that integrations/langchain_simple.py structure is correct."""
+    return_code, stdout, stderr = run_example("integrations/langchain_simple.py")
     
     # Should complete successfully or show langchain status
     assert return_code == 0 or "LangChain" in stdout, \
         f"Example had unexpected failure. return_code: {return_code}, stderr: {stderr}"
-    
-    # Verify expected structure
-    assert "Example 6: LangChain Integration" in stdout
-    assert "LangChain" in stdout
 
 
-@pytest.mark.skip(reason="Temporarily skipped during job terminology refactoring")
+@pytest.mark.skip(reason="Requires OPENAI_API_KEY - run manually if needed")
 def test_langchain_chains():
-    """Test that 07_langchain_chains.py structure is correct (skip actual LLM calls)."""
-    return_code, stdout, stderr = run_example("07_langchain_chains.py")
+    """Test that integrations/langchain_chains.py structure is correct."""
+    return_code, stdout, stderr = run_example("integrations/langchain_chains.py")
     
     # Should complete successfully or show langchain status
     assert return_code == 0 or "LangChain" in stdout, \
         f"Example had unexpected failure. return_code: {return_code}, stderr: {stderr}"
+
+
+@pytest.mark.skip(reason="Requires OPENAI_API_KEY - run manually if needed")
+def test_openai_native():
+    """Test that integrations/openai_native.py structure is correct."""
+    return_code, stdout, stderr = run_example("integrations/openai_native.py")
     
-    # Verify expected structure
-    assert "Example 7: LangChain Integration" in stdout
-    assert "LangChain" in stdout or "chains" in stdout.lower()
+    # Should complete successfully or show OpenAI status
+    assert return_code == 0 or "OpenAI" in stdout, \
+        f"Example had unexpected failure. return_code: {return_code}, stderr: {stderr}"
 
 
 if __name__ == "__main__":

@@ -1,24 +1,27 @@
 # Flow4AI Examples
 
-This directory contains working examples demonstrating Flow4AI's core features and capabilities.
+This directory contains working examples demonstrating Flow4AI's core features and capabilities, organized into two categories:
+
+- **[tutorials/](./tutorials/)** - Learn Flow4AI syntax from simple to complex
+- **[integrations/](./integrations/)** - Use Flow4AI with external frameworks (LangChain, OpenAI)
 
 ## Setup
 
 ### 1. Install Dependencies
 
-For basic examples (01-05):
+For tutorials (basic Flow4AI):
 ```bash
 pip install -e .
 ```
 
-For LangChain examples (06-07):
+For integrations (requires external libraries):
 ```bash
 pip install -e ".[test]"
 ```
 
 ### 2. Configure API Keys
 
-Some examples require API keys (especially LangChain examples). Set up your environment:
+Integration examples require API keys. Set up your environment:
 
 ```bash
 # Copy the example environment file
@@ -31,103 +34,59 @@ cp .env.example .env
 
 **Important**: The `.env` file is in `.gitignore` and will never be committed.
 
-## Running the Examples
+---
 
-Each example can be run independently:
+## Tutorials (Learning Flow4AI)
+
+Start here! Work through these in order for the best learning experience:
 
 ```bash
 cd /path/to/Flow4AI
-python examples/01_basic_workflow.py
-python examples/02_task_passthrough.py
-python examples/03_parallel_execution.py
-python examples/04_multiprocessing.py
-python examples/05_complex_workflow.py
-
-# LangChain examples (requires OPENAI_API_KEY in .env)
-python examples/06_langchain_simple.py
-python examples/07_langchain_chains.py
+python examples/tutorials/01_hello_workflow.py
+python examples/tutorials/02_parameters.py       # CORE - read early!
+python examples/tutorials/03_parallel_jobs.py
+python examples/tutorials/04_multiprocessing.py
+python examples/tutorials/05_job_types.py
+python examples/tutorials/06_data_flow.py
+python examples/tutorials/07_complex_pipelines.py
 ```
 
-## Example Descriptions
+### Tutorial Descriptions
 
-### 01_basic_workflow.py
-**Basic Workflow with Parallel Analysis**
+| # | File | Description |
+|---|------|-------------|
+| 01 | `hello_workflow.py` | Your first workflow: parallel analysis with result aggregation |
+| 02 | `parameters.py` | **CORE!** Task formats, parameter injection, and batch processing |
+| 03 | `parallel_jobs.py` | Submit 1000 concurrent tasks with FlowManager |
+| 04 | `multiprocessing.py` | CPU-bound processing with FlowManagerMP |
+| 05 | `job_types.py` | JobABC vs functions, multiple tails, intermediate results |
+| 06 | `data_flow.py` | Understanding `task_pass_through` for batch correlation |
+| 07 | `complex_pipelines.py` | Capstone: mixed job types, complex graphs, all features |
 
-Demonstrates:
-- Defining jobs as simple functions
-- Building workflows with serial (`>>`) and parallel (`|`, `p()`) operators
-- Parallel execution of multiple analysis jobs
-- Result aggregation
-- Accessing intermediate results with `SAVED_RESULTS`
+---
 
-### 02_task_passthrough.py
-**Task Passthrough for Independent Data**
+## Integrations (External Frameworks)
 
-Demonstrates:
-- Submitting multiple tasks with different data
-- Why `task_pass_through` is essential for batch processing
-- Accessing original task data in results
-- Correlating results with specific task inputs
+These examples show how Flow4AI orchestrates popular AI frameworks in parallel workflows:
 
-### 03_parallel_execution.py
-**Parallel Execution with FlowManager**
-
-Demonstrates:
-- Multi-threaded parallel execution with FlowManager
-- Submitting up to 1000 concurrent tasks
-- Proof of parallelism via execution time
-- Ideal use cases (I/O-bound tasks)
-
-### 04_multiprocessing.py
-**Multiprocessing with FlowManagerMP**
-
-Demonstrates:
-- True parallelism across CPU cores with FlowManagerMP
-- CPU-bound task processing
-- Proper cleanup with `close_processes()`
-- Performance benefits for computational workloads
-
-### 05_complex_workflow.py
-**Complex Workflow with Advanced Features**
-
-Demonstrates:
-- Mixed job types (JobABC classes, functions, lambdas)
-- Complex parallel branches with `p()` operator
-- Serial execution chains with `>>`
-- `SAVED_RESULTS` for intermediate data access
-- `task_pass_through` for original task data
-- Context functions with `j_ctx` parameter
-
-### 06_langchain_simple.py
-**LangChain Integration - Simple**
-
-Demonstrates:
-- Integrating LangChain with Flow4AI workflows
-- Wrapping LangChain LLM calls as Flow4AI jobs
-- Parallel execution of multiple LangChain operations
-- Async compatibility between frameworks
-
-Prerequisites:
 ```bash
-pip install -e ".[test]"  # Installs langchain dependencies
-export OPENAI_API_KEY=your_key_here
+# Requires OPENAI_API_KEY in .env
+python examples/integrations/langchain_simple.py
+python examples/integrations/langchain_chains.py
+python examples/integrations/openai_native.py
 ```
 
-### 07_langchain_chains.py
-**LangChain Integration - Chains**
+### Integration Descriptions
 
-Demonstrates:
-- Using LangChain chains in parallel workflows
-- Multi-perspective document analysis (technical, business, UX)
-- Parallel execution of multiple LangChain operations
-- Result synthesis using j_ctx
-- Real-world multi-agent analysis pattern
+| File | Description |
+|------|-------------|
+| `langchain_simple.py` | Wrap LangChain LLM calls as Flow4AI jobs |
+| `langchain_chains.py` | Multi-perspective document analysis with parallel LangChain chains |
+| `openai_native.py` | Native OpenAI integration with Flow4AI's `OpenAIJob` class |
 
-Prerequisites:
-```bash
-pip install -e ".[test]"
-export OPENAI_API_KEY=your_key_here
-```
+**Key insight**: Flow4AI doesn't replace these frameworks—it **orchestrates** them, enabling parallel execution and complex pipelines with any AI library.
+
+---
 
 ## Testing
 

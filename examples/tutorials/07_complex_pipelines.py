@@ -1,5 +1,5 @@
 """
-Example 5: Complex Workflow
+Tutorial 07: Complex Pipelines
 
 Demonstrates advanced Flow4AI features:
 - Mix of JobABC classes, functions, and lambdas

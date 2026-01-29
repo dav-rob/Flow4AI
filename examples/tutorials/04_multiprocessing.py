@@ -1,5 +1,5 @@
 """
-Example 4: Multiprocessing with FlowManagerMP
+Tutorial 04: Multiprocessing with FlowManagerMP
 
 Demonstrates FlowManagerMP's multi-process parallel execution:
 - True parallelism across CPU cores

@@ -1,5 +1,5 @@
 """
-Example 3: Parallel Execution with FlowManager
+Tutorial 03: Parallel Jobs
 
 Demonstrates FlowManager's multi-threaded parallel execution:
 - Submit 1000 tasks concurrently

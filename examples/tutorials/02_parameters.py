@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Flow4AI Example 10: Tasks and Parameters
+Tutorial 02: Tasks and Parameters
 
-This example demonstrates how to pass data into workflows through tasks.
-It covers all parameter formats and emphasizes key concepts.
+This is a CORE example! Understanding task structure and parameter passing
+is essential to using Flow4AI effectively. Read this early in your learning.
 
 =============================================================================
 CORE CONCEPTS
@@ -337,5 +337,5 @@ BATCH PROCESSING:
   - Submit 1000 tasks = 1000 concurrent executions
   - Each task carries its own unique data
 
-See examples/09_syntax_details.py for more on functions vs classes.
+See tutorials/05_job_types.py for more on functions vs classes.
 """)

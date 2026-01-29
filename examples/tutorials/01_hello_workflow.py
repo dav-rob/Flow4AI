@@ -1,7 +1,7 @@
 """
-Example 1: Basic Workflow
+Tutorial 01: Hello Workflow
 
-Demonstrates the core Flow4AI concepts:
+Your first Flow4AI workflow! Demonstrates core concepts:
 - Defining jobs as simple functions
 - Building workflows with serial (>>) and parallel (|) operators
 - Executing tasks and retrieving results
