@@ -36,11 +36,11 @@ def summarize(j_ctx):
 
 # Turn functions into jobs and build a pipeline
 jobs = job({"analyze": analyze, "summarize": summarize})
-dsl = jobs["analyze"] >> jobs["summarize"]
+workflow = jobs["analyze"] >> jobs["summarize"]
 
 # Execute
 task = {"analyze.text": "Hello World"}
-errors, result = FlowManager.run(dsl, task, graph_name="my_pipeline")
+errors, result = FlowManager.run(workflow, task, graph_name="my_pipeline")
 print(result["result"])  # "Summary: Analysis of: Hello World"
 ```
 
@@ -98,13 +98,13 @@ jobs = job({
 })
 
 # Parallel analysis branches >> aggregation
-dsl = p(jobs["keywords"], jobs["sentiment"], jobs["count"]) >> jobs["combine"]
+workflow = p(jobs["keywords"], jobs["sentiment"], jobs["count"]) >> jobs["combine"]
 
 # Execute
 task = {"keywords.text": "Hello world example", 
         "sentiment.text": "Hello world example",
         "count.text": "Hello world example"}
-errors, result = FlowManager.run(dsl, task, graph_name="analyzer")
+errors, result = FlowManager.run(workflow, task, graph_name="analyzer")
 
 print(result["result"])
 # {'keywords': ['Hello', 'world', 'example'], 'sentiment': 'positive', 'word_count': 3}
@@ -211,10 +211,10 @@ jobs["times"].save_result = True
 jobs["add"].save_result = True
 
 # Complex workflow: parallel branches >> aggregation
-dsl = p(jobs["analyzer"], jobs["times"]) >> (jobs["add"] | jobs["aggregate"])
+workflow = p(jobs["analyzer"], jobs["times"]) >> (jobs["add"] | jobs["aggregate"])
 
 errors, result = FlowManager.run(
-    dsl, 
+    workflow, 
     {"times": {"fn.x": 5}, "add": {"fn.x": 10}},
     "complex_workflow"
 )
@@ -326,7 +326,7 @@ Flow4AI provides two ways to access results: via an `on_complete` callback (asyn
 jobs = job({"step1": func1, "step2": func2, "step3": func3})
 jobs["step1"].save_result = True
 jobs["step2"].save_result = True
-dsl = jobs["step1"] >> jobs["step2"] >> jobs["step3"]
+workflow = jobs["step1"] >> jobs["step2"] >> jobs["step3"]
 
 # Option A: on_complete callback (async, per-task)
 def on_complete(result):

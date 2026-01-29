@@ -196,7 +196,7 @@ def main():
     
     # Create workflow: parallel analysis >> synthesis
     from flow4ai.dsl import p
-    dsl = p(jobs["technical"], jobs["business"], jobs["user_experience"]) >> jobs["synthesize"]
+    workflow = p(jobs["technical"], jobs["business"], jobs["user_experience"]) >> jobs["synthesize"]
     
     # Sample document
     document = """
@@ -220,7 +220,7 @@ def main():
     workflow_start = time.time()
     print(f"⏱️  Starting workflow execution at {time.strftime('%H:%M:%S')}\n")
     
-    errors, results = FlowManager.run(dsl, task, "multi_perspective_analysis", timeout=60)
+    errors, results = FlowManager.run(workflow, task, "multi_perspective_analysis", timeout=60)
     
     workflow_time = time.time() - workflow_start
     print(f"\n⏱️  Total workflow execution time: {workflow_time:.3f}s\n")

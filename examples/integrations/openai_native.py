@@ -197,9 +197,9 @@ def run_parallel_chains_openai():
     synthesize = SynthesisJob("synthesis")
     
     
-    # Define the DSL graph by providing the head nodes
+    # Define the workflow graph by providing the head nodes
     # When multiple head nodes exist, we use parallel() to group them
-    dsl = parallel(technical, business, ux) >> synthesize
+    workflow = parallel(technical, business, ux) >> synthesize
 
     document = """
     Flow4AI is a powerful Python framework for orchestrating complex AI workflows.
@@ -229,7 +229,7 @@ def run_parallel_chains_openai():
     print(f"⏱️  Starting workflow execution at {time.strftime('%H:%M:%S')}\n")
     
     # Run with 60s timeout mostly to act as a failsafe
-    errors, results = FlowManager.run(dsl, task, "multi_perspective_analysis_openai", timeout=60)
+    errors, results = FlowManager.run(workflow, task, "multi_perspective_analysis_openai", timeout=60)
     
     workflow_time = time.time() - workflow_start
     print(f"\n⏱️  Total workflow execution time: {workflow_time:.3f}s\n")

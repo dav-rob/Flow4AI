@@ -96,7 +96,7 @@ def main():
     })
     
     # Create parallel workflow: analyze sentiment AND summarize
-    dsl = jobs["sentiment"] | jobs["summarize"]
+    workflow = jobs["sentiment"] | jobs["summarize"]
     
     # Sample text
     text = """
@@ -114,7 +114,7 @@ def main():
         "summarize.text": text
     }
     
-    errors, results = FlowManager.run(dsl, task, "langchain_analysis", timeout=60)
+    errors, results = FlowManager.run(workflow, task, "langchain_analysis", timeout=60)
     
     if errors:
         print(f"❌ Errors occurred: {errors}")
