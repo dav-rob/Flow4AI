@@ -193,6 +193,9 @@ def test_directory_structure():
     integrations = [
         "integrations/langchain_simple.py",
         "integrations/langchain_chains.py",
+        "integrations/pydantic_structured.py",
+        "integrations/model_comparison.py",
+        "integrations/llamaindex_rag.py",
     ]
     
     for integration in integrations:
@@ -259,6 +262,42 @@ def test_langchain_chains():
     assert "LangChain Integration" in stdout
     assert "Analysis Complete" in stdout
 
+
+def test_pydantic_structured():
+    """Test that integrations/pydantic_structured.py executes correctly."""
+    return_code, stdout, stderr = run_example("integrations/pydantic_structured.py")
+    
+    # Should complete successfully
+    assert return_code == 0, f"Example failed with return code {return_code}. stderr: {stderr}"
+    assert "Pydantic Structured Extraction" in stdout
+    assert "Extraction Complete" in stdout
+
+
+def test_model_comparison():
+    """Test that integrations/model_comparison.py executes correctly."""
+    return_code, stdout, stderr = run_example("integrations/model_comparison.py")
+    
+    # Should complete successfully (even with only OpenAI key)
+    assert return_code == 0, f"Example failed with return code {return_code}. stderr: {stderr}"
+    assert "Model Comparison" in stdout
+    assert "Comparison Complete" in stdout
+
+
+def test_llamaindex_rag():
+    """Test that integrations/llamaindex_rag.py executes correctly.
+    
+    Note: This test may take >10s due to embedding and LLM calls.
+    It is excluded from core tests but runs in full suite.
+    """
+    return_code, stdout, stderr = run_example("integrations/llamaindex_rag.py")
+    
+    # Should complete successfully
+    assert return_code == 0, f"Example failed with return code {return_code}. stderr: {stderr}"
+    assert "LlamaIndex RAG Pipeline" in stdout
+    assert "RAG Pipeline Complete" in stdout
+
+
 if __name__ == "__main__":
     # Run tests with pytest
     pytest.main([__file__, "-v"])
+

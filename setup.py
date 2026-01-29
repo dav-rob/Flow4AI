@@ -31,6 +31,11 @@ setup(
             'langchain-core>=0.3.0',
             'langchain-openai>=0.2.0',
         ],
+        'llamaindex': [
+            'llama-index-core',
+            'llama-index-embeddings-openai',
+            'llama-index-llms-openai',
+        ],
         'dev': [
           "gitingest>=0.1.3"
         ],
