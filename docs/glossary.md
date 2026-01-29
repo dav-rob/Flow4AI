@@ -26,7 +26,7 @@ The entry point or starting job in a job graph. If multiple starting jobs are de
 The final job in a job graph that produces the ultimate result. This job's output is returned by default as the final result of workflow execution. If multiple endpoints exist in the graph, a default tail job is created to consolidate results from all terminal jobs.
 
 ### Short Job Name
-The simplified identifier used for referencing jobs within a workflow. This is the name assigned to a job in the `wrap()` function when using the DSL, or in the job definition when using YAML configuration files.
+The simplified identifier used for referencing jobs within a workflow. This is the name assigned to a job in the `job()` function when using the DSL, or in the job definition when using YAML configuration files.
 
 ### FQ_Name (Fully Qualified Name)
 An expanded job name created by the workflow engine to prevent naming collisions across job graphs. The format follows `graph_name$$param_name$$job_name$$`, providing a unique identifier for each job in the system.  Indices are added to the param_name to prevent collisions.

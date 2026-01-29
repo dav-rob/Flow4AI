@@ -3,7 +3,7 @@ from typing import Any, Dict
 import pytest
 
 from flow4ai import f4a_logging as logging
-from flow4ai.dsl import DSLComponent, wrap
+from flow4ai.dsl import DSLComponent, job
 from flow4ai.flowmanager import FlowManager
 from flow4ai.job import JobABC, Task
 
@@ -97,7 +97,7 @@ def create_math_pipeline(prefix: str, operation: str) -> DSLComponent:
     math_op = MathOperation(f"{prefix}_operation", operation=operation)
     aggregator = Aggregator(f"{prefix}_aggregator")
     
-    jobs = wrap({
+    jobs = job({
         "generator": generator,
         "operation": math_op,
         "aggregator": aggregator

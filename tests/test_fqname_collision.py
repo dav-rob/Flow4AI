@@ -3,7 +3,7 @@
 import pytest
 
 from flow4ai import f4a_logging as logging
-from flow4ai.dsl import DSLComponent, JobsDict, wrap
+from flow4ai.dsl import DSLComponent, JobsDict, job
 from flow4ai.flowmanager import FlowManager
 from flow4ai.job import JobABC, Task
 
@@ -55,7 +55,7 @@ def test_fq_name_collision_resolution():
     producer_a = SimpleProducerJob("producer", "A")
     consumer_a = SimpleConsumerJob("consumer", expected_value="A")
     
-    jobs_a = wrap({
+    jobs_a = job({
         "producer": producer_a,
         "consumer": consumer_a
     })
@@ -72,7 +72,7 @@ def test_fq_name_collision_resolution():
     producer_b = SimpleProducerJob("producer", "B")  # Same job name but different value
     consumer_b = SimpleConsumerJob("consumer", expected_value="B")
     
-    jobs_b = wrap({
+    jobs_b = job({
         "producer": producer_b,
         "consumer": consumer_b
     })
@@ -139,7 +139,7 @@ def test_fq_name_collision_resolution():
     producer_c = SimpleProducerJob("producer", "C")
     consumer_c = SimpleConsumerJob("consumer", expected_value="C")
     
-    jobs_c = wrap({
+    jobs_c = job({
         "producer": producer_c,
         "consumer": consumer_c
     })

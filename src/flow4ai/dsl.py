@@ -56,24 +56,24 @@ class Serial:
         return f"serial({', '.join(repr(c) for c in self.components)})"
 
 
-def wrap(obj=None, **kwargs):
+def job(obj=None, **kwargs):
     """
-    Wrap any object to enable direct graph operations with | and >> operators.
+    Turn Python functions into Flow4AI jobs.
     
-    This function is the key to enabling the clean syntax:
-    wrap(obj1) | wrap(obj2)  # For parallel composition
-    wrap(obj1) >> wrap(obj2)  # For serial composition
+    This function enables the clean DSL syntax:
+    job(obj1) | job(obj2)  # For parallel composition
+    job(obj1) >> job(obj2)  # For serial composition
     
-    Enhanced functionality:
-    1. Single object wrapping:
+    Usage:
+    1. Single object:
        - For JobABC instances: sets the name property and returns the instance
        - For Serial/Parallel: returns the object unchanged
-       - For other objects: creates a WrappingJob with the given name
+       - For other objects (functions): creates a job with the given name
     
-    2. dict (kwargs) object wrapping:
-       wrap(obj_a_name=obj_a, obj_b_name=obj_b) or wrap({"obj_a_name": obj_a, "obj_b_name": obj_b})
-       - Returns a collection of wrapped objects following the rules in case 1
-       - If only one item, returns a dict with the name as key and the wrapped object as value
+    2. Dictionary of objects:
+       job(obj_a_name=obj_a, obj_b_name=obj_b) or job({"obj_a_name": obj_a, "obj_b_name": obj_b})
+       - Returns a collection of jobs following the rules above
+       - If only one item, returns just that job
     """
     # Case 1: Only keyword arguments provided (no positional argument)
     if obj is None and kwargs:
@@ -111,17 +111,17 @@ def wrap(obj=None, **kwargs):
         return result
     
     # Case 3: Original behavior - single object
-    # Handle the case where obj is None (could happen if called with wrap())
+    # Handle the case where obj is None (could happen if called with job())
     if obj is None:
-        raise ValueError("wrap() requires at least one argument")
+        raise ValueError("job() requires at least one argument")
         
     if isinstance(obj, (JobABC, Parallel, Serial)):
         return obj  # Already has the operations we need
     return WrappingJob(obj)
 
-# Synonyms for wrap
-w = wrap
-job = wrap  # More intuitive alias: functions become jobs
+# Aliases for backward compatibility
+wrap = job  # Deprecated: use job() instead
+w = job     # Deprecated: use job() instead
 
 def parallel(*objects, **kwargs):
     """

@@ -9,7 +9,7 @@ Demonstrates why task_pass_through is essential:
 """
 
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap
+from flow4ai.dsl import job
 
 
 def process_order(order_id, customer_name, amount):
@@ -67,7 +67,7 @@ def main():
     print("4. task_pass_through is the ONLY way to correlate results with customers\n")
     
     # Wrap the function as a job
-    dsl = wrap(process=process_order)
+    dsl = job(process=process_order)
     
     # Create FlowManager with on_complete callback
     # NOTE: The callback is defined ABOVE, completely separate from this code

@@ -18,7 +18,7 @@ import pytest
 
 from flow4ai import f4a_logging as logging
 from flow4ai.dsl import (DSLComponent, JobsDict, Parallel, Serial, p, parallel,
-                         s, serial, w, wrap)
+                         s, serial, w, job)
 from flow4ai.job import JobABC
 from flow4ai.jobs.wrapping_job import WrappingJob
 from tests.test_utils.graph_evaluation import evaluate
@@ -67,19 +67,19 @@ class TestWrapping:
     
     def test_wrap_callable(self):
         """Test wrapping a callable object."""
-        wrapped = wrap(mock_llm_completion)
+        wrapped = job(mock_llm_completion)
         assert isinstance(wrapped, WrappingJob)
         assert wrapped.callable == mock_llm_completion
     
     def test_wrap_job_object(self):
         """Test wrapping a JobABC object (should return the object unchanged)."""
-        job = LLMSummarizer("test_summarizer")
-        wrapped = wrap(job)
-        assert wrapped is job  # Should return the same object
+        llm_job = LLMSummarizer("test_summarizer")
+        wrapped = job(llm_job)
+        assert wrapped is llm_job  # Should return the same object
     
     def test_w_alias(self):
         """Test that w is an alias for wrap."""
-        wrapped1 = wrap(mock_data_extraction)
+        wrapped1 = job(mock_data_extraction)
         wrapped2 = w(mock_data_extraction)
         assert isinstance(wrapped1, WrappingJob)
         assert isinstance(wrapped2, WrappingJob)
@@ -87,29 +87,29 @@ class TestWrapping:
         
     def test_wrap_named_callable_kwargs(self):
         """Test wrapping a callable with a name using kwargs syntax."""
-        wrapped = wrap(extractor=mock_data_extraction)
+        wrapped = job(extractor=mock_data_extraction)
         assert isinstance(wrapped, WrappingJob)
         assert wrapped.callable == mock_data_extraction
         assert wrapped.name == "extractor"
         
     def test_wrap_named_callable_dict(self):
         """Test wrapping a callable with a name using dict syntax."""
-        wrapped = wrap({"formatter": mock_json_formatter})
+        wrapped = job({"formatter": mock_json_formatter})
         assert isinstance(wrapped, WrappingJob)
         assert wrapped.callable == mock_json_formatter
         assert wrapped.name == "formatter"
         
     def test_wrap_job_object_with_name(self):
         """Test wrapping a JobABC object with a name (should set name and return the object)."""
-        job = LLMSummarizer()
-        wrapped = wrap(custom_summarizer=job)
-        assert wrapped is job  # Should return the same object
+        llm_job = LLMSummarizer()
+        wrapped = job(custom_summarizer=llm_job)
+        assert wrapped is llm_job  # Should return the same object
         assert wrapped.name == "custom_summarizer"  # But with updated name
         
         # Test dict syntax as well
-        job2 = DataProcessor()
-        wrapped2 = wrap({"data_proc": job2})
-        assert wrapped2 is job2
+        data_job = DataProcessor()
+        wrapped2 = job({"data_proc": data_job})
+        assert wrapped2 is data_job
         assert wrapped2.name == "data_proc"
         
     def test_wrap_composite_with_name(self):
@@ -119,8 +119,8 @@ class TestWrapping:
         parallel_obj = parallel(mock_data_extraction, mock_json_formatter)
         
         # Wrap them with names
-        wrapped_serial = wrap(pipeline=serial_obj)
-        wrapped_parallel = wrap({"processors": parallel_obj})
+        wrapped_serial = job(pipeline=serial_obj)
+        wrapped_parallel = job({"processors": parallel_obj})
         
         # Should return the same objects
         assert wrapped_serial is serial_obj
@@ -129,7 +129,7 @@ class TestWrapping:
     def test_wrap_multiple_objects(self):
         """Test wrapping multiple objects at once."""
         # Wrap multiple objects using kwargs syntax
-        wrapped = wrap(
+        wrapped = job(
             extractor=mock_data_extraction,
             formatter=mock_json_formatter,
             processor=mock_text_processing
@@ -156,7 +156,7 @@ class TestWrapping:
         serial_obj = serial(mock_llm_completion, mock_text_processing)
         
         # Wrap them all in a dictionary
-        wrapped = wrap({
+        wrapped = job({
             "summarizer": job1,
             "data_processor": job2,
             "formatter": mock_json_formatter,
@@ -184,12 +184,12 @@ class TestWrapping:
     def test_wrap_single_item_in_collection(self):
         """Test that wrapping a single item in a collection returns just that item."""
         # With kwargs syntax
-        wrapped1 = wrap(processor=mock_text_processing)
+        wrapped1 = job(processor=mock_text_processing)
         assert isinstance(wrapped1, WrappingJob)
         assert wrapped1.name == "processor"
         
         # With dict syntax
-        wrapped2 = wrap({"extractor": mock_data_extraction})
+        wrapped2 = job({"extractor": mock_data_extraction})
         assert isinstance(wrapped2, WrappingJob)
         assert wrapped2.name == "extractor"
 
@@ -200,7 +200,7 @@ class TestParallelComposition:
     def test_parallel_operator(self):
         """Test parallel composition using | operator with callables."""
         # Create parallel composition of two callables
-        composition = wrap(mock_llm_completion) | wrap(mock_data_extraction)
+        composition = job(mock_llm_completion) | job(mock_data_extraction)
         
         assert isinstance(composition, Parallel)
         assert len(composition.components) == 2
@@ -257,7 +257,7 @@ class TestParallelComposition:
     def test_parallel_mixed_components(self):
         """Test parallel composition with a mix of JobABC subclasses and wrapped callables."""
         llm_job = LLMSummarizer()
-        wrapped_func = wrap(mock_data_extraction)
+        wrapped_func = job(mock_data_extraction)
         
         composition = llm_job | wrapped_func
         
@@ -421,7 +421,7 @@ class TestSerialComposition:
     def test_serial_operator(self):
         """Test serial composition using >> operator with callables."""
         # Create a serial pipeline that simulates text extraction followed by formatting
-        composition = wrap(mock_text_processing) >> wrap(mock_json_formatter)
+        composition = job(mock_text_processing) >> job(mock_json_formatter)
         
         assert isinstance(composition, Serial)
         assert len(composition.components) == 2
@@ -478,7 +478,7 @@ class TestSerialComposition:
     def test_serial_mixed_components(self):
         """Test serial composition with a mix of JobABC subclasses and wrapped callables."""
         # Create a pipeline: wrapped callable -> JobABC subclass
-        wrapped_func = wrap(mock_llm_completion)
+        wrapped_func = job(mock_llm_completion)
         data_job = DataProcessor()
         
         composition = wrapped_func >> data_job
@@ -758,8 +758,8 @@ class TestMixedComposition:
         """Test mixed serial and parallel operators with callables."""
         # Create a complex workflow:
         # (LLM completion >> JSON formatting) | Data extraction
-        serial_part = wrap(mock_llm_completion) >> wrap(mock_json_formatter)
-        data_extraction_job = wrap(mock_data_extraction)
+        serial_part = job(mock_llm_completion) >> job(mock_json_formatter)
+        data_extraction_job = job(mock_data_extraction)
         composition1 = serial_part | data_extraction_job
         
         assert isinstance(composition1, Parallel)
@@ -771,8 +771,8 @@ class TestMixedComposition:
         
         # Another complex workflow:
         # Text processing | (Data extraction >> JSON formatting)
-        serial_comp = wrap(mock_data_extraction) >> wrap(mock_json_formatter)
-        text_processing_job = wrap(mock_text_processing)
+        serial_comp = job(mock_data_extraction) >> job(mock_json_formatter)
+        text_processing_job = job(mock_text_processing)
         composition2 = text_processing_job | serial_comp
         
         assert isinstance(composition2, Parallel)
@@ -785,7 +785,7 @@ class TestMixedComposition:
         # Create a workflow that processes data in parallel and then feeds to an LLM
         # (Data extraction | Text processing) >> LLM summarizer
         
-        parallel_processing = wrap(mock_data_extraction) | wrap(mock_text_processing)
+        parallel_processing = job(mock_data_extraction) | job(mock_text_processing)
         llm_summarizer = LLMSummarizer()
         
         workflow = parallel_processing >> llm_summarizer
@@ -801,7 +801,7 @@ class TestMixedComposition:
         # (LLM summarizer | Data processor) >> JSON formatter
         
         parallel_jobs = LLMSummarizer() | DataProcessor()
-        formatter = wrap(mock_json_formatter)
+        formatter = job(mock_json_formatter)
         
         workflow = parallel_jobs >> formatter
         
@@ -826,10 +826,10 @@ class TestMixedComposition:
         
         # Create a complex composition with lambdas, JobABC instances, and functions
         # (lambda1 | data_job) >> (lambda2 >> mock_text_processing) >> (llm_job | lambda3)
-        lambda1_job = wrap(lambda1)
-        lambda2_job = wrap(lambda2)
-        lambda3_job = wrap(lambda3)
-        text_proc_job = wrap(mock_text_processing) # return "Processed text output"
+        lambda1_job = job(lambda1)
+        lambda2_job = job(lambda2)
+        lambda3_job = job(lambda3)
+        text_proc_job = job(mock_text_processing) # return "Processed text output"
         
         first_stage = lambda1_job | data_job
         second_stage = lambda2_job >> text_proc_job
@@ -875,13 +875,13 @@ class TestMixedComposition:
         
         # Create the complex graph structure
         # p(w("T1") >> w(1), "T2", 3) >> w(4) | w(s(5, "T3", w(6)))
-        fn1_job = wrap(fn1)
+        fn1_job = job(fn1)
         fn1_job.name = "T1"
-        fn2_job = wrap(fn2)
-        fn3_job = wrap(fn3)
-        fn4_job = wrap(fn4)
-        fn5_job = wrap(fn5)
-        fn6_job = wrap(fn6)
+        fn2_job = job(fn2)
+        fn3_job = job(fn3)
+        fn4_job = job(fn4)
+        fn5_job = job(fn5)
+        fn6_job = job(fn6)
         
         # Build the graph in parts
         part1 = fn1_job >> fn2_job
@@ -890,11 +890,11 @@ class TestMixedComposition:
         part4 = serial(fn5_job, data_job, fn6_job)
         
         # Combine into final graph
-        dsl:DSLComponent = part3 | wrap(part4)
+        dsl:DSLComponent = part3 | job(part4)
         
         # Set up context access for all WrappingJob instances
-        for job in [fn1_job, fn2_job, fn3_job, fn4_job, fn5_job, fn6_job]:
-            job.get_task = MagicMock(return_value={job.name: {"args": ["test_input"]}})
+        for j in [fn1_job, fn2_job, fn3_job, fn4_job, fn5_job, fn6_job]:
+            j.get_task = MagicMock(return_value={j.name: {"args": ["test_input"]}})
         
         # Execute the workflow
         result = await evaluate(dsl)
@@ -922,17 +922,17 @@ class TestMixedComposition:
         fn11 = lambda x: f"Function 11: {x}"
         
         # Create the WrappingJob instances
-        job1 = wrap(fn1)
-        job2 = wrap(fn2)
-        job3 = wrap(fn3)
-        job4 = wrap(fn4)
-        job5 = wrap(fn5)
-        job6 = wrap(fn6)
-        job7 = wrap(fn7)
-        job8 = wrap(fn8)
-        job9 = wrap(fn9)
-        job10 = wrap(fn10)
-        job11 = wrap(fn11)
+        job1 = job(fn1)
+        job2 = job(fn2)
+        job3 = job(fn3)
+        job4 = job(fn4)
+        job5 = job(fn5)
+        job6 = job(fn6)
+        job7 = job(fn7)
+        job8 = job(fn8)
+        job9 = job(fn9)
+        job10 = job(fn10)
+        job11 = job(fn11)
         
         # Build the complex graph structure: w(1) >> ((p(5,4,3) >> 7 >> 9) | (w(2) >> 6 >> 8>> 10)) >> w(11)
         parallel_part1 = parallel(job5, job4, job3)
@@ -946,8 +946,8 @@ class TestMixedComposition:
         graph: DSLComponent = job1 >> middle_part >> job11
         
         # Set up context access for all WrappingJob instances
-        for job in [job1, job2, job3, job4, job5, job6, job7, job8, job9, job10, job11]:
-            job.get_task = MagicMock(return_value={job.name: {"args": ["test_input"]}})
+        for j in [job1, job2, job3, job4, job5, job6, job7, job8, job9, job10, job11]:
+            j.get_task = MagicMock(return_value={j.name: {"args": ["test_input"]}})
         
         # Execute the workflow
         result = await evaluate(graph)
@@ -1240,7 +1240,7 @@ class TestWrappingJob:
 
             return {"task": task, "inputs": inputs}
 
-        jobs = wrap ({
+        jobs = job({
             "times": times,
             "add": add,
             "square": square,
@@ -1249,8 +1249,8 @@ class TestWrappingJob:
 
         task = {"times": {"x": 1}, "add": {"x": 2}, "square": {"x": 3}}
         
-        for job in jobs.values():
-            job.get_task = MagicMock(return_value=task)
+        for j in jobs.values():
+            j.get_task = MagicMock(return_value=task)
         jobs["collate"].get_inputs = MagicMock(return_value={"test_job_input": "test_value"})
 
         dsl:DSLComponent = p(jobs["times"], jobs["add"], jobs["square"]) >> jobs["collate"]
@@ -1497,15 +1497,15 @@ class TestComplexDSLExpressions:
             }
         }
         
-        jobs = wrap({
+        jobs = job({
             "add": add_numbers,
             "mult": multiply_by,
             "fmt": format_fn,
             "proc": DataProcessor()
         })
 
-        for job in jobs.values():
-            job.get_task = MagicMock(return_value=task)
+        for j in jobs.values():
+            j.get_task = MagicMock(return_value=task)
         
         # Use the dictionary to create a concise DSL expression
         dsl: DSLComponent = (jobs["add"] >> jobs["mult"]) | (jobs["fmt"] >> jobs["proc"])

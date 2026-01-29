@@ -5,7 +5,7 @@ from typing import Any, Dict
 import pytest
 
 from flow4ai import f4a_logging as logging
-from flow4ai.dsl import DSLComponent, JobsDict, p, wrap
+from flow4ai.dsl import DSLComponent, JobsDict, p, job
 from flow4ai.flowmanager import FlowManager
 from flow4ai.job import JobABC
 
@@ -42,7 +42,7 @@ def test_execute_job_graph_from_dsl():
     formatter = ProcessorJob("Formatter", "format")
     cache_manager = ProcessorJob("CacheManager", "cache")
 
-    jobs:JobsDict = wrap({
+    jobs:JobsDict = job({
             "analyzer2": analyzer2,
             "cache_manager": cache_manager,
             "times": times,
@@ -191,7 +191,7 @@ def test_flowmanager_execute_method():
     
     def create_square_multiply_dsl():
         """Create a fresh DSL with square and multiply jobs."""
-        jobs = wrap({
+        jobs = job({
             "square": square,
             "multiply": multiply_with_context
         })
@@ -256,7 +256,7 @@ def test_flowmanager_run_static_method():
         double_result = inputs["double"]["result"]
         return double_result + 1
     
-    jobs = wrap({
+    jobs = job({
         "double": double,
         "increment": increment_with_context
     })
@@ -290,7 +290,7 @@ def test_display_results(capsys):
         add_result = inputs["add"]["result"]
         return add_result - 2
     
-    jobs = wrap({
+    jobs = job({
         "add": add,
         "subtract": subtract_with_context
     })
@@ -351,7 +351,7 @@ def test_error_handling_in_execute():
     
     # Create job dictionary with the failing job
     job_dict = {}
-    single_job = wrap({"failing": failing_job})
+    single_job = job({"failing": failing_job})
     
     # Create a DSL with just this single job
     dsl = single_job
@@ -374,7 +374,7 @@ def test_timeout_handling_in_execute():
         return x
     
     # Create the DSL directly
-    single_job = wrap({"slow": slow_job})
+    single_job = job({"slow": slow_job})
     
     # For a single job, just use the job itself as the DSL
     dsl = single_job
@@ -628,7 +628,7 @@ def test_submit_multiple_tasks_pipeline():
     transformer = NumberTransformer("transformer")
     
     # Create the DSL pipeline with both JobABC classes and a wrapped function
-    jobs = wrap({
+    jobs = job({
         "generator": generator,
         "transformer": transformer,
         "aggregator": aggregate_results  # Regular function that will be wrapped

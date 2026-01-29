@@ -9,7 +9,7 @@ Demonstrates advanced Flow4AI features:
 """
 
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap, p, JobsDict
+from flow4ai.dsl import job, p, JobsDict
 from flow4ai.job import JobABC
 
 
@@ -54,7 +54,7 @@ def main():
     cache_manager = DataProcessor("CacheManager", "caching")
     
     # Wrap everything into job dictionary
-    jobs: JobsDict = wrap({
+    jobs: JobsDict = job({
         "analyzer": analyzer,
         "cache_manager": cache_manager,
         "times": times_two,

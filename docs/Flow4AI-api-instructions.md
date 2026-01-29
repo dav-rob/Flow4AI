@@ -92,7 +92,7 @@ For more control, create an instance of `FlowManager`. This allows you to add mu
 
 ```python
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap
+from flow4ai.dsl import job
 from flow4ai.job import Task # Import Task for explicit task creation
 
 # Define functions or job classes
@@ -170,7 +170,7 @@ Create more complex pipelines with multiple processing steps:
 
 ```python
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap, p
+from flow4ai.dsl import job, p
 
 # Define functions for each step
 def generate_numbers(start, count):
@@ -213,7 +213,7 @@ Create pipelines with branches that execute in parallel:
 
 ```python
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap, p
+from flow4ai.dsl import job, p
 
 # Define functions for different branches
 def generate_numbers(start, count):
@@ -265,7 +265,7 @@ The `execute` method combines `add_dsl`, `submit`, `wait_for_completion`, and `p
 
 ```python
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap
+from flow4ai.dsl import job
 
 # Define functions
 def add(x_val): # Renamed for clarity
@@ -313,7 +313,7 @@ Create custom job classes by inheriting from `JobABC`:
 ```python
 from flow4ai.flowmanager import FlowManager
 from flow4ai.job import JobABC
-from flow4ai.dsl import wrap
+from flow4ai.dsl import job
 
 class NumberGenerator(JobABC):
     async def run(self, task):
@@ -365,7 +365,7 @@ Use the `j_ctx` parameter to access context information in functions:
 
 ```python
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap
+from flow4ai.dsl import job
 
 # Simple function without context
 def generate_data(value):
@@ -426,11 +426,11 @@ results = fm.pop_results()
 
 ```python
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap
+from flow4ai.dsl import job
 
 # Helper to create simple DSLs
 def create_pipeline(op_name, func):
-    return wrap({op_name: func})[op_name]
+    return job({op_name: func})[op_name]
 
 # Define DSLs
 dsl_square = create_pipeline("calculator", lambda x: x*x)
@@ -501,7 +501,7 @@ You can register a callback function with `FlowManager` that will be executed ea
 
 ```python
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap
+from flow4ai.dsl import job
 
 def process_data_job(data_input):
     return data_input * 2
@@ -541,7 +541,7 @@ Submit multiple tasks at once:
 
 ```python
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap
+from flow4ai.dsl import job
 from flow4ai.job import Task
 
 def process_value(value):

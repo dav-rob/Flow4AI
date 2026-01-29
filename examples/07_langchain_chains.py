@@ -16,7 +16,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap
+from flow4ai.dsl import job
 
 # Load environment variables from .env file
 load_dotenv()
@@ -182,7 +182,7 @@ def main():
     print("- Result synthesis using j_ctx\n")
     
     # Wrap LangChain chains as Flow4AI jobs
-    jobs = wrap({
+    jobs = job({
         "technical": technical_analysis,
         "business": business_analysis,
         "user_experience": user_experience_analysis,

@@ -12,7 +12,7 @@ import multiprocessing as mp
 import time
 from functools import partial
 from flow4ai.flowmanagerMP import FlowManagerMP
-from flow4ai.dsl import wrap
+from flow4ai.dsl import job
 
 
 def cpu_intensive_task(data_size):
@@ -79,7 +79,7 @@ def main():
     collector = partial(handle_completion, completed_tasks)
     
     # Wrap the CPU-intensive function
-    dsl = wrap(compute=cpu_intensive_task)
+    dsl = job(compute=cpu_intensive_task)
     
     # Create FlowManagerMP with on_complete callback
     fm = FlowManagerMP(dsl, on_complete=collector)

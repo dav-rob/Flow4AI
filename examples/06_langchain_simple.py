@@ -16,7 +16,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap
+from flow4ai.dsl import job
 
 # Load environment variables from .env file
 load_dotenv()
@@ -90,7 +90,7 @@ def main():
     print("- Parallel LLM calls managed by Flow4AI\n")
     
     # Wrap LangChain functions as Flow4AI jobs
-    jobs = wrap({
+    jobs = job({
         "sentiment": analyze_sentiment_langchain,
         "summarize": summarize_langchain
     })

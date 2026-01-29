@@ -5,7 +5,7 @@ from typing import Dict, List
 import pytest
 
 from flow4ai import f4a_logging as logging
-from flow4ai.dsl import DSLComponent, JobsDict, wrap
+from flow4ai.dsl import DSLComponent, JobsDict, job
 from flow4ai.flowmanager import FlowManager
 from flow4ai.job import (SPLIT_STR, JobABC,  # Import the separator constant
                          Task)
@@ -100,7 +100,7 @@ def create_math_pipeline(prefix: str, operation: str) -> DSLComponent:
     math_op = MathOperation(f"{prefix}_operation", operation=operation)
     aggregator = Aggregator(f"{prefix}_aggregator")
     
-    jobs = wrap({
+    jobs = job({
         "generator": generator,
         "operation": math_op,
         "aggregator": aggregator
@@ -355,7 +355,7 @@ def test_completion_callback():
     def post_processor(result):
         assert result["result"] == "once upon a time in a galaxy far far away"
             
-    jobs = wrap({
+    jobs = job({
         "once": once,
         "ina": ina,
         "collate": collate

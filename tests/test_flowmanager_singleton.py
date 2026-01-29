@@ -3,7 +3,7 @@ import threading
 import pytest
 
 from flow4ai import f4a_logging as logging
-from flow4ai.dsl import wrap
+from flow4ai.dsl import job
 from flow4ai.flowmanager import FlowManager
 from flow4ai.job import JobABC
 
@@ -34,8 +34,8 @@ def test_singleton_basic():
     assert fm1 is fm2, "FlowManager.instance() should return the same instance"
     
     # Verify both instances share the same state by modifying one
-    job = TestJob("test_job")
-    dsl = wrap({"test_job": job})
+    test_job_instance = TestJob("test_job")
+    dsl = job({"test_job": test_job_instance})
     
     fq_name = fm1.add_dsl(dsl, "test_graph")
     
@@ -52,8 +52,8 @@ def test_singleton_reset():
     fm1 = FlowManager.instance()
     
     # Add a job to the instance
-    job = TestJob("reset_test_job")
-    dsl = wrap({"reset_test_job": job})
+    test_job_instance = TestJob("reset_test_job")
+    dsl = job({"reset_test_job": test_job_instance})
     fq_name = fm1.add_dsl(dsl, "reset_test_graph")
     
     # Reset the instance
@@ -123,7 +123,7 @@ def test_singleton_in_different_contexts():
     
     # Get the instance and configure it
     fm = FlowManager.instance()
-    dsl1 = wrap({"simple_func": simple_function})
+    dsl1 = job({"simple_func": simple_function})
     fq_name1 = fm.add_dsl(dsl1, "context1")
     
     # Submit a task and verify results
@@ -149,11 +149,11 @@ def test_singleton_in_different_contexts():
     assert fm is fm2, "Should get the same instance"
     
     # Add a new DSL with both functions separately
-    dsl2 = wrap({"async_func": async_func})
+    dsl2 = job({"async_func": async_func})
     fq_name2 = fm2.add_dsl(dsl2, "context2")
     
     # Add the job separately
-    dsl3 = wrap({"async_job": async_job})
+    dsl3 = job({"async_job": async_job})
     fq_name3 = fm2.add_dsl(dsl3, "context3")
     
     # Submit a task to the new DSL
@@ -196,7 +196,7 @@ def test_singleton_parameters():
         return data.get('x', 'default_value')
     
     # Add DSL and submit task
-    dsl = wrap({"simple_job": simple_job})
+    dsl = job({"simple_job": simple_job})
     fq_name = fm.add_dsl(dsl, "param_test")
     fm.submit_task({"x": "test_value"}, fq_name)
     
@@ -242,7 +242,7 @@ def test_wait_for_completion_no_tasks():
         return data.get('x', 'default_value')
     
     # Add DSL but don't submit any tasks
-    dsl = wrap({"simple_job": simple_job})
+    dsl = job({"simple_job": simple_job})
     fm.add_dsl(dsl, "no_tasks_test")
     
     # Log that we're calling wait_for_completion with no tasks

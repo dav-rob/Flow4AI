@@ -11,7 +11,7 @@ Demonstrates FlowManager's multi-threaded parallel execution:
 import asyncio
 import time
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap
+from flow4ai.dsl import job
 
 
 async def simulate_work(task_id, duration=0.5):
@@ -57,7 +57,7 @@ def main():
     print("- Shows interlacing of submission and completion\n")
     
     # Wrap the async function as a job
-    dsl = wrap(worker=simulate_work)
+    dsl = job(worker=simulate_work)
     
     # Create FlowManager with completion handler
     fm = FlowManager(on_complete=handle_completion)

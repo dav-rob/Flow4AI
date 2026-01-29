@@ -1,7 +1,7 @@
 import pytest
 
 from flow4ai import f4a_logging as logging
-from flow4ai.dsl import DSLComponent, JobsDict, wrap
+from flow4ai.dsl import DSLComponent, JobsDict, job
 from flow4ai.flowmanager import FlowManager
 from flow4ai.job import JobABC, Task
 
@@ -128,7 +128,7 @@ def test_add_dsl_resubmission():
     job2 = SimpleJob("job2")
     
     # Wrap jobs in a dictionary
-    jobs = wrap({
+    jobs = job({
         "job1": job1,
         "job2": job2
     })
@@ -178,7 +178,7 @@ def test_dsl_submission_with_tasks():
     processor2 = SimpleJob("processor2")
     
     # Wrap jobs
-    jobs = wrap({
+    jobs = job({
         "processor1": processor1,
         "processor2": processor2
     })
@@ -239,7 +239,7 @@ def test_new_dsl_with_same_structure():
     # Create first DSL
     job1 = SimpleJob("job1")
     job2 = SimpleJob("job2")
-    jobs1 = wrap({
+    jobs1 = job({
         "job1": job1,
         "job2": job2
     })
@@ -256,7 +256,7 @@ def test_new_dsl_with_same_structure():
     # Create second DSL with same structure but different objects
     job3 = SimpleJob("job1")  # Same name but different object
     job4 = SimpleJob("job2")  # Same name but different object
-    jobs2 = wrap({
+    jobs2 = job({
         "job1": job3,
         "job2": job4
     })
@@ -286,7 +286,7 @@ def test_new_dsl_with_same_structure():
     # Create a third DSL with different job name structure
     job5 = SimpleJob("processorA")
     job6 = SimpleJob("processorB")
-    jobs3 = wrap({
+    jobs3 = job({
         "processorA": job5,
         "processorB": job6
     })
@@ -318,7 +318,7 @@ def test_add_dsl_dict_single_graph_no_variants():
     aggregator = Aggregator("aggregator")
     
     # Wrap jobs in a dictionary
-    jobs = wrap({
+    jobs = job({
         "generator": generator,
         "squarer": squarer,
         "aggregator": aggregator
@@ -427,7 +427,7 @@ def test_add_dsl_dict_single_graph_with_variants():
         math_op = MathOperation(f"{prefix}_operation", operation=operation)
         aggregator = Aggregator(f"{prefix}_aggregator")
         
-        jobs = wrap({
+        jobs = job({
             "generator": generator,
             "operation": math_op,
             "aggregator": aggregator
@@ -568,14 +568,14 @@ def test_add_dsl_dict_multiple_graphs_no_variants():
     multiply_aggregator = Aggregator("multiply_aggregator")
     
     # Wrap jobs for first graph (sum)
-    sum_jobs = wrap({
+    sum_jobs = job({
         "generator": sum_generator,
         "operation": sum_operation,
         "aggregator": sum_aggregator
     })
     
     # Wrap jobs for second graph (multiply)
-    multiply_jobs = wrap({
+    multiply_jobs = job({
         "generator": multiply_generator,
         "operation": multiply_operation,
         "aggregator": multiply_aggregator
@@ -698,7 +698,7 @@ def test_add_dsl_dict_multiple_graphs_with_variants():
         math_op = MathOperation(f"{prefix}_operation", operation=operation)
         aggregator = Aggregator(f"{prefix}_aggregator")
         
-        jobs = wrap({
+        jobs = job({
             "generator": generator,
             "operation": math_op,
             "aggregator": aggregator

@@ -8,7 +8,7 @@ Demonstrates the core Flow4AI concepts:
 """
 
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap, p
+from flow4ai.dsl import job, p
 
 
 def analyze_text(text):
@@ -73,7 +73,7 @@ def main():
     print("="*60 + "\n")
     
     # Create jobs from our functions
-    jobs = wrap({
+    jobs = job({
         "analyze": analyze_text,
         "sentiment": check_sentiment,
         "keywords": extract_keywords,

@@ -1,6 +1,6 @@
 from typing import Any, Dict
 
-from flow4ai.dsl import DSLComponent, JobsDict, p, wrap
+from flow4ai.dsl import DSLComponent, JobsDict, p, job
 from flow4ai.dsl_graph import dsl_to_precedence_graph, visualize_graph
 from flow4ai.f4a_graph import validate_graph
 from flow4ai.flowmanager import FlowManager
@@ -96,7 +96,7 @@ def test_complex_mixed():
     formatter = ProcessorJob("Formatter", "format")
     cache_manager = ProcessorJob("CacheManager", "cache")
 
-    jobs:JobsDict = wrap({
+    jobs:JobsDict = job({
             "analyzer2": analyzer2,
             "cache_manager": cache_manager,
             "times": times,
@@ -158,7 +158,7 @@ def test_execute_job_graph_from_dsl():
     formatter = ProcessorJob("Formatter", "format")
     cache_manager = ProcessorJob("CacheManager", "cache")
 
-    jobs:JobsDict = wrap({
+    jobs:JobsDict = job({
             "analyzer2": analyzer2,
             "cache_manager": cache_manager,
             "times": times,
@@ -241,7 +241,7 @@ def test_execute_with_task_params():
     square = lambda x: x**2
     join = lambda **kwargs: "_".join(map(str, sorted(kwargs.values()))) # Test kwargs
 
-    jobs: JobsDict = wrap({
+    jobs: JobsDict = job({
         "times": times,
         "add": add,
         "square": square,
@@ -296,7 +296,7 @@ def test_execute_with_shorthand_task_params():
     square = lambda x: x**2
     join = lambda **kwargs: "_".join(map(str, sorted(kwargs.values()))) # Test kwargs
 
-    jobs: JobsDict = wrap({
+    jobs: JobsDict = job({
         "times": times,
         "add": add,
         "square": square,

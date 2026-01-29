@@ -125,7 +125,7 @@ Perfect for API calls, database queries, file I/O, and network operations.
 ```python
 import asyncio
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap
+from flow4ai.dsl import job
 
 async def fetch_data(task_id):
     await asyncio.sleep(0.5)  # Simulate I/O
@@ -159,7 +159,7 @@ For CPU-intensive workloads requiring true parallelism across cores.
 
 ```python
 from flow4ai.flowmanagerMP import FlowManagerMP
-from flow4ai.dsl import wrap
+from flow4ai.dsl import job
 
 def cpu_intensive(n):
     # CPU-bound computation (e.g., prime calculations)
@@ -237,7 +237,7 @@ When processing multiple tasks with different data, results need access to the *
 
 ```python
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap
+from flow4ai.dsl import job
 
 def process_order(order_id, amount):
     tax = amount * 0.08

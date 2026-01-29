@@ -10,7 +10,7 @@ This example demonstrates critical Flow4AI concepts across three scenarios:
 import asyncio
 from typing import Dict, Any
 from flow4ai.flowmanager import FlowManager
-from flow4ai.dsl import wrap, p
+from flow4ai.dsl import job, p
 from flow4ai.job import JobABC
 
 # ==============================================================================
@@ -56,7 +56,7 @@ def scenario_1_syntax_differences():
         return {"result": val * 5}
 
     # Setup & Execution
-    jobs = wrap({
+    jobs = job({
         "class_job": ClassBasedJob("class_job"),
         "context_job": context_func,
         "simple_job": simple_func
@@ -98,7 +98,7 @@ def scenario_2_multiple_tails():
         prev = j_ctx["inputs"]["start"]["data"]
         return {"b_result": prev + 200}
         
-    jobs = wrap({
+    jobs = job({
         "start": start_job,
         "branch_a": branch_a,
         "branch_b": branch_b
@@ -134,7 +134,7 @@ def scenario_3_intermediate_and_lifecycle():
     def step_2(j_ctx): return {"step": 2, "msg": "I am intermediate"}
     def step_3(j_ctx): return {"step": 3, "msg": "I am the tail"}
     
-    jobs = wrap({"step1": step_1, "step2": step_2, "step3": step_3})
+    jobs = job({"step1": step_1, "step2": step_2, "step3": step_3})
     
     # 1. Accessing Intermediate Results
     # By default, only the tail result is returned. 
