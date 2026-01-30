@@ -1,0 +1,3 @@
+# Ignore downloaded corpus and vector DB
+corpus/
+chroma_db/
