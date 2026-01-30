@@ -9,6 +9,9 @@
 - Debug logs: `python -m pytest -s` or `FLOW4AI_LOG_LEVEL=DEBUG python -m pytest -v -s`
 - Type checking: `mypy src/flow4ai`
 
+## ⚠️ Virtual Environment
+If `python` is not found, ask the user to run `pyactivate` to activate the .venv.
+
 ## ⚠️ CRITICAL: No Complex sed Scripts
 **DO NOT create "god-like" sed one-liners for bulk code changes.** They break silently and waste hours debugging. Instead:
 1. Use proper file editing tools (replace_file_content, multi_replace_file_content)

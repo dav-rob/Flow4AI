@@ -44,3 +44,4 @@ dev_resources/temp.json
 temp.txt
 .env
 test_results.txt
+examples/integrations/parallel_rag/openAIratelimits.txt

@@ -41,10 +41,10 @@ from flow4ai.dsl import job
 # Local imports
 from utils.download import download_corpus, load_corpus
 from utils.chunking import chunk_corpus, Chunk
-from jobs.embedding import embed_chunk
+from jobs.embedding import embed_chunk, reset_client as reset_embed_client
 from jobs.indexing import index_chunks, search_collection, get_chroma_client
 from jobs.search import search_and_rerank
-from jobs.generation import generate_answer
+from jobs.generation import generate_answer, reset_client as reset_gen_client
 
 
 # =============================================================================
@@ -261,6 +261,11 @@ def main():
         print(f"   Embed time: {index_result['embed_time']:.2f}s")
     
     if args.mode in ["full", "query"]:
+        # Reset OpenAI clients before new event loop (fixes stale connection issue)
+        if args.mode == "full":
+            reset_embed_client()
+            reset_gen_client()
+        
         query_result = asyncio.run(run_query_pipeline(args.query))
         
         if query_result.get("status") != "success":

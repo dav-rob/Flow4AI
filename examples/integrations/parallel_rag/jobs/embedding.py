@@ -9,7 +9,7 @@ import asyncio
 from typing import List
 from openai import AsyncOpenAI
 
-# Global client (initialized once)
+# Global client (initialized once per event loop)
 _client = None
 
 
@@ -19,6 +19,12 @@ def get_client() -> AsyncOpenAI:
     if _client is None:
         _client = AsyncOpenAI()
     return _client
+
+
+def reset_client():
+    """Reset the client (needed when switching event loops via asyncio.run)."""
+    global _client
+    _client = None
 
 
 async def embed_chunk(chunk_id: str, text: str, model: str = "text-embedding-3-small") -> dict:

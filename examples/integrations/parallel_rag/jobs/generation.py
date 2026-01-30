@@ -20,6 +20,12 @@ def get_client() -> AsyncOpenAI:
     return _client
 
 
+def reset_client():
+    """Reset the client (needed when switching event loops via asyncio.run)."""
+    global _client
+    _client = None
+
+
 async def generate_answer(
     query: str,
     context_chunks: List[dict],
