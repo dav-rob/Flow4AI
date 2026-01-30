@@ -293,38 +293,31 @@ Flow4AI offers two ways to define jobs. Both are equally capable — choose base
 
 ### Accessing Data Inside Jobs
 
-The table below shows how to access different types of data from within your job:
+| Data You Need | Job Class (`JobABC`) | Function (with `j_ctx`) |
+|---|---|---|
+| **Parameters for *this* job** | `self.get_params()["key"]` | `kwargs["key"]` |
+| **Predecessors' outputs** | `self.get_inputs()["job_name"]` | `j_ctx["inputs"]["job_name"]` |
+| **Saved results** *(needs `.save_result=True`)* | `self.get_saved_results()["job_name"]` | `j_ctx["saved_results"]["job_name"]` |
+| **Full task dictionary** | `self.get_task()` | `j_ctx["task"]` |
 
-| Data You Need | Job Class (`JobABC`) | Function (with `j_ctx`) | Function (simple) |
-|---|---|---|---|
-| **Parameters for *this* job** | `self.get_params()` | `**kwargs` | Function arguments |
-| **Predecessor outputs** | `self.get_inputs()` | `j_ctx["inputs"]` | ❌ Not available |
-| **Full task dictionary** | `self.get_task()` | `j_ctx["task"]` | ❌ Not available |
-
-**How parameters get to jobs:** Parameters are passed via the task dictionary. Use nested format `{"job_name": {"param": value}}` or shorthand `{"job_name.param": value}`. For functions, parameters matching the signature are auto-injected; use `**kwargs` to receive all parameters. See [`tutorials/02_parameters.py`](examples/tutorials/02_parameters.py) for comprehensive examples.
+> **Note:** `get_inputs()` returns outputs from **immediate predecessors only**. For earlier jobs in a chain, use `get_saved_results()` (requires setting `.save_result=True` on those jobs).
 
 **Examples:**
 
 ```python
-# Job Class - use get_params() for clean parameter access
+# Job Class
 class MyJob(JobABC):
     async def run(self, task):
-        params = self.get_params()       # {"val": 10, "name": "test"}
-        val = params.get("val", 0)
-        
-        inputs = self.get_inputs()        # Results from predecessor jobs
-        prev = inputs.get("other_job", {}).get("result")
-        return {"result": val * 2}
+        params = self.get_params()                    # Parameters for this job
+        inputs = self.get_inputs()["prev_job"]        # Immediate predecessors
+        saved = self.get_saved_results()["early_job"] # Earlier jobs (save_result=True)
+        return {"result": params.get("val", 0) * 2}
 
-# Function with j_ctx - full context access
+# Function with j_ctx
 def my_function(j_ctx, **kwargs):
-    val = kwargs.get("val", 0)            # Auto-extracted from task
-    inputs = j_ctx["inputs"]              # Results from predecessor jobs
-    task = j_ctx["task"]                  # Full task dictionary
-    return {"result": val * 2}
-
-# Simple function - parameters auto-injected as arguments
-def simple_function(val):
+    val = kwargs.get("val", 0)                        # Parameters for this job
+    inputs = j_ctx["inputs"]["prev_job"]              # Immediate predecessors
+    saved = j_ctx["saved_results"]["early_job"]       # Earlier jobs (save_result=True)
     return {"result": val * 2}
 ```
 
