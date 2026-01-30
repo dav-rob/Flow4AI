@@ -22,9 +22,9 @@ When running the parallel_rag example with 3033 chunks, FlowManager hangs - task
 
 ## PRDs (Sequentially)
 
-### 1. [Throttled Submission Pattern](prd_throttled_submission.md)
+### 1. [Throttled Submission Pattern](prd_throttled_submission.md) ✅
 Monitor load and submit jobs incrementally to stay within limits.
-**Status:** Not started
+**Status:** IMPLEMENTED - 3033 chunks in 12.39s (245/sec)
 
 ### 2. [FlowManagerMP Multi-Process Scaling](prd_flowmanagermp_scaling.md)
 Extend FlowManagerMP to spawn processes per CPU core for maximum parallelism.
@@ -37,3 +37,4 @@ Extend FlowManagerMP to spawn processes per CPU core for maximum parallelism.
 | 2026-01-30 | Discovered 3000+ chunk hanging issue |
 | 2026-01-30 | Created load-management branch |
 | 2026-01-30 | Created PRDs |
+| 2026-01-30 | **Implemented throttled submission - 3033 chunks in 12.39s!** |

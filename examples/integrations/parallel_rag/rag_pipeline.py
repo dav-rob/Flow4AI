@@ -151,6 +151,130 @@ def run_indexing_pipeline(
 
 
 # =============================================================================
+# Indexing Pipeline - THROTTLED for Large Scale (3000+ chunks)
+# =============================================================================
+
+def run_indexing_pipeline_throttled(
+    max_chunks: int = None,
+    reset_collection: bool = True,
+    books: list = None,
+    batch_size: int = 250,
+    max_pending: int = 500,
+) -> dict:
+    """
+    Throttled embedding pipeline for large scale (3000+ chunks).
+    
+    Uses fm.get_counts() to monitor completion rate and avoid overwhelming
+    the system. Submits in batches and waits when too many tasks are pending.
+    
+    Args:
+        batch_size: Number of tasks to submit per batch
+        max_pending: Maximum pending tasks before waiting
+    """
+    output.section("INDEXING PIPELINE (THROTTLED)")
+    
+    # 1. Load corpus (same as regular pipeline)
+    output.step("📥", "Downloading corpus...")
+    if books is None:
+        books = ["alice_wonderland", "sherlock_holmes", "frankenstein"]
+    
+    corpus_dir = Path(__file__).parent / "corpus"
+    download_corpus(corpus_dir, books)
+    corpus = load_corpus(corpus_dir)
+    output.detail(f"Loaded {len(corpus)} documents")
+    
+    # 2. Chunk text
+    output.step("✂️", "Chunking text...")
+    chunks = chunk_corpus(corpus, chunk_size=500, overlap=100)
+    output.detail(f"Created {len(chunks)} chunks")
+    
+    if max_chunks and len(chunks) > max_chunks:
+        chunks = chunks[:max_chunks]
+        output.detail(f"Limited to {max_chunks} chunks for testing")
+    
+    # 3. Throttled parallel embedding
+    output.step("🔄", f"Embedding {len(chunks)} chunks (throttled: {batch_size}/batch, max {max_pending} pending)...")
+    
+    embeddings = []
+    
+    def on_complete(result):
+        embeddings.append(result)
+    
+    # ----- FLOW4AI THROTTLED WORKFLOW -----
+    workflow = job(embed=embed_chunk)
+    fm = FlowManager(on_complete=on_complete)
+    fq_name = fm.add_workflow(workflow, "embedding_pipeline")
+    
+    start_time = time.perf_counter()
+    submitted = 0
+    last_progress = 0
+    
+    while submitted < len(chunks):
+        # Submit a batch
+        batch_end = min(submitted + batch_size, len(chunks))
+        for i in range(submitted, batch_end):
+            chunk = chunks[i]
+            task = {
+                "embed.chunk_id": chunk.id,
+                "embed.text": chunk.text,
+            }
+            fm.submit_task(task, fq_name)
+        submitted = batch_end
+        
+        # Wait if too many pending
+        while True:
+            counts = fm.get_counts()
+            pending = counts['submitted'] - counts['completed'] - counts['errors']
+            
+            # Progress update
+            if counts['completed'] - last_progress >= 100:
+                output.detail(f"Progress: {counts['completed']}/{len(chunks)} complete, {pending} pending")
+                last_progress = counts['completed']
+            
+            if pending < max_pending or submitted >= len(chunks):
+                break
+            time.sleep(0.1)
+    
+    output.detail(f"Submitted all {len(chunks)} tasks, waiting for completion...")
+    
+    # Wait for final completion
+    success = fm.wait_for_completion(timeout=600, check_interval=0.5)
+    embed_time = time.perf_counter() - start_time
+    # ----- END FLOW4AI THROTTLED WORKFLOW -----
+    
+    if not success:
+        output.error("Timeout waiting for embeddings")
+        return {"status": "timeout"}
+    
+    output.stats("Embedded", len(embeddings), embed_time)
+    
+    # 4. Index in ChromaDB
+    output.step("💾", "Indexing in ChromaDB...")
+    
+    chunk_dicts = [c.to_dict() for c in chunks]
+    index_result = asyncio.run(index_chunks(
+        chunk_dicts,
+        embeddings,
+        reset=reset_collection,
+    ))
+    
+    if index_result.get("status") == "error":
+        output.error(f"Indexing failed: {index_result.get('error')}")
+        return index_result
+    
+    output.success(f"Indexed {index_result.get('indexed_count')} chunks")
+    
+    return {
+        "status": "success",
+        "chunks_created": len(chunks),
+        "embeddings_created": len(embeddings),
+        "indexed_count": index_result.get("indexed_count"),
+        "embed_time": embed_time,
+        "mode": "throttled",
+    }
+
+
+# =============================================================================
 # Query Pipeline - Direct Async Version
 # =============================================================================
 
@@ -273,16 +397,30 @@ def main():
     parser.add_argument("--chunks", type=int, default=None, help="Limit chunks")
     parser.add_argument("--query", type=str, default="What happens to Alice in Wonderland?")
     parser.add_argument("--books", nargs="+", default=None)
+    parser.add_argument("--throttle", action="store_true", 
+                        help="Use throttled submission for large datasets (3000+ chunks)")
+    parser.add_argument("--batch-size", type=int, default=250,
+                        help="Batch size for throttled mode (default: 250)")
+    parser.add_argument("--max-pending", type=int, default=500,
+                        help="Max pending tasks for throttled mode (default: 500)")
     
     args = parser.parse_args()
     
     output.section("🚀 Flow4AI Massive Parallel RAG Pipeline")
     
     if args.mode in ["full", "index"]:
-        index_result = run_indexing_pipeline(
-            max_chunks=args.chunks,
-            books=args.books,
-        )
+        if args.throttle:
+            index_result = run_indexing_pipeline_throttled(
+                max_chunks=args.chunks,
+                books=args.books,
+                batch_size=args.batch_size,
+                max_pending=args.max_pending,
+            )
+        else:
+            index_result = run_indexing_pipeline(
+                max_chunks=args.chunks,
+                books=args.books,
+            )
         
         if index_result.get("status") != "success":
             output.error("Indexing failed")
@@ -293,6 +431,7 @@ def main():
             ("Embeddings", str(index_result['embeddings_created'])),
             ("Indexed", str(index_result['indexed_count'])),
             ("Time", f"{index_result['embed_time']:.2f}s"),
+            ("Mode", index_result.get('mode', 'parallel')),
         ])
     
     if args.mode in ["full", "query"]:

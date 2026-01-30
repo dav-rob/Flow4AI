@@ -1,5 +1,14 @@
 # PRD: Throttled Submission Pattern
 
+**STATUS: IMPLEMENTED ✅**
+
+## Results
+
+| Chunks | Mode | Time | Rate | Status |
+|--------|------|------|------|--------|
+| 3033 | Parallel (all at once) | ∞ (hangs) | 0 | ❌ Fails |
+| 3033 | **Throttled** | **12.39s** | **245/sec** | ✅ Works |
+
 ## Problem Statement
 
 When submitting 3000+ tasks simultaneously to FlowManager, the system hangs - tasks are submitted but none complete. This is because FlowManager has a practical limit on concurrent tasks.
