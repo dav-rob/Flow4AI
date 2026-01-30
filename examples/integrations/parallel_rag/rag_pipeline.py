@@ -45,6 +45,12 @@ from jobs.embedding import embed_chunk, reset_client as reset_embed_client
 from jobs.indexing import index_chunks, search_collection, get_chroma_client
 from jobs.search import search_and_rerank
 from jobs.generation import generate_answer, reset_client as reset_gen_client
+from jobs.query_jobs import (
+    embed_query_job,
+    vector_search_job,
+    bm25_rerank_job,
+    generate_answer_job,
+)
 
 
 # =============================================================================
@@ -217,6 +223,87 @@ async def run_query_pipeline(query: str) -> dict:
             "mean_vector_score": search_result["mean_vector_score"],
             "mean_bm25_score": search_result["mean_bm25_score"],
         },
+    }
+
+
+# =============================================================================
+# Query Pipeline - FlowManager Version with Job Chaining
+# =============================================================================
+
+def run_query_pipeline_fm(query: str) -> dict:
+    """
+    Run a single query using FlowManager with explicit job chaining.
+    
+    This demonstrates:
+    - Sequential workflow with >> operator
+    - j_ctx["inputs"] for accessing predecessor outputs
+    - Explicit data flow between jobs
+    
+    Args:
+        query: The user's question
+    
+    Returns:
+        Dict with answer and citations
+    """
+    print("\n" + "="*60)
+    print("QUERY PIPELINE (FlowManager)")
+    print("="*60)
+    print(f"\n❓ Query: {query}")
+    
+    # Reset clients for fresh connections
+    reset_embed_client()
+    reset_gen_client()
+    
+    # Define sequential workflow using >> operator
+    # Each job's output becomes available to next job via j_ctx["inputs"]
+    query_workflow = (
+        job(embed_query=embed_query_job)
+        >> job(vector_search=vector_search_job)
+        >> job(bm25_rerank=bm25_rerank_job)
+        >> job(generate_answer=generate_answer_job)
+    )
+    
+    # Create FlowManager
+    result_holder = {}
+    
+    def on_complete(result):
+        result_holder["result"] = result
+    
+    fm = FlowManager(on_complete=on_complete)
+    fq_name = fm.add_workflow(query_workflow, "query_pipeline")
+    
+    # Submit task: only embed_query needs params
+    # Other jobs get all data from j_ctx["inputs"] (predecessor outputs)
+    task = {
+        "embed_query": {"text": query},
+    }
+    
+    print("\n🔄 Running workflow: embed_query >> vector_search >> bm25_rerank >> generate_answer")
+    fm.submit_task(task, fq_name)
+    
+    success = fm.wait_for_completion(timeout=60)
+    
+    if not success:
+        print("   ❌ Timeout")
+        return {"status": "error", "error": "Timeout"}
+    
+    # Extract result
+    result = result_holder.get("result", {})
+    
+    if result.get("status") != "success":
+        print(f"   ❌ Failed: {result.get('error', 'Unknown error')}")
+        return result
+    
+    print(f"   ✅ Generated answer with {result['citations']['total_cited']} citations")
+    print(f"   📊 Mean vector score: {result['search_stats']['mean_vector_score']}")
+    print(f"   📊 Mean BM25 score: {result['search_stats']['mean_bm25_score']}")
+    
+    return {
+        "status": "success",
+        "query": query,
+        "answer": result["answer"],
+        "citations": result["citations"],
+        "search_stats": result["search_stats"],
     }
 
 
