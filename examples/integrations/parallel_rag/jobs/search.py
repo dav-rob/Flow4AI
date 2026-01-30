@@ -48,7 +48,7 @@ async def search_and_rerank(
     query_embedding = query_result["embedding"]
     
     # Vector search
-    vector_results = search_collection(
+    vector_results = await search_collection(
         query_embedding,
         collection_name=collection_name,
         top_k=top_k_initial,

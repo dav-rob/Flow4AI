@@ -2,8 +2,11 @@
 ChromaDB indexing job for storing embeddings.
 
 Uses ChromaDB for persistent vector storage.
+NOTE: ChromaDB operations are synchronous, so we wrap them
+      in asyncio.to_thread() to avoid blocking the event loop.
 """
 
+import asyncio
 import os
 from typing import List, Optional
 from pathlib import Path
@@ -66,6 +69,19 @@ async def index_chunks(
     Returns:
         Dict with indexing statistics
     """
+    # Run sync ChromaDB ops in thread pool to avoid blocking
+    return await asyncio.to_thread(
+        _index_chunks_sync, chunks, embeddings, collection_name, reset
+    )
+
+
+def _index_chunks_sync(
+    chunks: List[dict],
+    embeddings: List[dict],
+    collection_name: str = "rag_chunks",
+    reset: bool = False,
+) -> dict:
+    """Sync implementation of index_chunks for thread pool execution."""
     if not CHROMADB_AVAILABLE:
         return {"error": "chromadb not installed", "status": "error"}
     
@@ -128,7 +144,7 @@ async def index_chunks(
     }
 
 
-def search_collection(
+async def search_collection(
     query_embedding: List[float],
     collection_name: str = "rag_chunks",
     top_k: int = 20,
@@ -144,6 +160,18 @@ def search_collection(
     Returns:
         List of results with text, metadata, and distance
     """
+    # Run sync ChromaDB ops in thread pool
+    return await asyncio.to_thread(
+        _search_collection_sync, query_embedding, collection_name, top_k
+    )
+
+
+def _search_collection_sync(
+    query_embedding: List[float],
+    collection_name: str = "rag_chunks",
+    top_k: int = 20,
+) -> List[dict]:
+    """Sync implementation of search_collection for thread pool execution."""
     if not CHROMADB_AVAILABLE:
         return []
     
