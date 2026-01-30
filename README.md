@@ -12,6 +12,7 @@ Whether you're processing thousands of documents, chaining complex LLM calls, or
 - [Core Concepts](#core-concepts)
 - [The Core Pattern: Divide and Aggregate](#the-core-pattern-divide-and-aggregate)
 - [Massive Parallelism](#massive-parallel-execution)
+  - [Async Requirements](#async-requirements-for-parallel-code)
 - [Complex Workflows](#complex-workflow-example)
 - [Working Examples](#working-examples)
 - [Deep Dive: Functions vs Job Classes](#deep-dive-functions-vs-job-classes)
@@ -149,6 +150,29 @@ print(f"Sequential would take: {1000 * 0.5:.0f}s")
 print(f"Speedup: {(1000 * 0.5) / elapsed:.0f}x")
 # Typical output: ~1-2 seconds (100-500x speedup!)
 ```
+
+### Async Requirements for Parallel Code
+
+**Critical:** Flow4AI uses asyncio for concurrency. Blocking (sync) code will execute sequentially, not in parallel.
+
+| Pattern | 5 Tasks | Speedup |
+|---------|---------|--------|
+| OpenAI Sync | 5.81s | 1x |
+| **OpenAI Async** | 0.52s | **11.3x** |
+| LangChain `invoke()` | 3.43s | 1x |
+| **LangChain `ainvoke()`** | 1.33s | **2.6x** |
+
+```python
+# ❌ WRONG - blocks event loop, runs sequentially
+def my_job(prompt):
+    return OpenAI().chat.completions.create(...)  # Blocking!
+
+# ✅ CORRECT - async enables parallel execution
+async def my_job(prompt):
+    return await AsyncOpenAI().chat.completions.create(...)
+```
+
+See [`examples/async/`](examples/async/) for detailed comparisons and benchmarks.
 
 ### FlowManagerMP: Multi-process (CPU-Bound)
 
