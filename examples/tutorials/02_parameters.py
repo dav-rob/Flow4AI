@@ -306,23 +306,52 @@ def demo_task_passthrough():
 # SECTION 8: Inputs vs Saved Results in Serial Chains
 # =============================================================================
 
-class ChainedJob(JobABC):
-    """Demonstrates get_inputs() vs get_saved_results() access patterns."""
-    
-    def __init__(self, name):
-        super().__init__(name)
+class JobClassA(JobABC):
+    """First job in chain - returns initial data."""
+    def __init__(self):
+        super().__init__('job_class_a')
     
     async def run(self, task):
+        return {'a_value': 100, 'source': 'JobClassA'}
+
+
+class JobClassB(JobABC):
+    """Second job - passes data forward."""
+    def __init__(self):
+        super().__init__('job_class_b')
+    
+    async def run(self, task):
+        return {'b_value': 200, 'source': 'JobClassB'}
+
+
+class JobClassC(JobABC):
+    """Third job - intermediate step."""
+    def __init__(self):
+        super().__init__('job_class_c')
+    
+    async def run(self, task):
+        return {'c_value': 300, 'source': 'JobClassC'}
+
+
+class JobClassD(JobABC):
+    """Final job - demonstrates get_inputs() vs get_saved_results()."""
+    def __init__(self):
+        super().__init__('job_class_d')
+    
+    async def run(self, task):
+        # get_inputs() - only immediate predecessor
         inputs = self.get_inputs()
+        # get_saved_results() - all jobs with save_result=True
         saved = self.get_saved_results()
         
-        result = {
-            "job_name": self.name,
-            "inputs_keys": list(inputs.keys()),
-            "saved_keys": list(saved.keys()),
-        }
+        print(f"\n  [JobABC] job_class_d sees in get_inputs(): {list(inputs.keys())}")
+        print(f"  [JobABC] job_class_d sees in get_saved_results(): {list(saved.keys())}")
         
-        return result
+        # Access earlier job data via saved results
+        if 'job_class_a' in saved:
+            print(f"  [JobABC] job_class_a data: {saved['job_class_a'].get('a_value')}")
+        
+        return {'d_result': 'done_class'}
 
 
 def demo_inputs_vs_saved_results():
@@ -341,50 +370,81 @@ def demo_inputs_vs_saved_results():
     print("SECTION 8: Inputs vs Saved Results in Serial Chains")
     print("="*60)
     
-    # Using wrapped functions
-    def job_a():
-        return {"a_value": 100}
+    # =========================================================================
+    # Part 1: Using JobABC classes
+    # =========================================================================
+    print("\n--- Part 1: Using JobABC Classes ---")
     
-    def job_b(j_ctx):
-        return {"b_value": 200}
+    job_a = JobClassA()
+    job_a.save_result = True  # Mark to save
     
-    def job_c(j_ctx):
-        return {"c_value": 300}
+    job_b = JobClassB()
+    job_b.save_result = True  # Mark to save
     
-    def job_d(j_ctx):
-        # Get immediate predecessor data
-        inputs = j_ctx["inputs"]
-        # Get saved results from earlier jobs
-        saved = j_ctx.get("saved_results", {})
-        
-        print(f"\n  job_d sees in inputs: {list(inputs.keys())}")
-        print(f"  job_d sees in saved_results: {list(saved.keys())}")
-        
-        # Access earlier job data via saved_results
-        if "job_a" in saved:
-            print(f"  job_a data (via saved_results): {saved['job_a'].get('a_value')}")
-        
-        return {"d_result": "done"}
-    
-    jobs = job({"job_a": job_a, "job_b": job_b, "job_c": job_c, "job_d": job_d})
-    
-    # Mark some jobs to save their results
-    jobs["job_a"].save_result = True
-    jobs["job_b"].save_result = True
+    job_c = JobClassC()
     # job_c does NOT save - to show it won't appear in saved_results
     
-    workflow = jobs["job_a"] >> jobs["job_b"] >> jobs["job_c"] >> jobs["job_d"]
+    job_d = JobClassD()
     
-    print("\nWorkflow: job_a >> job_b >> job_c >> job_d")
-    print("save_result=True: job_a, job_b")
-    print("save_result=False: job_c (default)")
+    workflow_class = job_a >> job_b >> job_c >> job_d
     
-    errors, result = FlowManager.run(workflow, {}, "inputs_vs_saved")
+    print("\nWorkflow: JobClassA >> JobClassB >> JobClassC >> JobClassD")
+    print("save_result=True: JobClassA, JobClassB")
+    print("save_result=False: JobClassC (default)")
     
-    print("\n  Explanation:")
-    print("  - job_d can access job_c via get_inputs() (immediate predecessor)")
-    print("  - job_d can access job_a, job_b via get_saved_results() (save_result=True)")
-    print("  - job_c is NOT in saved_results because save_result=False")
+    errors, result = FlowManager.run(workflow_class, {}, "class_demo")
+    
+    # =========================================================================
+    # Part 2: Using wrapped functions
+    # =========================================================================
+    print("\n--- Part 2: Using Wrapped Functions ---")
+    
+    def fn_a():
+        return {"a_value": 100}
+    
+    def fn_b(j_ctx):
+        return {"b_value": 200}
+    
+    def fn_c(j_ctx):
+        return {"c_value": 300}
+    
+    def fn_d(j_ctx):
+        # j_ctx["inputs"] - only immediate predecessor
+        inputs = j_ctx["inputs"]
+        # j_ctx["saved_results"] - all jobs with save_result=True
+        saved = j_ctx.get("saved_results", {})
+        
+        print(f"\n  [Function] fn_d sees in j_ctx['inputs']: {list(inputs.keys())}")
+        print(f"  [Function] fn_d sees in j_ctx['saved_results']: {list(saved.keys())}")
+        
+        if "fn_a" in saved:
+            print(f"  [Function] fn_a data: {saved['fn_a'].get('a_value')}")
+        
+        return {"d_result": "done_fn"}
+    
+    jobs = job({"fn_a": fn_a, "fn_b": fn_b, "fn_c": fn_c, "fn_d": fn_d})
+    
+    # Mark some jobs to save their results
+    jobs["fn_a"].save_result = True
+    jobs["fn_b"].save_result = True
+    # fn_c does NOT save
+    
+    workflow_fn = jobs["fn_a"] >> jobs["fn_b"] >> jobs["fn_c"] >> jobs["fn_d"]
+    
+    print("\nWorkflow: fn_a >> fn_b >> fn_c >> fn_d")
+    print("save_result=True: fn_a, fn_b")
+    print("save_result=False: fn_c (default)")
+    
+    errors, result = FlowManager.run(workflow_fn, {}, "fn_demo")
+    
+    # =========================================================================
+    # Summary
+    # =========================================================================
+    print("\n--- Summary ---")
+    print("  JobABC classes: Use self.get_inputs() and self.get_saved_results()")
+    print("  Wrapped functions: Use j_ctx['inputs'] and j_ctx['saved_results']")
+    print("  get_inputs(): Only immediate predecessor")
+    print("  get_saved_results(): All jobs with save_result=True")
 
 
 # =============================================================================
