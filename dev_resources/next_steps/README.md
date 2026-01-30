@@ -1,37 +1,39 @@
-# Flow4AI Integration Examples - Next Steps
+# Load Management - Next Steps
 
-## Overview
+This directory contains PRDs for scaling Flow4AI beyond single-batch parallelism.
 
-This document summarizes research on potential integration examples for Flow4AI and outlines the implementation plan.
+## Background
 
-## Approved Implementation Order
+When running the parallel_rag example with 3033 chunks, FlowManager hangs - tasks are submitted but none complete. With 100-1000 chunks, it works perfectly (~4.6s for 1000 embeddings).
 
-1. **pydantic_structured.py** - Structured output extraction with Pydantic/Instructor
-2. **model_comparison.py** - Multi-model parallel queries and comparison
-3. **llamaindex_rag.py** - Simple RAG pipeline with LlamaIndex
+**Root cause:** FlowManager has a practical limit on concurrent tasks due to:
+- Python's GIL (single-threaded execution)
+- AsyncIO event loop capacity
+- External API rate limits (OpenAI)
 
-## Key Design Principles
+## Observed Limits
 
-1. **Succinctness** - Each example ~100-150 lines, clear and focused
-2. **Self-Contained** - Sample data embedded in code, no external files
-3. **Flow4AI Semantics** - Demonstrate correct use of `job()`, `p()`, `>>`, `j_ctx`, `save_result`
-4. **Fast Tests** - Use `max_tokens` where possible; skip slow tests (>10s) in core tests
-5. **Production Patterns** - Show real-world applicable patterns
+| Manager | Hardware | Approximate Limit |
+|---------|----------|-------------------|
+| FlowManager | Intel Mac | ~1000 concurrent |
+| FlowManagerMP | Intel Mac | ~10,000 concurrent |
+| FlowManager | M4 Mac | TBD (higher) |
+| FlowManagerMP | M4 Mac | TBD (higher) |
 
-## Test Strategy
+## PRDs (Sequentially)
 
-- Examples < 10s: Include in `run_core_tests.sh`
-- Examples > 10s: Skip in core tests, run only in full suite
-- Flag slow examples for potential optimization review
+### 1. [Throttled Submission Pattern](prd_throttled_submission.md)
+Monitor load and submit jobs incrementally to stay within limits.
+**Status:** Not started
 
-## PRD Documents
+### 2. [FlowManagerMP Multi-Process Scaling](prd_flowmanagermp_scaling.md)
+Extend FlowManagerMP to spawn processes per CPU core for maximum parallelism.
+**Status:** Not started
 
-See individual PRD files in this folder:
-- `prd_pydantic_structured.md`
-- `prd_model_comparison.md`
-- `prd_llamaindex_rag.md`
+## Progress Log
 
-## Research Reference
-
-Full research is available in the artifacts directory:
-`/Users/davidroberts/.gemini/antigravity/brain/e88f14a8-8255-4db4-bdb7-8b6fb32baee0/integration_examples_research.md`
+| Date | Activity |
+|------|----------|
+| 2026-01-30 | Discovered 3000+ chunk hanging issue |
+| 2026-01-30 | Created load-management branch |
+| 2026-01-30 | Created PRDs |
