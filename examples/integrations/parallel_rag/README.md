@@ -30,11 +30,21 @@ graph LR
 
 ## Performance Results
 
-| Mode | Time | Details |
+### Indexing (1000 chunks)
+
+| Mode | Time | Speedup |
 |------|------|---------|
-| **Indexing** (1000 chunks) | 4.59s | 218 chunks/sec |
-| **Query - Sequential** (5 tests) | 10.83s | Direct async |
-| **Query - Parallel** (5 tests) | 3.65s | FlowManager (~3x faster) |
+| Sequential (theoretical) | ~388s (6.5 min) | 1x |
+| **FlowManager Parallel** | **4.59s** | **~85x** |
+
+> Single embedding: ~0.3s. FlowManager submits all 1000 in parallel.
+
+### Query Tests (5 needle-in-haystack)
+
+| Mode | Time | Speedup |
+|------|------|---------|
+| Sequential (direct async) | 10.83s | 1x |
+| **FlowManager Parallel** | **3.65s** | **~3x** |
 
 ## j_ctx Pattern for Job Chaining
 
