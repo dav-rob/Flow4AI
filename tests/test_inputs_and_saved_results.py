@@ -2,7 +2,7 @@
 Tests for job data access patterns: get_inputs() and get_saved_results().
 
 Tests verify that:
-1. get_inputs() returns only immediate predecessor outputs
+1. get_inputs() returns only immediate predecessors' outputs
 2. get_saved_results() / j_ctx["saved_results"] returns all saved results from earlier jobs
 3. Both JobABC classes and wrapped functions have consistent access
 """
@@ -56,12 +56,12 @@ class JobC(JobABC):
 
 
 # =============================================================================
-# Test: JobABC class inputs only sees immediate predecessor
+# Test: JobABC class inputs only sees immediate predecessors
 # =============================================================================
 
 @pytest.mark.asyncio
 async def test_jobabc_inputs_only_sees_immediate_predecessor():
-    """JobABC.get_inputs() should only return immediate predecessor, not earlier jobs."""
+    """JobABC.get_inputs() should only return immediate predecessors, not earlier jobs."""
     job_a = JobA()
     job_b = JobB()
     job_c = JobC()
@@ -74,7 +74,7 @@ async def test_jobabc_inputs_only_sees_immediate_predecessor():
     
     # job_c should only see job_b in inputs, NOT job_a
     assert 'job_b' in result['inputs_keys'], "job_c should see job_b in inputs"
-    assert 'job_a' not in result['inputs_keys'], "job_c should NOT see job_a in inputs (only immediate predecessor)"
+    assert 'job_a' not in result['inputs_keys'], "job_c should NOT see job_a in inputs (only immediate predecessors)"
 
 
 # =============================================================================
@@ -104,12 +104,12 @@ async def test_jobabc_saved_results_sees_earlier_jobs():
 
 
 # =============================================================================
-# Test: Wrapped function j_ctx["inputs"] only sees immediate predecessor
+# Test: Wrapped function j_ctx["inputs"] only sees immediate predecessors
 # =============================================================================
 
 @pytest.mark.asyncio
 async def test_wrapped_function_inputs_only_sees_immediate_predecessor():
-    """Wrapped functions' j_ctx['inputs'] should only return immediate predecessor."""
+    """Wrapped functions' j_ctx['inputs'] should only return immediate predecessors."""
     
     received_by_fn_c = {}
     

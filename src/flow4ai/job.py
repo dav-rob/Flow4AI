@@ -545,9 +545,9 @@ class JobABC(ABC, metaclass=JobMeta):
         Get saved results from earlier jobs in the workflow.
         
         Only jobs with save_result=True will have their outputs available here.
-        This allows access to results from jobs beyond the immediate predecessor.
+        This allows access to results from jobs beyond the immediate predecessors.
         
-        Note: get_inputs() returns only immediate predecessor outputs.
+        Note: get_inputs() returns only immediate predecessors' outputs.
         Use get_saved_results() to access outputs from earlier jobs in a chain.
         
         Returns:

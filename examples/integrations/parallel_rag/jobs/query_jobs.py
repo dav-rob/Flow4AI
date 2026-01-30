@@ -112,7 +112,7 @@ def bm25_rerank_job(j_ctx):
     """
     inputs = j_ctx["inputs"]
     
-    # Get data from immediate predecessor (vector_search)
+    # Get data from immediate predecessors (vector_search)
     search_result = inputs.get("vector_search", {})
     
     if search_result.get("status") != "success":
@@ -176,7 +176,7 @@ async def generate_answer_job(j_ctx):
     """
     inputs = j_ctx["inputs"]
     
-    # Get data from immediate predecessor (bm25_rerank)
+    # Get data from immediate predecessors (bm25_rerank)
     rerank_result = inputs.get("bm25_rerank", {})
     
     if rerank_result.get("status") != "success":

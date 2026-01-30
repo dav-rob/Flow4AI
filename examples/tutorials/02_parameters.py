@@ -55,7 +55,7 @@ def using_kwargs(**kwargs):
 def with_context(j_ctx, **kwargs):
     """j_ctx provides access to the full execution context.
     
-    - j_ctx["inputs"]: Outputs from IMMEDIATE predecessor (not all ancestors)
+    - j_ctx["inputs"]: Outputs from IMMEDIATE predecessors (not all ancestors)
     - j_ctx["saved_results"]: Outputs from earlier jobs (require save_result=True)
     - j_ctx["task"]: The full task dictionary
     - **kwargs: Parameters for this specific job
@@ -75,7 +75,7 @@ class DataProcessor(JobABC):
     """Job classes use get_params() for clean parameter access.
     
     self.get_params() returns only the parameters for THIS job.
-    self.get_inputs() returns outputs from IMMEDIATE predecessor (not all ancestors).
+    self.get_inputs() returns outputs from IMMEDIATE predecessors (not all ancestors).
     self.get_saved_results() returns outputs from earlier jobs (require save_result=True).
     self.get_task() returns the complete task dictionary.
     """
@@ -339,7 +339,7 @@ class JobClassD(JobABC):
         super().__init__('job_class_d')
     
     async def run(self, task):
-        # get_inputs() - only immediate predecessor
+        # get_inputs() - only immediate predecessors
         inputs = self.get_inputs()
         # get_saved_results() - all jobs with save_result=True
         saved = self.get_saved_results()
@@ -358,7 +358,7 @@ def demo_inputs_vs_saved_results():
     """Demonstrates the difference between get_inputs() and get_saved_results().
     
     CRITICAL CONCEPT:
-    - get_inputs() / j_ctx["inputs"]: Only IMMEDIATE predecessor
+    - get_inputs() / j_ctx["inputs"]: Only IMMEDIATE predecessors
     - get_saved_results() / j_ctx["saved_results"]: ALL jobs with save_result=True
     
     In a chain A >> B >> C >> D:
@@ -409,7 +409,7 @@ def demo_inputs_vs_saved_results():
         return {"c_value": 300}
     
     def fn_d(j_ctx):
-        # j_ctx["inputs"] - only immediate predecessor
+        # j_ctx["inputs"] - only immediate predecessors
         inputs = j_ctx["inputs"]
         # j_ctx["saved_results"] - all jobs with save_result=True
         saved = j_ctx.get("saved_results", {})
@@ -443,7 +443,7 @@ def demo_inputs_vs_saved_results():
     print("\n--- Summary ---")
     print("  JobABC classes: Use self.get_inputs() and self.get_saved_results()")
     print("  Wrapped functions: Use j_ctx['inputs'] and j_ctx['saved_results']")
-    print("  get_inputs(): Only immediate predecessor")
+    print("  get_inputs(): Only immediate predecessors")
     print("  get_saved_results(): All jobs with save_result=True")
 
 
@@ -482,7 +482,7 @@ PARAMETER ACCESS:
   - JobABC:    Use self.get_params() for clean access
 
 DATA ACCESS IN SERIAL CHAINS (A >> B >> C):
-  - get_inputs() / j_ctx["inputs"]: Only IMMEDIATE predecessor
+  - get_inputs() / j_ctx["inputs"]: Only IMMEDIATE predecessors
   - get_saved_results() / j_ctx["saved_results"]: Earlier jobs (need save_result=True)
 
 BATCH PROCESSING:
