@@ -55,7 +55,8 @@ def using_kwargs(**kwargs):
 def with_context(j_ctx, **kwargs):
     """j_ctx provides access to the full execution context.
     
-    - j_ctx["inputs"]: Outputs from predecessor jobs
+    - j_ctx["inputs"]: Outputs from IMMEDIATE predecessor (not all ancestors)
+    - j_ctx["saved_results"]: Outputs from earlier jobs (require save_result=True)
     - j_ctx["task"]: The full task dictionary
     - **kwargs: Parameters for this specific job
     """
@@ -74,7 +75,8 @@ class DataProcessor(JobABC):
     """Job classes use get_params() for clean parameter access.
     
     self.get_params() returns only the parameters for THIS job.
-    self.get_inputs() returns outputs from all predecessor jobs.
+    self.get_inputs() returns outputs from IMMEDIATE predecessor (not all ancestors).
+    self.get_saved_results() returns outputs from earlier jobs (require save_result=True).
     self.get_task() returns the complete task dictionary.
     """
     
@@ -301,12 +303,97 @@ def demo_task_passthrough():
 
 
 # =============================================================================
+# SECTION 8: Inputs vs Saved Results in Serial Chains
+# =============================================================================
+
+class ChainedJob(JobABC):
+    """Demonstrates get_inputs() vs get_saved_results() access patterns."""
+    
+    def __init__(self, name):
+        super().__init__(name)
+    
+    async def run(self, task):
+        inputs = self.get_inputs()
+        saved = self.get_saved_results()
+        
+        result = {
+            "job_name": self.name,
+            "inputs_keys": list(inputs.keys()),
+            "saved_keys": list(saved.keys()),
+        }
+        
+        return result
+
+
+def demo_inputs_vs_saved_results():
+    """Demonstrates the difference between get_inputs() and get_saved_results().
+    
+    CRITICAL CONCEPT:
+    - get_inputs() / j_ctx["inputs"]: Only IMMEDIATE predecessor
+    - get_saved_results() / j_ctx["saved_results"]: ALL jobs with save_result=True
+    
+    In a chain A >> B >> C >> D:
+    - D.get_inputs() sees only C
+    - D.get_saved_results() sees A and B (if they have save_result=True)
+    """
+    
+    print("\n" + "="*60)
+    print("SECTION 8: Inputs vs Saved Results in Serial Chains")
+    print("="*60)
+    
+    # Using wrapped functions
+    def job_a():
+        return {"a_value": 100}
+    
+    def job_b(j_ctx):
+        return {"b_value": 200}
+    
+    def job_c(j_ctx):
+        return {"c_value": 300}
+    
+    def job_d(j_ctx):
+        # Get immediate predecessor data
+        inputs = j_ctx["inputs"]
+        # Get saved results from earlier jobs
+        saved = j_ctx.get("saved_results", {})
+        
+        print(f"\n  job_d sees in inputs: {list(inputs.keys())}")
+        print(f"  job_d sees in saved_results: {list(saved.keys())}")
+        
+        # Access earlier job data via saved_results
+        if "job_a" in saved:
+            print(f"  job_a data (via saved_results): {saved['job_a'].get('a_value')}")
+        
+        return {"d_result": "done"}
+    
+    jobs = job({"job_a": job_a, "job_b": job_b, "job_c": job_c, "job_d": job_d})
+    
+    # Mark some jobs to save their results
+    jobs["job_a"].save_result = True
+    jobs["job_b"].save_result = True
+    # job_c does NOT save - to show it won't appear in saved_results
+    
+    workflow = jobs["job_a"] >> jobs["job_b"] >> jobs["job_c"] >> jobs["job_d"]
+    
+    print("\nWorkflow: job_a >> job_b >> job_c >> job_d")
+    print("save_result=True: job_a, job_b")
+    print("save_result=False: job_c (default)")
+    
+    errors, result = FlowManager.run(workflow, {}, "inputs_vs_saved")
+    
+    print("\n  Explanation:")
+    print("  - job_d can access job_c via get_inputs() (immediate predecessor)")
+    print("  - job_d can access job_a, job_b via get_saved_results() (save_result=True)")
+    print("  - job_c is NOT in saved_results because save_result=False")
+
+
+# =============================================================================
 # MAIN
 # =============================================================================
 
 if __name__ == "__main__":
     print("="*60)
-    print("Flow4AI Example 10: Tasks and Parameters")
+    print("Flow4AI Tutorial 02: Tasks and Parameters")
     print("="*60)
     
     demo_task_formats()
@@ -314,6 +401,7 @@ if __name__ == "__main__":
     demo_job_class_parameters()
     demo_batch_processing()
     demo_task_passthrough()
+    demo_inputs_vs_saved_results()
     
     print("\n" + "="*60)
     print("SUMMARY")
@@ -333,9 +421,14 @@ PARAMETER ACCESS:
   - Functions: Named params auto-inject, or use **kwargs
   - JobABC:    Use self.get_params() for clean access
 
+DATA ACCESS IN SERIAL CHAINS (A >> B >> C):
+  - get_inputs() / j_ctx["inputs"]: Only IMMEDIATE predecessor
+  - get_saved_results() / j_ctx["saved_results"]: Earlier jobs (need save_result=True)
+
 BATCH PROCESSING:
   - Submit 1000 tasks = 1000 concurrent executions
   - Each task carries its own unique data
 
 See tutorials/05_job_types.py for more on functions vs classes.
 """)
+

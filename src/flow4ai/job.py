@@ -540,6 +540,22 @@ class JobABC(ABC, metaclass=JobMeta):
             short_name = self.name
         return task.get(short_name, {})
 
+    def get_saved_results(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Get saved results from earlier jobs in the workflow.
+        
+        Only jobs with save_result=True will have their outputs available here.
+        This allows access to results from jobs beyond the immediate predecessor.
+        
+        Note: get_inputs() returns only immediate predecessor outputs.
+        Use get_saved_results() to access outputs from earlier jobs in a chain.
+        
+        Returns:
+            Dict[str, Dict[str, Any]]: Saved results keyed by short job name.
+        """
+        saved = self.get_context().get(JobABC.SAVED_RESULTS, {})
+        return {JobABC.parse_job_name(k): v for k, v in saved.items()}
+
     def update_context(self, new_context: Dict[str, Any]) -> None:
         """
         Update the context dictionary with new values.
