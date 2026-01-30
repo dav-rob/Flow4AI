@@ -13,6 +13,7 @@ Whether you're processing thousands of documents, chaining complex LLM calls, or
 - [The Core Pattern: Divide and Aggregate](#the-core-pattern-divide-and-aggregate)
 - [Massive Parallelism](#massive-parallel-execution)
   - [Async Requirements](#async-requirements-for-parallel-code)
+  - [Scaling to 1000+ Tasks](#scaling-to-1000-tasks)
 - [Complex Workflows](#complex-workflow-example)
 - [Working Examples](#working-examples)
 - [Deep Dive: Functions vs Job Classes](#deep-dive-functions-vs-job-classes)
@@ -173,6 +174,32 @@ async def my_job(prompt):
 ```
 
 See [`examples/async/`](examples/async/) for detailed comparisons and benchmarks.
+
+### Scaling to 1000+ Tasks
+
+For large workloads (3000+ tasks), set `max_concurrent` to avoid overwhelming the event loop:
+
+```python
+# Automatic throttling - framework handles it internally
+fm = FlowManager(max_concurrent=500)  # Safe default
+
+# Or use submit_batch for clean iteration
+fm.submit_batch(
+    chunks,
+    lambda chunk: {"embed.chunk_id": chunk.id, "embed.text": chunk.text},
+    fq_name
+)
+```
+
+| max_concurrent | Recommended For |
+|----------------|-----------------|
+| None (default) | Small workloads (< 500 tasks) |
+| 500 | Safe default for any system |
+| 1000+ | Modern laptops (M1+, i7+) - experiment |
+
+Run `python examples/benchmarks/scale_test.py` to find optimal value for your system.
+
+See [`examples/integrations/parallel_rag/`](examples/integrations/parallel_rag/) for a real-world example processing 3000+ document chunks with throttling.
 
 ### FlowManagerMP: Multi-process (CPU-Bound)
 

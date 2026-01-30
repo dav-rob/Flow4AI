@@ -158,22 +158,20 @@ def run_indexing_pipeline_throttled(
     max_chunks: int = None,
     reset_collection: bool = True,
     books: list = None,
-    batch_size: int = 250,
-    max_pending: int = 500,
+    max_concurrent: int = 500,
 ) -> dict:
     """
     Throttled embedding pipeline for large scale (3000+ chunks).
     
-    Uses fm.get_counts() to monitor completion rate and avoid overwhelming
-    the system. Submits in batches and waits when too many tasks are pending.
+    Uses FlowManager's built-in max_concurrent to automatically throttle
+    submission and avoid overwhelming the system.
     
     Args:
-        batch_size: Number of tasks to submit per batch
-        max_pending: Maximum pending tasks before waiting
+        max_concurrent: Maximum concurrent tasks (default: 500)
     """
     output.section("INDEXING PIPELINE (THROTTLED)")
     
-    # 1. Load corpus (same as regular pipeline)
+    # 1. Load corpus
     output.step("📥", "Downloading corpus...")
     if books is None:
         books = ["alice_wonderland", "sherlock_holmes", "frankenstein"]
@@ -192,52 +190,32 @@ def run_indexing_pipeline_throttled(
         chunks = chunks[:max_chunks]
         output.detail(f"Limited to {max_chunks} chunks for testing")
     
-    # 3. Throttled parallel embedding
-    output.step("🔄", f"Embedding {len(chunks)} chunks (throttled: {batch_size}/batch, max {max_pending} pending)...")
+    # 3. Parallel embedding with automatic throttling
+    output.step("🔄", f"Embedding {len(chunks)} chunks (max_concurrent={max_concurrent})...")
     
     embeddings = []
     
     def on_complete(result):
         embeddings.append(result)
+        if len(embeddings) == 1:
+            output.detail("First embedding complete")
+        elif len(embeddings) % 500 == 0:
+            output.detail(f"Progress: {len(embeddings)}/{len(chunks)} complete")
     
-    # ----- FLOW4AI THROTTLED WORKFLOW -----
+    # ----- FLOW4AI THROTTLED WORKFLOW (clean API) -----
     workflow = job(embed=embed_chunk)
-    fm = FlowManager(on_complete=on_complete)
+    fm = FlowManager(on_complete=on_complete, max_concurrent=max_concurrent)
     fq_name = fm.add_workflow(workflow, "embedding_pipeline")
     
     start_time = time.perf_counter()
-    submitted = 0
-    last_progress = 0
     
-    while submitted < len(chunks):
-        # Submit a batch
-        batch_end = min(submitted + batch_size, len(chunks))
-        for i in range(submitted, batch_end):
-            chunk = chunks[i]
-            task = {
-                "embed.chunk_id": chunk.id,
-                "embed.text": chunk.text,
-            }
-            fm.submit_task(task, fq_name)
-        submitted = batch_end
-        
-        # Wait if too many pending
-        while True:
-            counts = fm.get_counts()
-            pending = counts['submitted'] - counts['completed'] - counts['errors']
-            
-            # Progress update
-            if counts['completed'] - last_progress >= 100:
-                output.detail(f"Progress: {counts['completed']}/{len(chunks)} complete, {pending} pending")
-                last_progress = counts['completed']
-            
-            if pending < max_pending or submitted >= len(chunks):
-                break
-            time.sleep(0.1)
+    # Single call handles all throttling internally!
+    fm.submit_batch(
+        chunks,
+        lambda chunk: {"embed.chunk_id": chunk.id, "embed.text": chunk.text},
+        fq_name
+    )
     
-    output.detail(f"Submitted all {len(chunks)} tasks, waiting for completion...")
-    
-    # Wait for final completion
     success = fm.wait_for_completion(timeout=600, check_interval=0.5)
     embed_time = time.perf_counter() - start_time
     # ----- END FLOW4AI THROTTLED WORKFLOW -----
@@ -399,10 +377,8 @@ def main():
     parser.add_argument("--books", nargs="+", default=None)
     parser.add_argument("--throttle", action="store_true", 
                         help="Use throttled submission for large datasets (3000+ chunks)")
-    parser.add_argument("--batch-size", type=int, default=250,
-                        help="Batch size for throttled mode (default: 250)")
-    parser.add_argument("--max-pending", type=int, default=500,
-                        help="Max pending tasks for throttled mode (default: 500)")
+    parser.add_argument("--max-concurrent", type=int, default=500,
+                        help="Max concurrent tasks for throttled mode (default: 500)")
     
     args = parser.parse_args()
     
@@ -413,8 +389,7 @@ def main():
             index_result = run_indexing_pipeline_throttled(
                 max_chunks=args.chunks,
                 books=args.books,
-                batch_size=args.batch_size,
-                max_pending=args.max_pending,
+                max_concurrent=args.max_concurrent,
             )
         else:
             index_result = run_indexing_pipeline(

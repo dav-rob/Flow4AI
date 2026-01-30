@@ -14,17 +14,22 @@ class FlowManager(FlowManagerABC):
     _lock = threading.Lock()  # Lock for thread-safe initialization
     _instance = None  # Singleton instance
     
-    def __init__(self, dsl=None, jobs_dir_mode=False, on_complete: Optional[Callable[[Any], None]] = None):
+    def __init__(self, dsl=None, jobs_dir_mode=False, on_complete: Optional[Callable[[Any], None]] = None,
+                 max_concurrent: Optional[int] = None):
         """Initialize the FlowManager.
         
         Args:
             dsl: A dictionary of job DSLs, a job DSL, a JobABC instance, or a collection of JobABC instances.
             jobs_dir_mode: If True, the FlowManager will load jobs from a directory.
             on_complete: A callback function to be called when a job is completed.
+            max_concurrent: Maximum number of concurrent tasks. If set, submit_task will
+                           block when this limit is reached until some tasks complete.
+                           Recommended: 500 (safe default), 1000+ for modern hardware.
         """
         super().__init__()
         self.jobs_dir_mode = jobs_dir_mode
         self.on_complete = on_complete
+        self.max_concurrent = max_concurrent
         self._initialize()
         
         # Add DSL dictionary if provided
@@ -80,8 +85,50 @@ class FlowManager(FlowManagerABC):
         # Handle single task or list of tasks
         if isinstance(task, list):
             for single_task in task:
+                self._wait_for_capacity()
                 self._submit_single_task(single_task, fq_name)
         else:
+            self._wait_for_capacity()
+            self._submit_single_task(task, fq_name)
+    
+    def _wait_for_capacity(self):
+        """Wait until there is capacity to submit more tasks.
+        
+        Only blocks if max_concurrent is set and we've reached the limit.
+        """
+        if self.max_concurrent is None:
+            return
+        
+        while True:
+            counts = self.get_counts()
+            pending = counts['submitted'] - counts['completed'] - counts['errors']
+            if pending < self.max_concurrent:
+                return
+            time.sleep(0.05)  # Brief sleep to avoid busy-waiting
+    
+    def submit_batch(self, items, task_builder: Callable, fq_name: str = None):
+        """Submit a batch of items as tasks with automatic throttling.
+        
+        This is a convenience method for iterating over items and submitting
+        each as a task. If max_concurrent is set, submission will automatically
+        throttle to stay within the limit.
+        
+        Args:
+            items: Iterable of items to process
+            task_builder: Function that takes an item and returns a task dict
+            fq_name: The fully qualified name of the job graph
+            
+        Example:
+            fm.submit_batch(
+                chunks,
+                lambda chunk: {"embed.chunk_id": chunk.id, "embed.text": chunk.text},
+                fq_name
+            )
+        """
+        fq_name = self.check_fq_name_and_job_graph_map(fq_name)
+        for item in items:
+            task = task_builder(item)
+            self._wait_for_capacity()
             self._submit_single_task(task, fq_name)
 
     def _submit_single_task(self, task: Dict[str, Any], fq_name: str):
@@ -468,13 +515,15 @@ class FlowManager(FlowManagerABC):
         
         return results
     @classmethod
-    def instance(cls, dsl=None, jobs_dir_mode=False, on_complete: Optional[Callable[[Any], None]] = None) -> 'FlowManager':
+    def instance(cls, dsl=None, jobs_dir_mode=False, on_complete: Optional[Callable[[Any], None]] = None,
+                 max_concurrent: Optional[int] = None) -> 'FlowManager':
         """Get or create the singleton instance of FlowManager.
         
         Args:
             dsl: A dictionary of job DSLs, a job DSL, a JobABC instance, or a collection of JobABC instances.
             jobs_dir_mode: If True, the FlowManager will load jobs from a directory.
             on_complete: A callback function to be called when a job is completed.
+            max_concurrent: Maximum number of concurrent tasks for throttling.
             
         Returns:
             The singleton instance of FlowManager
@@ -482,7 +531,7 @@ class FlowManager(FlowManagerABC):
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
-                    cls._instance = cls(dsl, jobs_dir_mode, on_complete)
+                    cls._instance = cls(dsl, jobs_dir_mode, on_complete, max_concurrent)
         return cls._instance
     
     @classmethod

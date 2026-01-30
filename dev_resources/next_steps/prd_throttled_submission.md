@@ -69,29 +69,26 @@ fm.wait_for_completion()
 2. [ ] Check if `pop_results()` can be used non-destructively
 3. [ ] Test optimal batch_size for different scenarios
 
-## Implementation Plan
+## Implementation (COMPLETE)
 
-### File Changes
+### FlowManager Changes (`src/flow4ai/flowmanager.py`)
 
-#### 1. `src/flow4ai/flowmanager.py` (if needed)
-- Add `get_stats()` or `get_pending_count()` method if not present
+Added:
+1. **`max_concurrent` constructor parameter** - Sets limit on pending tasks
+2. **`_wait_for_capacity()` internal method** - Blocks until under limit
+3. **`submit_batch()` convenience method** - Clean iteration with auto-throttle
 
-#### 2. `examples/integrations/parallel_rag/rag_pipeline.py`
-- Add `run_indexing_pipeline_throttled()` function
-- Implement monitor-and-submit loop
+```python
+# Clean user-facing API
+fm = FlowManager(max_concurrent=500)  # Now just one line!
+fm.submit_batch(chunks, lambda c: {"embed.id": c.id, "embed.text": c.text}, fq_name)
+fm.wait_for_completion()
+```
 
-#### 3. `examples/integrations/parallel_rag/README.md`
-- Document throttled pattern
-- Add performance comparison
+### Benchmark Example (`examples/benchmarks/scale_test.py`)
 
-## Success Criteria
+Tests different max_concurrent values to find optimal setting for user's system.
 
-- [ ] 3000+ chunks complete successfully
-- [ ] Performance within 2x of small-batch runs
-- [ ] Clear documentation of pattern
+### Documentation (`README.md`)
 
-## Open Questions
-
-1. What's the optimal batch size? (250? 500?)
-2. Should we expose throttle settings as CLI args?
-3. Can we auto-detect the optimal batch size?
+Added "Scaling to 1000+ Tasks" section with table and examples.
