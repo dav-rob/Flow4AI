@@ -2,93 +2,86 @@
 
 Demonstrates Flow4AI's parallel execution at scale with 1000+ document chunks.
 
-## Technical Decisions
+## Flow4AI Workflow Architecture
+
+```mermaid
+graph LR
+    subgraph "INDEXING PIPELINE (Flow4AI Orchestrated)"
+        A[📄 Documents] --> B[✂️ Chunker]
+        B --> C{🔄 FlowManager}
+        C --> D1[embed_chunk]
+        C --> D2[embed_chunk]
+        C --> D3[embed_chunk]
+        C --> D4["... (1000 parallel)"]
+        D1 --> E[💾 ChromaDB]
+        D2 --> E
+        D3 --> E
+        D4 --> E
+    end
+```
+
+```mermaid
+graph LR
+    subgraph "QUERY PIPELINE (Async, not FlowManager)"
+        Q[❓ Query] --> R[embed_chunk]
+        R --> S[🔍 Vector Search]
+        S --> T[📊 BM25 Rerank]
+        T --> U[🤖 Generate Answer]
+    end
+```
+
+**Flow4AI Usage:** Only the embedding step uses FlowManager for massive parallelism. The query pipeline uses direct async calls since it's a single sequential flow.
+
+## Scale Testing Results
+
+| Chunks | Time | Rate | Status |
+|--------|------|------|--------|
+| 10 | 0.50s | 20 chunks/sec | ✅ |
+| 100 | 1.01s | 99 chunks/sec | ✅ |
+| **1000** | **4.59s** | **218 chunks/sec** | ✅ |
+
+## Technical Stack
 
 | Component | Choice | Rationale |
 |-----------|--------|-----------|
-| **Vector DB** | ChromaDB | Pure Python, persistent, no external DB needed |
-| **Ordinary DB** | None | ChromaDB handles persistence (stores to disk) |
-| **Embedding Model** | OpenAI `text-embedding-3-small` | Fast, cheap, 1536 dimensions |
-| **Generation Model** | OpenAI `gpt-4o-mini` | Cost-effective, good quality |
-| **Reranking** | BM25 via `rank-bm25` | Lightweight, pure Python, no GPU |
+| **Vector DB** | ChromaDB | Pure Python, persistent, no external DB |
+| **Embedding** | OpenAI `text-embedding-3-small` | Fast, cheap, 1536 dims |
+| **LLM** | OpenAI `gpt-4o-mini` | Cost-effective |
+| **Reranking** | BM25 (`rank-bm25`) | Lightweight, no GPU |
 
-## Architecture
+## Chunking Strategy
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      INDEXING PIPELINE                           │
-├─────────────────────────────────────────────────────────────────┤
-│  Download Books → Chunk Text → Parallel Embed → Store in Chroma │
-│       (1)            (N)       (N parallel)        (batch)      │
-└─────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────┐
-│                        QUERY PIPELINE                            │
-├─────────────────────────────────────────────────────────────────┤
-│  Query → Embed → Vector Search → BM25 Rerank → Generate Answer  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-## Dependencies
-
-```bash
-pip install chromadb rank-bm25
-# OpenAI API key required
-export OPENAI_API_KEY=your_key_here
-```
+- **Chunk size:** 500 characters
+- **Overlap:** 100 characters  
+- **Sentence boundary:** Yes (breaks at `. ! ?`)
 
 ## Usage
 
 ```bash
-# Full pipeline (index + query)
-python rag_pipeline.py
+pip install chromadb rank-bm25
+export OPENAI_API_KEY=your_key
 
-# Index only (with chunk limit for testing)
-python rag_pipeline.py --mode index --chunks 100
+python rag_pipeline.py                              # Full pipeline
+python rag_pipeline.py --mode index --chunks 100    # Index only
+python rag_pipeline.py --mode query --query "..."   # Query only
 
-# Query only (uses existing index)
-python rag_pipeline.py --mode query --query "What is Alice's adventure?"
-
-# Specific books
-python rag_pipeline.py --books alice_wonderland sherlock_holmes
+python test_rag.py --suite needle                   # Run retrieval tests
 ```
 
 ## Flow4AI Pattern
 
-The key demonstration is **parallel embedding** with Flow4AI:
-
 ```python
-# Submit 1000+ embedding tasks concurrently
+# Submit 1000 tasks in parallel
 workflow = job(embed=embed_chunk)
 fm = FlowManager(on_complete=on_complete)
 fq_name = fm.add_workflow(workflow, "embedding_pipeline")
 
 for chunk in chunks:
-    task = {"embed.chunk_id": chunk.id, "embed.text": chunk.text}
-    fm.submit_task(task, fq_name)
+    fm.submit_task({"embed.chunk_id": chunk.id, "embed.text": chunk.text}, fq_name)
 
 fm.wait_for_completion(timeout=300)
 ```
 
-## Scale Testing Results
+## Async Note
 
-| Chunks | Status |
-|--------|--------|
-| 1 | ✅ Tested (1.54s, 0.6 chunks/sec) |
-| 10 | 🔄 In progress |
-| 100 | ⏳ Pending |
-| 1000 | ⏳ Pending |
-
-## Status
-
-**Branch**: `feature/massive-parallel-rag`  
-**Current State**: Work in progress - basic pipeline functional with 1 chunk
-
-### Known Issues
-- Need to investigate async/sync behavior with OpenAI embeddings
-- Scale testing incomplete
-
-### TODO
-- [ ] Complete scale testing (10, 100, 1000 chunks)
-- [ ] Needle-in-haystack tests
-- [ ] Edge case testing
+AsyncOpenAI clients become stale across `asyncio.run()` boundaries. The pipeline calls `reset_client()` between index and query phases.
