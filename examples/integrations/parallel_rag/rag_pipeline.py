@@ -3,13 +3,10 @@ Massive Parallel RAG Pipeline
 
 Demonstrates Flow4AI's parallel execution at scale with 1000+ document chunks.
 
-This example implements a production-grade RAG pipeline:
-- Download corpus from Project Gutenberg
-- Chunk text with overlap
-- Parallel embedding using Flow4AI (1000+ concurrent tasks)
-- Store in ChromaDB vector database
-- Search with reranking
-- Answer generation with citations
+This example shows:
+- Parallel embedding: 1000+ chunks embedded concurrently (~85x faster)
+- Sequential workflows: Job chaining with >> operator
+- Data flow: j_ctx["inputs"] and j_ctx["saved_results"] patterns
 
 Prerequisites:
     pip install chromadb rank-bm25
@@ -28,7 +25,6 @@ import time
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
 # Add parent to path for imports
@@ -41,6 +37,7 @@ from flow4ai.dsl import job
 # Local imports
 from utils.download import download_corpus, load_corpus
 from utils.chunking import chunk_corpus, Chunk
+from utils import output  # Output helpers
 from jobs.embedding import embed_chunk, reset_client as reset_embed_client
 from jobs.indexing import index_chunks, search_collection, get_chroma_client
 from jobs.search import search_and_rerank
@@ -54,7 +51,7 @@ from jobs.query_jobs import (
 
 
 # =============================================================================
-# Indexing Pipeline - Parallel embedding with Flow4AI
+# Indexing Pipeline - Parallel Embedding with Flow4AI
 # =============================================================================
 
 def run_indexing_pipeline(
@@ -63,67 +60,52 @@ def run_indexing_pipeline(
     books: list = None,
 ) -> dict:
     """
-    Run the indexing pipeline.
+    Parallel embedding pipeline demonstrating Flow4AI at scale.
     
-    This demonstrates Flow4AI's massive parallel execution:
-    - Submit 1000+ embedding tasks concurrently
-    - Tasks complete while others are still being submitted
-    
-    Args:
-        max_chunks: Limit number of chunks (for testing)
-        reset_collection: Whether to clear existing collection
-        books: List of book names to download
-    
-    Returns:
-        Dict with indexing statistics
+    Flow4AI workflow:
+        workflow = job(embed=embed_chunk)
+        for chunk in chunks:
+            fm.submit_task({...}, fq_name)  # All run in parallel!
     """
-    print("\n" + "="*60)
-    print("INDEXING PIPELINE")
-    print("="*60)
+    output.section("INDEXING PIPELINE")
     
-    # 1. Download corpus
-    print("\n📥 Downloading corpus...")
+    # 1. Load corpus
+    output.step("📥", "Downloading corpus...")
     if books is None:
         books = ["alice_wonderland", "sherlock_holmes", "frankenstein"]
     
     corpus_dir = Path(__file__).parent / "corpus"
     download_corpus(corpus_dir, books)
-    
     corpus = load_corpus(corpus_dir)
-    print(f"   Loaded {len(corpus)} documents")
+    output.detail(f"Loaded {len(corpus)} documents")
     
     # 2. Chunk text
-    print("\n✂️  Chunking text...")
+    output.step("✂️", "Chunking text...")
     chunks = chunk_corpus(corpus, chunk_size=500, overlap=100)
-    print(f"   Created {len(chunks)} chunks")
+    output.detail(f"Created {len(chunks)} chunks")
     
     if max_chunks and len(chunks) > max_chunks:
         chunks = chunks[:max_chunks]
-        print(f"   Limited to {max_chunks} chunks for testing")
+        output.detail(f"Limited to {max_chunks} chunks for testing")
     
     # 3. Parallel embedding with Flow4AI
-    print(f"\n🔄 Embedding {len(chunks)} chunks in parallel...")
+    output.step("🔄", f"Embedding {len(chunks)} chunks in parallel...")
     
-    # Track completions
     embeddings = []
-    completion_count = [0]  # Use list for mutability in closure
+    completion_count = [0]
     
     def on_complete(result):
         embeddings.append(result)
         completion_count[0] += 1
-        if completion_count[0] == 1:
-            print(f"   🎯 First embedding complete")
-        elif completion_count[0] % 100 == 0:
-            print(f"   ⏱️  {completion_count[0]}/{len(chunks)} complete")
+        output.progress(completion_count[0], len(chunks))
     
-    # Create Flow4AI workflow
+    # ----- FLOW4AI WORKFLOW (key code) -----
     workflow = job(embed=embed_chunk)
     fm = FlowManager(on_complete=on_complete)
     fq_name = fm.add_workflow(workflow, "embedding_pipeline")
     
     start_time = time.perf_counter()
     
-    # Submit all tasks
     for chunk in chunks:
         task = {
             "embed.chunk_id": chunk.id,
@@ -131,27 +113,22 @@ def run_indexing_pipeline(
         }
         fm.submit_task(task, fq_name)
     
-    print(f"   📤 Submitted {len(chunks)} tasks")
+    output.detail(f"Submitted {len(chunks)} tasks")
     
-    # Wait for completion
     success = fm.wait_for_completion(timeout=300, check_interval=0.5)
-    
     embed_time = time.perf_counter() - start_time
+    # ----- END FLOW4AI WORKFLOW -----
     
     if not success:
-        print("   ❌ Timeout waiting for embeddings")
+        output.error("Timeout waiting for embeddings")
         return {"status": "timeout"}
     
-    print(f"   ✅ Embedded {len(embeddings)} chunks in {embed_time:.2f}s")
-    print(f"   ⚡ Rate: {len(embeddings)/embed_time:.1f} chunks/sec")
+    output.stats("Embedded", len(embeddings), embed_time)
     
     # 4. Index in ChromaDB
-    print("\n💾 Indexing in ChromaDB...")
+    output.step("💾", "Indexing in ChromaDB...")
     
-    # Convert Chunk objects to dicts for indexing
     chunk_dicts = [c.to_dict() for c in chunks]
-    
-    # Run indexing synchronously (ChromaDB is not async)
     index_result = asyncio.run(index_chunks(
         chunk_dicts,
         embeddings,
@@ -159,10 +136,10 @@ def run_indexing_pipeline(
     ))
     
     if index_result.get("status") == "error":
-        print(f"   ❌ Indexing failed: {index_result.get('error')}")
+        output.error(f"Indexing failed: {index_result.get('error')}")
         return index_result
     
-    print(f"   ✅ Indexed {index_result.get('indexed_count')} chunks")
+    output.success(f"Indexed {index_result.get('indexed_count')} chunks")
     
     return {
         "status": "success",
@@ -174,45 +151,41 @@ def run_indexing_pipeline(
 
 
 # =============================================================================
-# Query Pipeline - Search and answer with citations
+# Query Pipeline - Direct Async Version
 # =============================================================================
 
 async def run_query_pipeline(query: str) -> dict:
     """
-    Run a single query through the RAG pipeline.
-    
-    Args:
-        query: The user's question
-    
-    Returns:
-        Dict with answer and citations
+    Direct async query pipeline (for comparison with FlowManager version).
     """
-    print("\n" + "="*60)
-    print("QUERY PIPELINE")
-    print("="*60)
-    print(f"\n❓ Query: {query}")
+    output.section("QUERY PIPELINE (Direct Async)")
+    output.detail(f"Query: {query}")
     
-    # 1. Search with reranking
-    print("\n🔍 Searching...")
-    search_result = await search_and_rerank(query, top_k_initial=20, top_k_final=5)
+    reset_embed_client()
+    reset_gen_client()
     
-    if search_result.get("status") != "success":
-        print(f"   ❌ Search failed: {search_result.get('error', 'No results')}")
-        return search_result
+    output.step("🔍", "Embedding query...")
+    from jobs.embedding import embed_text
+    query_embedding = await embed_text(query)
     
-    print(f"   ✅ Found {len(search_result['results'])} relevant chunks")
-    print(f"   📊 Mean vector score: {search_result['mean_vector_score']}")
-    print(f"   📊 Mean BM25 score: {search_result['mean_bm25_score']}")
+    output.step("🔎", "Vector search...")
+    search_result = await search_collection(query, query_embedding, top_k=10)
     
-    # 2. Generate answer with citations
-    print("\n💡 Generating answer...")
-    answer_result = await generate_answer(query, search_result["results"])
+    if not search_result["results"]:
+        output.error("No results found")
+        return {"status": "error", "error": "No results"}
     
-    if answer_result.get("status") != "success":
-        print(f"   ❌ Generation failed: {answer_result.get('error')}")
-        return answer_result
+    output.step("📊", "Reranking with BM25...")
+    rerank_result = await search_and_rerank(
+        query, query_embedding, 
+        chroma_results=search_result["results"],
+        top_k=5,
+    )
     
-    print(f"   ✅ Generated answer with {answer_result['citations']['total_cited']} citations")
+    output.step("🤖", "Generating answer...")
+    answer_result = await generate_answer(query, rerank_result["combined_results"])
+    
+    output.success(f"Generated answer with {answer_result['citations']['total_cited']} citations")
     
     return {
         "status": "success",
@@ -220,42 +193,32 @@ async def run_query_pipeline(query: str) -> dict:
         "answer": answer_result["answer"],
         "citations": answer_result["citations"],
         "search_stats": {
-            "mean_vector_score": search_result["mean_vector_score"],
-            "mean_bm25_score": search_result["mean_bm25_score"],
+            "mean_vector_score": rerank_result.get("mean_vector_score"),
+            "mean_bm25_score": rerank_result.get("mean_bm25_score"),
         },
     }
 
 
 # =============================================================================
-# Query Pipeline - FlowManager Version with Job Chaining
+# Query Pipeline - FlowManager with Job Chaining
 # =============================================================================
 
 def run_query_pipeline_fm(query: str) -> dict:
     """
-    Run a single query using FlowManager with explicit job chaining.
+    FlowManager query pipeline with explicit job chaining.
     
-    This demonstrates:
-    - Sequential workflow with >> operator
-    - j_ctx["inputs"] for accessing predecessor outputs
-    - Explicit data flow between jobs
-    
-    Args:
-        query: The user's question
-    
-    Returns:
-        Dict with answer and citations
+    Flow4AI workflow:
+        embed_query >> vector_search >> bm25_rerank >> generate_answer
+        
+    Each job receives predecessor output via j_ctx["inputs"].
     """
-    print("\n" + "="*60)
-    print("QUERY PIPELINE (FlowManager)")
-    print("="*60)
-    print(f"\n❓ Query: {query}")
+    output.section("QUERY PIPELINE (FlowManager)")
+    output.detail(f"Query: {query}")
     
-    # Reset clients for fresh connections
     reset_embed_client()
     reset_gen_client()
     
-    # Define sequential workflow using >> operator
-    # Each job's output becomes available to next job via j_ctx["inputs"]
+    # ----- FLOW4AI WORKFLOW (key code) -----
     query_workflow = (
         job(embed_query=embed_query_job)
         >> job(vector_search=vector_search_job)
@@ -263,40 +226,32 @@ def run_query_pipeline_fm(query: str) -> dict:
         >> job(generate_answer=generate_answer_job)
     )
     
-    # Create FlowManager
     result_holder = {}
-    
-    def on_complete(result):
-        result_holder["result"] = result
-    
-    fm = FlowManager(on_complete=on_complete)
+    fm = FlowManager(on_complete=lambda r: result_holder.update({"result": r}))
     fq_name = fm.add_workflow(query_workflow, "query_pipeline")
     
-    # Submit task: only embed_query needs params
-    # Other jobs get all data from j_ctx["inputs"] (predecessor outputs)
-    task = {
-        "embed_query": {"text": query},
-    }
+    # Only first job needs params; rest get data via j_ctx["inputs"]
+    task = {"embed_query": {"text": query}}
     
-    print("\n🔄 Running workflow: embed_query >> vector_search >> bm25_rerank >> generate_answer")
+    output.step("🔄", "Running: embed >> search >> rerank >> generate")
     fm.submit_task(task, fq_name)
     
     success = fm.wait_for_completion(timeout=60)
+    # ----- END FLOW4AI WORKFLOW -----
     
     if not success:
-        print("   ❌ Timeout")
+        output.error("Timeout")
         return {"status": "error", "error": "Timeout"}
     
-    # Extract result
     result = result_holder.get("result", {})
     
     if result.get("status") != "success":
-        print(f"   ❌ Failed: {result.get('error', 'Unknown error')}")
+        output.error(f"Failed: {result.get('error', 'Unknown')}")
         return result
     
-    print(f"   ✅ Generated answer with {result['citations']['total_cited']} citations")
-    print(f"   📊 Mean vector score: {result['search_stats']['mean_vector_score']}")
-    print(f"   📊 Mean BM25 score: {result['search_stats']['mean_bm25_score']}")
+    output.success(f"Generated answer with {result['citations']['total_cited']} citations")
+    output.detail(f"Mean vector score: {result['search_stats']['mean_vector_score']}")
+    output.detail(f"Mean BM25 score: {result['search_stats']['mean_bm25_score']}")
     
     return {
         "status": "success",
@@ -308,26 +263,20 @@ def run_query_pipeline_fm(query: str) -> dict:
 
 
 # =============================================================================
-# Main - Full pipeline or individual modes
+# Main Entry Point
 # =============================================================================
 
 def main():
     """Run the RAG pipeline."""
     parser = argparse.ArgumentParser(description="Massive Parallel RAG Pipeline")
-    parser.add_argument("--mode", choices=["full", "index", "query"], default="full",
-                        help="Pipeline mode: full, index, or query")
-    parser.add_argument("--chunks", type=int, default=None,
-                        help="Limit number of chunks (for testing)")
-    parser.add_argument("--query", type=str, default="What happens to Alice in Wonderland?",
-                        help="Query for search (in query mode)")
-    parser.add_argument("--books", nargs="+", default=None,
-                        help="Books to download (e.g., alice_wonderland sherlock_holmes)")
+    parser.add_argument("--mode", choices=["full", "index", "query"], default="full")
+    parser.add_argument("--chunks", type=int, default=None, help="Limit chunks")
+    parser.add_argument("--query", type=str, default="What happens to Alice in Wonderland?")
+    parser.add_argument("--books", nargs="+", default=None)
     
     args = parser.parse_args()
     
-    print("\n" + "="*60)
-    print("🚀 Flow4AI Massive Parallel RAG Pipeline")
-    print("="*60)
+    output.section("🚀 Flow4AI Massive Parallel RAG Pipeline")
     
     if args.mode in ["full", "index"]:
         index_result = run_indexing_pipeline(
@@ -336,19 +285,17 @@ def main():
         )
         
         if index_result.get("status") != "success":
-            print("\n❌ Indexing failed")
+            output.error("Indexing failed")
             return False
         
-        print("\n" + "-"*60)
-        print("📊 INDEXING SUMMARY")
-        print("-"*60)
-        print(f"   Chunks created: {index_result['chunks_created']}")
-        print(f"   Embeddings: {index_result['embeddings_created']}")
-        print(f"   Indexed: {index_result['indexed_count']}")
-        print(f"   Embed time: {index_result['embed_time']:.2f}s")
+        output.summary_table("📊 INDEXING SUMMARY", [
+            ("Chunks", str(index_result['chunks_created'])),
+            ("Embeddings", str(index_result['embeddings_created'])),
+            ("Indexed", str(index_result['indexed_count'])),
+            ("Time", f"{index_result['embed_time']:.2f}s"),
+        ])
     
     if args.mode in ["full", "query"]:
-        # Reset OpenAI clients before new event loop (fixes stale connection issue)
         if args.mode == "full":
             reset_embed_client()
             reset_gen_client()
@@ -356,21 +303,15 @@ def main():
         query_result = asyncio.run(run_query_pipeline(args.query))
         
         if query_result.get("status") != "success":
-            print("\n❌ Query failed")
+            output.error("Query failed")
             return False
         
-        print("\n" + "-"*60)
-        print("📊 QUERY RESULT")
-        print("-"*60)
+        output.summary_table("📊 QUERY RESULT", [
+            ("Citations", f"{query_result['citations']['total_cited']} sources"),
+        ])
         print(f"\n{query_result['answer']}")
-        print("\n" + "-"*60)
-        print(f"Citations: {query_result['citations']['total_cited']} of {query_result['citations']['total_shown']} chunks")
-        print(f"Cited: {query_result['citations']['cited']}")
     
-    print("\n" + "="*60)
-    print("✅ Pipeline complete!")
-    print("="*60 + "\n")
-    
+    output.section("✅ Pipeline complete!")
     return True
 
 
