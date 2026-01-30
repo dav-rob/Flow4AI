@@ -78,6 +78,15 @@ class WrappingJob(JobABC):
             callable_params["kwargs"][self.FN_CONTEXT]["global"] = self.global_ctx
             callable_params["kwargs"][self.FN_CONTEXT]["task"] = params
             callable_params["kwargs"][self.FN_CONTEXT]["inputs"] = self.get_inputs()
+            # Add saved_results for access to earlier job outputs (when save_result=True)
+            try:
+                saved = self.get_context().get(JobABC.SAVED_RESULTS, {})
+                callable_params["kwargs"][self.FN_CONTEXT]["saved_results"] = {
+                    JobABC.parse_job_name(k): v for k, v in saved.items()
+                }
+            except LookupError:
+                # Context not available (e.g., in unit tests calling run() directly)
+                callable_params["kwargs"][self.FN_CONTEXT]["saved_results"] = {}
 
         # Validate parameters against the callable's signature
         self._validate_params(callable_params["args"], callable_params["kwargs"])
