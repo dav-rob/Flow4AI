@@ -48,17 +48,19 @@ graph LR
 
 ## j_ctx Pattern for Job Chaining
 
-Jobs receive predecessor outputs via `j_ctx["inputs"]`:
+Jobs receive predecessor outputs via `j_ctx["inputs"]` (immediate predecessor only):
 
 ```python
-# Job only sees IMMEDIATE predecessor
 def bm25_rerank_job(j_ctx):
+    # Immediate predecessor
     search_result = j_ctx["inputs"]["vector_search"]
-    query = search_result["query"]  # Passed through from earlier job
-    results = search_result["results"]
+    
+    # Earlier jobs (set save_result=True on those jobs)
+    embed_data = j_ctx["saved_results"].get("embed_query", {})
 ```
 
-> **Key:** `j_ctx["inputs"]` only contains the immediate predecessor. Data must be passed forward through each job's output.
+> **Options:** `j_ctx["inputs"]` = immediate predecessor only. `j_ctx["saved_results"]` = earlier jobs with `save_result=True`.
+
 
 ## Usage
 
